@@ -42,6 +42,7 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 | `zw-map` | `zw-spec` | Destination named, open decisions sliced | `map.md`, decision tickets |
 | `zw-spec` | `zw-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
 | `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
+| `zw-how` | `zw-why` | The flow raises why the shape is this way | The cited rationale, in tiers, with the gaps named |
 | `zw` | `zw-write` | Text a person will read is written or reviewed | The text, tightened |
 | `zw-review` | `zw-blast-radius` | A diff's risk turns on something the diff does not show | The one safety fact, proven or marked unproven |
 | `zw-implement` | `zw-tdd` | A cycle reaches a confirmed seam | Failing test, then green |
@@ -74,6 +75,7 @@ A drivable route exists before implementation is delegated, and the shipped rout
 | `zw-write` -> any node that writes text | Text a person reads is being written or reviewed | The text, tightened |
 | `zw-blast-radius` -> any node that lands a change | The change's blast radius is not obvious from the diff | Confirmed and cleared risks, and the one safety fact proven |
 | `zw-bro` -> the user | The last reply was jargon | The same content, plainly and shorter |
+| `zw-why` -> any node that questions an existing shape | The reason is not readable from the code | A cited read, its tiers, and the searches that found nothing |
 | `zw-review` -> the user | The verdict is blocked | The findings, and what would unblock them |
 
 Side lanes never block the spine. `zw-handoff` and `zw-retro` are leaves: nothing downstream consumes their output in the same task.
@@ -107,4 +109,4 @@ A repo that skips them is unverified, not clean.
 
 ## Context cost
 
-Six nodes are model-invoked, so six carry their description in context permanently: `zw-note`, `zw-verify-maintain`, `zw-how`, `zw-tdd`, `zw-write` and `zw-blast-radius`. The other ten are human-invoked commands and cost nothing until they run.
+Seven nodes are model-invoked, so seven carry their description in context permanently: `zw-note`, `zw-verify-maintain`, `zw-how`, `zw-tdd`, `zw-write`, `zw-blast-radius` and `zw-why`. The other ten are human-invoked commands and cost nothing until they run.
