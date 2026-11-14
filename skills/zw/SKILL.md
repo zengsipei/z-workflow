@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # zw
 
-The entry to this workflow. It does three things: restate the goal, pick the playbook, and keep the spine in view.
+The entry to this workflow. It does four things: hold the working style, restate the goal, pick the playbook, and keep the spine in view.
 
 ## Fires when
 
@@ -38,6 +38,12 @@ The user starts a task that will change code, docs, or a running system, and no 
 - Artifacts land per DESIGN.md section 5: drafts in `.scratch/<feature>/`, settled files in `docs/`, or the repo's tracker when it has one.
 - A decision note is written for non-trivial change only: behaviour, architecture, cross-file contract, process or tooling, test strategy, or a persisted format. Formatting, renames, dependency bumps and routine CRUD do not qualify.
 
+## Style
+
+- Reply in Chinese, answer first and short, with bold section headers and tables for status and evidence. Repo artifacts, commits and docs stay English. No em dash, no filler, no jargon; restate a jargon-heavy reply plainly.
+- Reversible work: do it and present the result. Irreversible writes pause and ask first, which covers a force-push to a shared branch, a deploy, data deletion and a message to a customer. Never ask for a fact the repo or a running system can answer, and resolve a blocker yourself before asking.
+- Nontrivial change: run `how` before design. When the user asks for gaps, compare against the plan document or a reference product, not a feature tour.
+
 ## Done
 
 - Playbook steps are in the todo list, with every skip carrying a reason.
@@ -47,6 +53,12 @@ The user starts a task that will change code, docs, or a running system, and no 
 
 ## Harness
 
-- DSH: delegate with the `subagent` tool; ask with the native question tool; per-role model routing, when configured, comes from the host overlay, never from this file.
+- Any harness: a skill marked `disable-model-invocation: true` is a user command. Read its `SKILL.md` from the installed skill base instead of invoking it as a skill, and record the skip when the file is missing.
+- DSH: delegate with the `subagent` tool; ask with the native question tool; per-role model routing, when configured, comes from the host overlay, never from this file. The pstack skill base is `~/.dsh/profiles/web/node_modules/pstack-dsh/skills/<name>/SKILL.md`.
 - Claude Code: delegate with Task; ask with AskUserQuestion; the same playbooks apply.
 - Codex: no subagents, so run playbooks sequentially and say so; no question tool, so put questions inline in the reply.
+
+## Provenance
+
+- Upstream: pstack `poteto-mode` at commit `3dbd22f` (playbook shape, throughput checkpoint, name-the-data-shape rule) and the matt skill set's invocation split (a user command whose body points at the skill that does the work).
+- Changed: the 23 poteto playbooks collapsed to five shapes; the four throughput checkpoints kept verbatim; reply style, autonomy and the `how`-before-design rule absorbed from `zsp-mode` when that skill was retired on 2026-11-14; every harness tool name moved to Harness.
