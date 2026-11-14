@@ -2,6 +2,8 @@
 
 Use when new behaviour lands in this repo as reviewed code.
 
+Route key: `feature`. Every delegated leg of this run resolves through `../references/harness/index.md`, and this key is the one its line starts from.
+
 1. Run `zw-verify` first, when the repo has no drivable route to its own behaviour. Mandatory: implementation is not delegated until that route exists, and a missing route is a blocker rather than a skip.
 2. Run `zw-map` when one session cannot hold the decisions.
 3. Settle the spec with `zw-spec`.

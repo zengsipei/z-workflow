@@ -16,10 +16,11 @@ The user starts a task that will change code, docs, or a running system, and no 
 
 1. Restate the goal in your own words: what they want, the problem behind it, and the smallest change that would satisfy it. Do not wait for confirmation. If the evidence rules out the change they asked for, show that and stop.
 2. Pick the playbook. `scripts/playbooks.mjs --list` prints the routes in effect for this repo, nearest layer first, and `scripts/playbooks.mjs <name>` prints the one that wins. Copy its steps into the todo list, then add the task's own steps after them. These are procedures, not suggestions: follow them as written. A step you cannot take stays in the list marked `skip: <reason>`, and a step marked Mandatory is not skippable at all.
-3. Settle the drivable route before the spine reaches anything that delegates implementation: a project-local verification skill, or an equivalent script that launches the app and drives one user path. Feature and Refactor run `zw-verify` first when the repo has none, and finish it before implementation starts. A Bug fix whose reproduction on the real surface fails stops there instead of building one. Name the route you found.
-4. Run the spine for the matched playbook, in order, handing off to the named skill at each step. A step whose artifact already exists is verified, not redone.
-5. Before any delegation, write the four throughput checkpoints as todos: blocking prerequisite, independent work stream, shared mutable state, smallest safe decomposition. Then delegate.
-6. At the end, run the two repo checkers and state the result in the reply.
+3. If the repo records no issue tracker, triage labels or domain layout, write them now from `references/repo-setup.md`, in the files that skill names. Every later step reads those files instead of guessing.
+4. Settle the drivable route before the spine reaches anything that delegates implementation: a project-local verification skill, or an equivalent script that launches the app and drives one user path. Feature and Refactor run `zw-verify` first when the repo has none, and finish it before implementation starts. A Bug fix whose reproduction on the real surface fails stops there instead of building one. Name the route you found.
+5. Run the spine for the matched playbook, in order, handing off to the named skill at each step. A step whose artifact already exists is verified, not redone.
+6. Before any delegation, write the four throughput checkpoints as todos: blocking prerequisite, independent work stream, shared mutable state, smallest safe decomposition. Then delegate.
+7. At the end, run the notes gate and the artifact checker against the target repo, and state both results in the reply.
 
 ## Playbooks
 
@@ -35,7 +36,7 @@ Five routes, one file each under `playbooks/`. Anything under `.agents/zw-playbo
 
 The routes bind by their wording, not by a checker: nothing validates a playbook file and nothing refuses to run one. A Mandatory line is the part that is not negotiable, verification first among them, and a route that cannot be followed is a blocker the reply names rather than a step quietly dropped.
 
-Rigor scales with the risk rather than with the effort: a one-way door or a wide blast radius earns gates and artifacts, a reversible low-stakes step earns less. A verdict is VERIFIED, NOT VERIFIED, or INCONCLUSIVE, and INCONCLUSIVE is not a pass.
+Rigor scales with the risk rather than with the effort: a one-way door or a wide blast radius earns gates and artifacts, a reversible low-stakes step earns less. A verdict is VERIFIED, NOT VERIFIED, or INCONCLUSIVE, and INCONCLUSIVE is not a pass. The experiment log's `verdict` column is a different word: kept or reverted, about one attempt, and a kept attempt still owes this rigor verdict before it lands.
 
 ## Standing rules
 
@@ -61,13 +62,13 @@ Rigor scales with the risk rather than with the effort: a one-way door or a wide
 - Playbook steps are in the todo list, with every skip carrying a reason.
 - The verification route was settled before any delegation: found and named, or `zw-verify` run and finished first.
 - Every claimed artifact exists at its path.
-- Both checkers exit zero, run from this skill's own `scripts/` directory against the target repo.
+- The notes gate and the artifact checker both exit zero against the target repo.
 - The reply opens with the restated goal and closes with what was verified, and how.
 
 ## Harness
 
-- Every harness: a `zw-` step names only a `zw-` skill, so the spine runs with no other skill set installed; an installed skill is reference material, never a step. Delegation goes through the adapter for the harness you are running, `references/harness/index.md`, which holds the five roles, the route resolution order, and what degrades.
-- DSH: the adapter is `references/harness/dsh.md`, the role table is resolved by `scripts/role-route.mjs`; questions go through the native question tool.
+- Every harness: a `zw-` step names only a `zw-` skill, so the spine runs with no other skill set installed; an installed skill is reference material, never a step. Delegation goes through the adapter for the harness you are running, `references/harness/index.md`, which holds the two roles, the route resolution order, and what degrades.
+- DSH: the adapter is `references/harness/dsh.md`, the key table is resolved by `scripts/role-route.mjs`; questions go through the native question tool.
 - Claude Code: no adapter is written yet, so delegate with Task and ask with AskUserQuestion; the same playbooks apply.
 - Codex: no subagents, so run playbooks sequentially and say so; no question tool, so put questions inline in the reply.
 

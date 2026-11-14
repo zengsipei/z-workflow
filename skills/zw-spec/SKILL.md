@@ -18,7 +18,7 @@ The user has finished shaping a feature, fix, or refactor in conversation and as
 2. Explore the repo enough to ground the spec: the domain glossary, the ADRs in the area, the current shape of the code. Done when the spec can speak the project's vocabulary.
 3. Fix the test seam before writing. Prefer an existing seam, use the highest one possible, and aim for exactly one. If a new seam is needed, propose it at the highest point. Confirm the seam with the user. Done when the seam is named.
 4. Write the seven sections from the spec template: Problem Statement, Solution, User Stories, Implementation Decisions, Testing Decisions, Out of Scope, Further Notes. No file paths or line numbers in the body; a prototype snippet may be inlined where it encodes a decision better than prose. Done when all seven sections exist.
-5. Publish: the draft to `.scratch/<feature>/spec.md`; once settled, `docs/specs/<slug>.md` or the repo's tracker with the ready-for-agent label. Done when the spec sits at the path its state says.
+5. Read `docs/agents/issue-tracker.md` for the tracker and `docs/agents/triage-labels.md` for the ready-for-agent label before publishing; where a file is missing, `../zw/references/repo-setup.md` says how it gets written. Then publish: the draft to `.scratch/<feature>/spec.md`; once settled, `docs/specs/<slug>.md` or the repo's tracker with the ready-for-agent label. Done when the spec sits at the path its state says.
 
 ## Artifacts
 

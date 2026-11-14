@@ -1,7 +1,8 @@
 # z-workflow
 
-A portable agent workflow: seventeen skills plus zero-dependency checkers, in the `.agents/skills`
-convention so every harness reads the same files. `DESIGN.md` is the contract.
+A portable agent workflow: seventeen skills plus checkers, in the `.agents/skills` convention so
+every harness reads the same files. `DESIGN.md` is the contract. The notes gate is the upstream
+write-notes-like-deepseek skill vendored verbatim, so the two tools read one tree the same way.
 
 ## Install
 
@@ -11,7 +12,8 @@ npx skills add zengsipei/z-workflow
 
 Add `-g` for every project on the machine, or `-a claude-code` to target one harness. The install
 copies each skill directory whole, so `references/` and `scripts/` arrive with the skill that names
-them. Nothing else needs to be installed first: the checkers are plain Node ESM with no dependencies.
+them. The artifact and install checkers are plain Node ESM with no dependencies; the vendored notes
+checkers are TypeScript and run through `npx tsx`, which fetches tsx on first use.
 
 Then start a task by loading the `zw` skill. It restates the goal, picks a playbook, and runs the
 spine.

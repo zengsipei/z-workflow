@@ -2,56 +2,92 @@
 
 Delegation is the one part of this workflow that cannot be written harness-neutral: the tool, its
 fields, and where a route comes from all differ. One adapter file per harness sits beside this one.
-This file is the part they share: the five roles, where a route is resolved from, and what happens
+This file is the part they share: the two roles, where a route is resolved from, and what happens
 when a harness cannot route at all.
 
 Only a harness's own capabilities are used. Nothing installed beside the workflow is required,
 because it can be uninstalled before the next session.
 
-## Roles
+## Keys
 
-Five, named for the job and never for a model. A brief names its role; the adapter turns that into a
-call, a route, and a permission to write.
+One namespace, and a step names a key from it. Three kinds sit in it, and a key is the only handle a
+route hangs on.
 
-| Role | Job | Writes | Wants |
-|---|---|---|---|
-| `impl` | Write the code for one settled ticket | code | the strongest coding route available |
-| `explore` | Read one angle and report; many run in parallel | nothing | the cheapest fast route |
-| `judge` | A design call, the hardest reasoning, an adversarial read | nothing | the strongest reasoning route |
-| `verify` | Check work somebody else finished | nothing | a route other than the writer's |
-| `prose` | Docs, notes, commit and PR text | docs | judgement about language |
+| Kind | Keys | What the key decides |
+|---|---|---|
+| Playbook | `feature`, `bug-fix`, `investigation`, `refactor`, `ship` | the route the run starts on |
+| Sub-workload | `how-explorer`, `how-explainer`, `why-investigator`, `why-synthesizer`, `review-standards`, `review-spec`, `verify-driver`, `research`, `prose` | the route one fan-out leg gets |
+| Agent type | `poteto-agent`, `comment-sicko`, `independent-verifier` | which definition the child runs under, and the fallback route for a leg with no key of its own |
 
-A role is a request, not a guarantee. A harness that cannot route still runs the work: see
+Two of those agent types are files pstack wrote and this repo vendors verbatim:
+`vendor/pstack/agents/poteto-agent.md` is the general delegate, which is one ticket of code, one
+angle read and reported, a design call or a prose pass, and `vendor/pstack/agents/comment-sicko.md`
+finds comments to delete and flags the exact symbol `MUST KILL` instead of rewriting it.
+`independent-verifier` is a key and not a file: it exists so a check runs on a route the writer did
+not use, which is the whole point of a second opinion.
+
+Read the vendored file before the first spawn. It is the definition, not a paraphrase of one, and it
+opens by requiring `zw/SKILL.md` in full, which is this workflow's equivalent of the mode skill the
+upstream text names.
+
+The vendored prose still speaks Cursor: it names `~/.cursor/plugins/` and its own slash commands.
+The parent hands over the absolute path to `zw/SKILL.md` in the brief, and that file stands in for
+the mode skill the upstream text asks for, so the search fallback never runs.
+
+A key is not a model tier. The playbook keys and the sub-workload keys exist so the same workflow can
+send a cheap read to a cheap route and a contested judgement to a strong one, which is what pstack's
+own key list does. A key with no line inherits, so an empty table still runs the work.
+
+A key is a request, not a guarantee. A harness that cannot route still runs the work: see
 Degradation.
 
 ## Resolving a route
 
 Stop at the first step that applies.
 
-1. The role table in `roles.md`, when it names a route for this role, this harness, and a route
-   this session authorizes.
+1. The key's line in `roles.md`, for this harness, when the session authorizes the route. A line
+   holds one route or a panel of them, and `--route-index` picks from a panel, which is how the two
+   reviews of one diff can run on different model families.
 2. A model or effort field the harness accepts per child, when the brief names one and the session
-   authorizes it.
+   authorizes it. A route line never blocks a brief that names its own.
 3. Nothing. The child inherits the parent's route. This always works and never blocks.
+
+## Tiers within a key
+
+A key's line is a starting point, not a verdict on difficulty. pstack gives each spawn one more
+decision, and so does this: before the call, move the effort along the ladder the harness printed for
+that model, keeping the family.
+
+- Raise it one step for the hardest or subtlest work.
+- Lower it one step for a judgement call and two or more for routine work.
+- Never invent an effort or a model id. The ladder and the ids come from the harness's own listing,
+  and a rejected route falls back to the nearest valid slug that error names, or to inheritance when
+  it names none.
+- `role-route.mjs <key> --efforts <lowest-first ladder> --shift <n>` applies the move and reports
+  whether it clamped, so the shift is a resolved value rather than a hope.
+- A faster lane is a different key or a model field, never a mutated id.
+
+A `budget:` line in the same file is the effort a route line leaves out. It is a starting level, not
+a cap: a brief may name a different effort for one leg and the resolution order above honours it.
 
 ## Adapters
 
 | Harness | File | Call | Route source |
 |---|---|---|---|
-| DSH | `dsh.md` | `subagent` | the role table |
-| Claude Code | to write | `Task` | the role table, or the model field |
+| DSH | `dsh.md` | `subagent` | the key table |
+| Claude Code | to write | `Task` | the key table, or the model field |
 | Codex | to write | none, the main thread runs the work | not applicable |
 
 ## Degradation
 
 A missing capability changes how the work runs, never whether it runs.
 
-- No role table, or no route for the role: every child inherits the parent route.
+- No key table, or no line for the key: every child inherits the parent route.
 - A route the session does not authorize: drop to inheritance, say so in one line, and carry on
   rather than failing the delegation.
 - No subagents: the work runs sequentially on the main thread, and the reply says so.
-- A role that needs independence and cannot get it: the reply says the check was not independent
-  rather than presenting it as one.
+- An independent check needs a child that did not write the code. When the harness cannot give a
+  fresh one, the reply says the check was not independent rather than presenting it as one.
 
 ## Pointing here
 

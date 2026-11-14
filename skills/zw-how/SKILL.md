@@ -33,7 +33,7 @@ None. The explanation is the artifact, and it stays in the conversation.
 
 ## Harness
 
-- DSH: complex questions fan out as `explore` children, one worker per angle, then one `prose` synthesizer, all through `../zw/references/harness/index.md`; a simple question is a single worker or no worker at all.
+- DSH: complex questions fan out as `how-explorer` children, one per angle, then one `how-explainer` for the synthesis, all through `../zw/references/harness/index.md`; a simple question is a single worker or no worker at all.
 - Claude Code: the same split with Task; a simple question is answered inline.
 - Codex: no subagents, so the angles are read sequentially in one pass and the reply says so.
 

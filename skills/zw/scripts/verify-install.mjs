@@ -27,10 +27,15 @@
  *   resolves inside the skills root, so the shared harness adapter is checked
  *   rather than skipped.
  * - The body names no file that only exists at the repository root.
+ * - A vendor/ tree carries a VENDOR.md whose table lists every file with a
+ *   sha256 and a state. A vendored file must hash to its listed value, a file
+ *   marked omitted must be absent, and an unlisted file is reported. A copy
+ *   nobody can prove identical is a fork, so the tree is compared, not trusted.
  *
  * The self-test builds its fixtures in a temporary directory, because shipping
  * a malformed SKILL.md inside this skill is exactly the defect it checks for.
  */
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -41,8 +46,10 @@ const ROOT_ONLY = [
   { re: /link-skills[.]sh/, label: "link-skills.sh" },
   { re: /samples\//, label: "samples/" },
 ];
-const RELATIVE = /(?:^|[\s`(\[])((?:references|scripts)\/[A-Za-z0-9_.\/-]+)/g;
-const SIBLING = /(?:^|[\s`(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts)\/[A-Za-z0-9_.\/-]+)/g;
+const RELATIVE = /(?:^|[\s`(\[])((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+)/g;
+const SIBLING = /(?:^|[\s`(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+)/g;
+const VENDOR_ROOT = "vendor";
+const VENDOR_MANIFEST = "VENDOR.md";
 
 function parseFrontmatter(raw, push) {
   const lines = raw.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
@@ -107,6 +114,74 @@ function findNestedSkillFiles(dir, root, out) {
   return out;
 }
 
+function sha256(buffer) {
+  return createHash("sha256").update(buffer).digest("hex");
+}
+
+function listFiles(dir, prefix = "") {
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix ? prefix + "/" + entry.name : entry.name;
+    if (entry.isDirectory()) out.push(...listFiles(join(dir, entry.name), rel));
+    else out.push(rel);
+  }
+  return out;
+}
+
+function parseVendorManifest(raw, push) {
+  const entries = [];
+  for (const line of raw.replace(/\r\n?/g, "\n").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|")) continue;
+    const cols = trimmed.split("|").map((c) => c.trim());
+    const rel = cols[1];
+    const digest = cols[2];
+    const state = cols[3] || "";
+    if (!rel || rel === "file" || /^-+$/.test(rel)) continue;
+    if (!/^[0-9a-f]{64}$/.test(digest || "")) {
+      push(VENDOR_MANIFEST + " row for " + rel + " needs a 64 character hex sha256");
+      continue;
+    }
+    if (!/^(?:vendored|omitted)/.test(state)) {
+      push(VENDOR_MANIFEST + " row for " + rel + " must say vendored or omitted");
+      continue;
+    }
+    entries.push({ rel, digest, omitted: state.startsWith("omitted") });
+  }
+  return entries;
+}
+
+function checkVendor(skillDir, push) {
+  const vendorDir = join(skillDir, VENDOR_ROOT);
+  if (!existsSync(vendorDir)) return;
+  const manifestPath = join(vendorDir, VENDOR_MANIFEST);
+  if (!existsSync(manifestPath)) {
+    push("ships a " + VENDOR_ROOT + "/ tree but no " + VENDOR_ROOT + "/" + VENDOR_MANIFEST);
+    return;
+  }
+  const entries = parseVendorManifest(readFileSync(manifestPath, "utf8"), push);
+  const listed = new Set();
+  for (const entry of entries) {
+    listed.add(entry.rel);
+    const full = join(vendorDir, entry.rel);
+    if (entry.omitted) {
+      if (existsSync(full)) push(VENDOR_MANIFEST + " marks " + entry.rel + " omitted but the file is present");
+      continue;
+    }
+    if (!existsSync(full)) {
+      push(VENDOR_MANIFEST + " lists " + entry.rel + " but vendor/ does not ship it");
+      continue;
+    }
+    if (sha256(readFileSync(full)) !== entry.digest) {
+      push("vendor/" + entry.rel + " does not match its " + VENDOR_MANIFEST + " sha256, so the copy was edited");
+    }
+  }
+  for (const rel of listFiles(vendorDir)) {
+    if (rel === VENDOR_MANIFEST) continue;
+    if (!listed.has(rel)) push("vendor/" + rel + " is not listed in " + VENDOR_MANIFEST);
+  }
+}
+
 function runOnSkills(skillsRoot) {
   skillsRoot = resolve(skillsRoot);
   const errors = [];
@@ -129,6 +204,7 @@ function runOnSkills(skillsRoot) {
     if (parsed.fields.name !== entry.name) push("frontmatter name " + JSON.stringify(parsed.fields.name || "") + " does not match the directory name");
     checkDescription(parsed.fields.description, push);
     checkBody(parsed.body, skillDir, skillsRoot, push);
+    checkVendor(skillDir, push);
     for (const nested of findNestedSkillFiles(skillDir, skillDir, [])) {
       push("ships a nested SKILL.md at " + nested.slice(skillDir.length + 1) + ", which an installer rewrites as a packaged skill");
     }
@@ -150,11 +226,18 @@ function selfTest() {
   const tmp = mkdtempSync(join(tmpdir(), "verify-install-"));
   const failures = [];
 
+  const vendorSource = "export const tool = 1;\n";
+  const vendorManifest = "# VENDOR sample\n\n| file | sha256 | state |\n| --- | --- | --- |\n| lib/tool.ts | " +
+    sha256(Buffer.from(vendorSource, "utf8")) +
+    " | vendored |\n| SKILL.md | " + "0".repeat(64) + " | omitted: an installer rewrites a nested SKILL.md |\n";
+
   const goodRoot = join(tmp, "good");
   writeTree(goodRoot, {
-    "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A well formed skill.\ndisable-model-invocation: true\n" + FENCE + "\n\n# alpha\n\nRead references/detail.md and run scripts/check.mjs.\n",
+    "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A well formed skill.\ndisable-model-invocation: true\n" + FENCE + "\n\n# alpha\n\nRead references/detail.md, run scripts/check.mjs, and load vendor/lib/tool.ts.\n",
     "alpha/references/detail.md": "detail\n",
     "alpha/scripts/check.mjs": "console.log(1);\n",
+    "alpha/vendor/lib/tool.ts": vendorSource,
+    "alpha/vendor/VENDOR.md": vendorManifest,
     "beta/SKILL.md": FENCE + "\nname: beta\ndescription: \"Quoted: because the value holds a colon.\"\n" + FENCE + "\n\n# beta\n\nNo helpers of its own, but it points at ../alpha/references/detail.md.\n",
   });
   const good = runOnSkills(goodRoot);
@@ -172,6 +255,12 @@ function selfTest() {
     "zeta-nested/scripts/fixtures/bad/inner/SKILL.md": FENCE + "\nname: inner\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n",
     "eta-nofile/README.md": "no SKILL.md here\n",
     "theta-dangling/SKILL.md": FENCE + "\nname: theta-dangling\ndescription: Points at a skill that is not installed.\n" + FENCE + "\n\n# theta-dangling\n\nRead ../ghost/references/absent.md.\n",
+    "theta-vendor/SKILL.md": FENCE + "\nname: theta-vendor\ndescription: Ships an edited vendor copy.\n" + FENCE + "\n\n# theta-vendor\n\nLoad vendor/lib/tool.ts.\n",
+    "theta-vendor/vendor/lib/tool.ts": "export const tool = 2;\n",
+    "theta-vendor/vendor/lib/extra.ts": "export const extra = 1;\n",
+    "theta-vendor/vendor/VENDOR.md": "# VENDOR sample\n\n| file | sha256 | state |\n| --- | --- | --- |\n| lib/tool.ts | " + "a".repeat(64) + " | vendored |\n",
+    "iota-vendor/SKILL.md": FENCE + "\nname: iota-vendor\ndescription: Ships a vendor tree with no manifest.\n" + FENCE + "\n\n# iota-vendor\n",
+    "iota-vendor/vendor/lib/x.ts": "export const x = 1;\n",
   });
   const bad = runOnSkills(badRoot);
   if (bad.errors.length === 0) failures.push("bad fixture: expected errors, got none");
@@ -184,6 +273,9 @@ function selfTest() {
     "nested SKILL.md",
     "no SKILL.md",
     "which the installed skill set does not ship",
+    "does not match its VENDOR.md sha256",
+    "is not listed in VENDOR.md",
+    "but no vendor/VENDOR.md",
   ];
   for (const needle of needles) {
     if (!bad.errors.some((e) => e.includes(needle))) failures.push("bad fixture: expected an error containing " + JSON.stringify(needle));

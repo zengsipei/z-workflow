@@ -2,6 +2,8 @@
 
 Use when the behaviour stays the same and the shape changes.
 
+Route key: `refactor`. Every delegated leg of this run resolves through `../references/harness/index.md`, and this key is the one its line starts from.
+
 1. Run `zw-verify` first, when the repo has no drivable route. Mandatory: the behaviour that route drives is what must not change, and implementation is not delegated until it exists.
 2. Run `zw-map` for the target shape.
 3. Settle `zw-spec` with the seam decided.

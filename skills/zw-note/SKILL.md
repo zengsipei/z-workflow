@@ -5,7 +5,7 @@ description: Use when a change is non-trivial (behavior, architecture, cross-fil
 
 # zw-note
 
-Records why a decision was made, what was rejected, and when to revisit it, in one note per decision under the repo's notes tree.
+Records one decision per note in the repo notes tree, driven by the vendored write-notes-like-deepseek skill.
 
 ## Fires when
 
@@ -13,34 +13,35 @@ A change is non-trivial: it changes behavior, architecture, a cross-file contrac
 
 ## Steps
 
-1. Apply the write gate. Skip the note when the change is only mechanical. When in doubt, ask: can a later reader derive why this is so from code and tests alone? If not, write.
-2. Search the active notes (proposed, implemented, rejected) by module name or keyword before writing anything. Classify every hit now: unrelated, partial overlap (cross-link), fully absorbed (delete or archive), or dead proposal (reject or delete).
-3. Prefer updating the note that already owns this decision. Fix facts such as paths, symbols, and defaults in place, in the present tense. A flipped decision or reason opens a new note and cross-links; never rewrite an old Decision into its opposite.
-4. Write the note under the repo's notes tree at the lifecycle and class path that matches it, using the fixed header block and the sections for that lifecycle. Record only alternatives that were actually weighed, each with its strongest case first and then why it lost. Write Consequences with cost and benefit, then close the note with a standalone Revisit signal section.
+1. Apply the write gate from vendor/write-notes-like-deepseek/references/when-to-write.md. Skip the note when the change is only mechanical.
+2. Search the active notes (proposed, implemented, rejected) by module name or keyword before writing. Classify every hit as unrelated, partial overlap (cross-link), fully absorbed (delete or archive), or dead proposal (reject or delete).
+3. Prefer updating the note that already owns this decision. Fix facts in place in the present tense. A flipped decision or reason opens a new note and cross-links.
+4. Write the note under its lifecycle and class path using the header block and section order in vendor/write-notes-like-deepseek/references/note-format.md. Record only alternatives actually weighed, each with its strongest case first and then why it lost.
 5. When a proposed note lands in the same change, move it to implemented, keep the date, rewrite the proposal as a present-tense Decision, and fold acceptance criteria and risks into Consequences.
-6. Run the note checker and fix every failure before finishing.
+6. Run vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts and vendor/write-notes-like-deepseek/scripts/verify-agent-note-format.ts from the repo root. Fix every failure before finishing.
+7. When a note moves to archived, use vendor/write-notes-like-deepseek/scripts/archive-agent-note.ts for the move and seal the archive with vendor/write-notes-like-deepseek/scripts/verify-archived-agent-notes.ts.
 
 ## Artifacts
 
-One note per decision at <repo>/.agents/notes/{proposed,implemented,rejected,archived}/<class>/yyyy-mm-dd-topic.md.
-
-Lifecycle: proposed (an idea, not yet built), implemented (built and current), rejected (a vetoed proposal, kept only while it prevents a repeat), archived (frozen history).
-
-Class is a closed set of six: feature, bug-fix, simplification, architecture, process, testing. Adding a class means changing the checker too; see references/classification.md.
+One note per decision at <repo>/.agents/notes/{proposed,implemented,rejected,archived}/<class>/yyyy-mm-dd-topic.md, sealed by its own archived/manifest.json.
 
 ## Done
 
-- The note sits at the path matching its lifecycle and class, with the fixed header block and the date of first proposal.
-- Alternatives are real options, strongest case before rejection; Consequences names cost and benefit, and a standalone Revisit signal section closes the note.
+- The note sits at the path matching its lifecycle and class, with the header block and section order from the vendored format reference.
+- Alternatives are real options, strongest case before rejection; Consequences names cost and benefit.
 - Existing notes were searched first, and an owned decision was updated in place, not duplicated.
-- The note checker exits zero; it ships in `zw`'s `scripts/` directory.
+- The vendored tree and format checkers exit zero from the repo root.
 
 ## Harness
 
-- DSH: ask with the native question tool only for real decisions, never for facts the note tree can answer; run the checker from the repo root.
-- Claude Code: ask with AskUserQuestion; the same gates apply.
-- Codex: no question tool, so put questions inline in the reply; run the checker the same way.
+The vendored checkers run with `npx tsx` from the repo root. The commands are identical across harnesses; only the command-line entry differs.
+
+- DSH: run them through the Bash tool.
+- Claude Code: run them through the Bash tool.
+- Codex: run them through the shell tool.
+
+Archiving commands: seal with `npx tsx vendor/write-notes-like-deepseek/scripts/verify-archived-agent-notes.ts --write`, and move a note with `npx tsx vendor/write-notes-like-deepseek/scripts/archive-agent-note.ts <note-path>`.
 
 ## Provenance
 
-Copied from write-notes-like-deepseek (commit 72573a5) and refactored for z-workflow: kept the write gate, path-as-state, closed class set, update-over-create, and archive sealing; switched the body language to English, pointed the gate at the checker that ships with the entry skill, and banned file paths and line numbers from note bodies.
+Vendored verbatim from write-notes-like-deepseek (https://github.com/czm15053/write-notes-like-deepseek) at commit 72573a5b179de7798bbb7c4aeacdc0df6bf62439. The rules, checkers, templates and board are the upstream skill itself; only this body is written here.

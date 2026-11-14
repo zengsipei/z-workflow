@@ -20,7 +20,7 @@ The user has an approved spec and asks for tickets, or the zw playbook reaches t
 4. Handle wide refactors as expand-contract, not vertical slices: one ticket adds the new form beside the old, migration tickets move call sites in batches sized by blast radius, and a final ticket deletes the old form, blocked by every migration. Done when no wide refactor is forced into a slice.
 5. Assign blockers and numbers. Every ticket lists the tickets that gate it; a ticket with no blockers can start immediately. Number in dependency order so blockers always have lower numbers, one file per ticket. Done when the graph reads from the numbers alone.
 6. Quiz the user before publishing: show each ticket's title, its blockers, and what it delivers end to end. Ask whether the granularity is right, whether every blocking edge is genuine, and whether any tickets should merge or split. Done when the user approves the breakdown.
-7. Publish in dependency order. Local drafts go to `.scratch/<feature>/tickets/NN-<slug>.md`; a real tracker gets one issue per ticket with native blocking where it has it, ready-for-agent applied, in the same order. Done when every approved ticket exists.
+7. Read `docs/agents/issue-tracker.md` for the tracker and `docs/agents/triage-labels.md` for the ready-for-agent label before publishing; where a file is missing, `../zw/references/repo-setup.md` says how it gets written. Then publish in dependency order. Local drafts go to `.scratch/<feature>/tickets/NN-<slug>.md`; a real tracker gets one issue per ticket with native blocking where it has it, ready-for-agent applied, in the same order. Done when every approved ticket exists.
 
 ## Artifacts
 
@@ -37,7 +37,7 @@ The user has an approved spec and asks for tickets, or the zw playbook reaches t
 
 ## Harness
 
-- DSH: tracker native blocking and child issues; each ticket can be dispatched as an `impl` child through `../zw/references/harness/index.md`.
+- DSH: tracker native blocking and child issues; each ticket can be dispatched as a `poteto-agent` child through `../zw/references/harness/index.md`.
 - Claude Code: Task per ticket, native blocking on the tracker.
 - Codex: no subagents, so tickets run sequentially in number order; no question tool, so the quiz goes inline in the reply.
 

@@ -21,7 +21,7 @@ Use when no map exists yet.
 1. Check the size first. If the whole effort, decisions included, fits one session, stop and hand off to zw-spec. Done when the need for a map is established, not assumed.
 2. Name the destination: what reaching the end of the map looks like, in one or two lines. It fixes the scope, so it is settled before anything else. Done when the scope is stated.
 3. Sketch the decision tree breadth-first: every open decision, its dependencies, and the first steps takeable now. Fan out across the whole space, never deep on one thread. Done when the open decisions are on the table.
-4. Write the map draft from the map template: Destination, Notes, Decisions so far, Not yet specified, Out of scope. Done when all five sections exist.
+4. Read `docs/agents/issue-tracker.md` to fix where the settled map and its tickets land; where the file is missing, `../zw/references/repo-setup.md` says how it gets written. Then write the map draft from the map template: Destination, Notes, Decisions so far, Not yet specified, Out of scope. Done when all five sections exist.
 5. Create one ticket per decision you can state precisely now, from the ticket template. A question you cannot phrase sharply stays in Not yet specified. Done when each decision is exactly one ticket and the fog stays unsliced.
 6. Wire blocking edges in a second pass, then fix the numbering: a decision is blocked by every decision it needs resolved first, and blockers get lower numbers. Done when the frontier is visible as the open, unblocked, unclaimed tickets.
 7. Stop. Charting is one session's work; it resolves nothing.
@@ -53,7 +53,7 @@ Use when the user names an existing map or ticket.
 
 ## Harness
 
-- DSH: when a task board is installed, its parent and child links plus blocking edges render the frontier and assignment is the claim; with no board, the map file and ticket numbers carry it; research tickets fan out in parallel as `explore` children through `../zw/references/harness/index.md`.
+- DSH: when a task board is installed, its parent and child links plus blocking edges render the frontier and assignment is the claim; with no board, the map file and ticket numbers carry it; research tickets fan out in parallel on the `research` key through `../zw/references/harness/index.md`.
 - Claude Code: the same tracker or local files; research tickets fan out with Task.
 - Codex: no parallel workers, so research tickets resolve sequentially; no question tool, so questions go inline in the reply.
 

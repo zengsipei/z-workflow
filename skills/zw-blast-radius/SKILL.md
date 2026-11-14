@@ -41,6 +41,6 @@ None committed, unless the proof script is cheap to keep: then it sits beside th
 
 ## Harness
 
-- DSH: the multi-reader step goes through `../zw/references/harness/index.md` with the `explore` and `judge` roles; the proof script runs in bash; the commit range and pull request come from the repo's own git and forge commands.
+- DSH: the multi-reader step goes through `../zw/references/harness/index.md` with one child per reader on the `research` key and one `poteto-agent` child for the judgement; the proof script runs in bash; the commit range and pull request come from the repo's own git and forge commands.
 - Claude Code: readers are delegated with Task; everything else is the same.
 - Codex: readers run in sequence and the reply says the read was not independent.

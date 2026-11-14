@@ -25,7 +25,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 4. When fanning out, hand each worker a brief: goal, scope as behaviour and interfaces, the data shape decided before code, success criteria, and pointers to the spec, tickets and notes. Spec, ticket, and note bodies never carry file paths or line numbers. Each worker starts fresh and reports through the frontier, not through chat. Every brief carries its stop conditions: the outcomes that end the work without a fix. Not a defect, cannot reproduce, and risk too large are terminal results, reported as such, never overridden by an improvised fix.
 5. Implement in frontier order. Use `zw-tdd` at the pre-agreed seams. Run the typecheck often, one test file often, and the full suite once at the end.
 6. Review the finished work against the spec, then run `zw-review` on the whole diff. Fix raised issues in one fresh pass.
-7. Run both repo checkers and confirm both exit zero. A repo that skips them is unverified, not clean.
+7. Run the notes gate and the artifact checker, and confirm both exit zero. A repo that skips them is unverified, not clean.
 
 ## Artifacts
 
@@ -39,12 +39,12 @@ The user says implement, build, or land this, and a spec or ticket graph already
 - The four checkpoints are in the todo list, each with a reason or `n/a`, and were rewritten whenever a blocking gate passed, the shared writer changed, or the decomposition changed.
 - Every brief carried its stop conditions, and a worker that stopped reported a terminal result instead of a workaround.
 - Review findings are fixed and re-verified.
-- Both repo checkers exit zero.
+- The notes gate and the artifact checker both exit zero.
 - The reply names what was built, what was delegated and why, and what was verified.
 
 ## Harness
 
-- DSH: fan-out goes through the harness adapter at `../zw/references/harness/index.md`, which owns the call, the role mapping and the fallbacks. A ticket is an `impl` child, an audit or an investigation is `explore`, competing experiments and a contested design call are `judge`. Missing decisions go through the native question tool; the checkers ship in `zw`'s `scripts/` directory and run against the target repo.
+- DSH: fan-out goes through the harness adapter at `../zw/references/harness/index.md`, which owns the call, the key-to-route mapping and the fallbacks. A ticket is a `poteto-agent` child, an audit or an investigation is one too, and competing experiments or a contested design call get separate `poteto-agent` children. Missing decisions go through the native question tool; the checkers ship in `zw`'s `scripts/` directory and run against the target repo.
 - Claude Code: fan-out uses Task; questions use AskUserQuestion; the same steps apply.
 - Codex: no subagents, so run the graph sequentially and say so; no question tool, so ask inline.
 

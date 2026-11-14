@@ -47,7 +47,7 @@ Edit only the verification skill's own directory: its SKILL.md, features, and an
 
 ## Harness
 
-- DSH: source wave workers are `explore` children through `../zw/references/harness/index.md`; questions go through the native question tool.
+- DSH: source wave workers are `verify-driver` children through `../zw/references/harness/index.md`; questions go through the native question tool.
 - Claude Code: workers through Task; questions through AskUserQuestion.
 - Codex: no subagents, so the source wave runs sequentially and says so; no question tool, so questions go inline.
 

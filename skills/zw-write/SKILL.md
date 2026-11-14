@@ -53,7 +53,7 @@ None of its own. The text is the artifact, in place or in the reply.
 
 ## Harness
 
-- DSH: the rules apply in place; the question tool gates an encoding proposal that changes code, and nothing else here needs a tool.
+- DSH: the rules apply in place; the question tool gates an encoding proposal that changes code. Drafting a long document runs on the `prose` key, and the comment pass can run as a `comment-sicko` child, both through `../zw/references/harness/index.md`; the comment child reports deletions and `MUST KILL` flags and never writes, so the edits land here.
 - Claude Code: the same rules, with AskUserQuestion in that gate.
 - Codex: no question tool, so an encoding proposal is stated inline and applied only when the user answers.
 

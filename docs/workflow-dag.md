@@ -98,7 +98,7 @@ The target-repo checkers are leaves on the spine, not hooks: they run in the clo
 
 | Checker | Checks |
 |---|---|
-| `verify-notes.mjs` | Path-as-state, the closed lifecycle and class sets, the fixed header block, Alternatives and the revisit signal |
+| `zw-note/vendor/write-notes-like-deepseek/scripts/*.ts` | The whole notes contract, run through `npx tsx`: tree and lifecycle shape, note format, relative links, and the sha256 seals of archived notes. Vendored verbatim, so the upstream skill judges a tree the same way |
 | `verify-artifacts.mjs` | Ticket numbering and dependency order, spec to ticket links, the no-file-paths rule |
 | `playbooks.mjs` | Which routes are in effect for a repo, by layer. It validates nothing: a playbook is a recommendation |
 | `verify-install.mjs` | This repo only: frontmatter in the portable subset, name matching the directory, description a YAML parser reads intact, every named helper shipped inside its own skill |

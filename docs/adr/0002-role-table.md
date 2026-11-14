@@ -57,3 +57,18 @@ skills replaces their directories while the table is the user's own choice.
   install would write into the source checkout.
 - One table per harness in that harness's own config directory. Rejected: the same five lines in two
   formats, and Codex has no such directory.
+
+## Superseded in part
+
+The mechanism here stands: one table at `~/.agents/zw-roles.md`, one line per key, resolved by
+`role-route.mjs`, with inheritance as the fallback.
+
+What changed on 2026-11-14 is what a line is keyed by. Five invented roles were first replaced by
+the two agents pstack defines, vendored verbatim at `skills/zw/vendor/pstack/agents/`. That was a
+misread: pstack keys its config by workload, not by agent type, and its own `pstack-dsh.json` names
+`feature`, `how-explainer` and `independent-verifier` in the same namespace as `poteto-agent`. The
+final shape keeps one namespace and fills it from both sides: the five playbook keys, the
+sub-workload keys a fan-out leg names (`how-explorer`, `why-synthesizer`, `review-standards`,
+`independent-verifier` and the rest), and the two vendored agent types. A line may hold a panel, and
+a `budget:` line supplies the effort a route leaves out, which restores the cheap-explorer and
+strong-judge split the last alternative above was worried about losing.
