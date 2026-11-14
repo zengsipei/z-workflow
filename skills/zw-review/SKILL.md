@@ -1,6 +1,6 @@
 ---
 name: zw-review
-description: Two-axis review of the changes since a fixed point: Standards and Spec.
+description: "Two-axis review of the changes since a fixed point: Standards and Spec."
 disable-model-invocation: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: zw-retro
-description: Turn a session's mistakes into environment fixes: checks for mechanical errors, standards for judgement.
+description: "Turn a session's mistakes into environment fixes: checks for mechanical errors, standards for judgement."
 disable-model-invocation: true
 ---
 

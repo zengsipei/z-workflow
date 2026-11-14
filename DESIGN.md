@@ -32,8 +32,8 @@ z-workflow/
   skills/<name>/references/  details loaded on demand
   skills/<name>/scripts/     skill-local helpers, executable
   scripts/link-skills.sh     symlink skills into the harness roots
-  scripts/verify-notes.mjs   note format checker (zero deps)
-  scripts/verify-artifacts.mjs  spec/ticket contract checker (zero deps)
+  skills/zw/scripts/verify-notes.mjs      note format checker (zero deps)
+  skills/zw/scripts/verify-artifacts.mjs  spec/ticket contract checker (zero deps)
   docs/adr/                  architecture decision records
   samples/                   proof runs (v1 acceptance)
 ```
@@ -73,7 +73,7 @@ Drafts are gitignored; only settled artifacts are committed. Tickets and specs d
 
 ## 6. Gates
 
-`scripts/verify-notes.mjs` checks path-as-state, the closed lifecycle and class sets, the fixed header block, and that Alternatives and the revisit signal exist. `scripts/verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule.
+`verify-notes.mjs` checks path-as-state, the closed lifecycle and class sets, the fixed header block, and that Alternatives and the revisit signal exist. `verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule. Both ship inside `skills/zw/scripts/` so a skills-CLI install carries them.
 
 No host hooks: the gate runs where the workflow already runs, namely the closing step of `zw` and the last step of `zw-implement`. Both exit non-zero and print what failed.
 

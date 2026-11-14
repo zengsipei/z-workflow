@@ -33,7 +33,7 @@ Class is a closed set of six: feature, bug-fix, simplification, architecture, pr
 - The note sits at the path matching its lifecycle and class, with the fixed header block and the date of first proposal.
 - Alternatives are real options, strongest case before rejection; Consequences names cost and benefit, and a standalone Revisit signal section closes the note.
 - Existing notes were searched first, and an owned decision was updated in place, not duplicated.
-- node scripts/verify-notes.mjs <repo> exits zero.
+- The note checker exits zero; it ships in `zw`'s `scripts/` directory.
 
 ## Harness
 
@@ -43,4 +43,4 @@ Class is a closed set of six: feature, bug-fix, simplification, architecture, pr
 
 ## Provenance
 
-Copied from write-notes-like-deepseek (commit 72573a5) and refactored for z-workflow: kept the write gate, path-as-state, closed class set, update-over-create, and archive sealing; switched the body language to English, pointed the gate at this repo's scripts/verify-notes.mjs, and banned file paths and line numbers from note bodies.
+Copied from write-notes-like-deepseek (commit 72573a5) and refactored for z-workflow: kept the write gate, path-as-state, closed class set, update-over-create, and archive sealing; switched the body language to English, pointed the gate at the checker that ships with the entry skill, and banned file paths and line numbers from note bodies.

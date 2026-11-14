@@ -30,4 +30,4 @@ Boundaries:
 
 ## Closed set rule
 
-The six classes are closed. Adding a class means changing the closed set in scripts/verify-notes.mjs and this reference in the same change, or the checker fails every note in the new class.
+The six classes are closed. Adding a class means changing the closed set in the checker that ships with the entry skill and this reference in the same change, or the checker fails every note in the new class.

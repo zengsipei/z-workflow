@@ -27,7 +27,7 @@ The user asks for a way to verify a repo, says "make a control skill for this re
 - Generated skill at `<target-repo>/.agents/skills/verify-<app>/`, or `<target-repo>/.dsh/skills/verify-<app>/` when the DSH-only criterion applies.
 - Feature map at `features/README.md` plus one file per feature inside the skill directory.
 - Proof artifacts at the location the generated skill names; they must survive cleanup.
-- Any spec or tickets this consumes stay in their DESIGN.md section 5 paths.
+- Any spec or tickets this consumes stay at the paths the other skills use.
 
 ## Done
 

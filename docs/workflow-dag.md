@@ -81,8 +81,10 @@ Both checkers are leaves on the spine, not hooks: they run in the closing step o
 
 | Checker | Checks |
 |---|---|
-| `scripts/verify-notes.mjs` | Path-as-state, the closed lifecycle and class sets, the fixed header block, Alternatives and the revisit signal |
-| `scripts/verify-artifacts.mjs` | Ticket numbering and dependency order, spec to ticket links, the no-file-paths rule |
+| `verify-notes.mjs` | Path-as-state, the closed lifecycle and class sets, the fixed header block, Alternatives and the revisit signal |
+| `verify-artifacts.mjs` | Ticket numbering and dependency order, spec to ticket links, the no-file-paths rule |
+
+Both ship inside `skills/zw/scripts/`, so `npx skills add` carries them with the entry skill.
 
 A repo that skips them is unverified, not clean.
 

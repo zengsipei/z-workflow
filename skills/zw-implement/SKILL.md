@@ -1,6 +1,6 @@
 ---
 name: zw-implement
-description: Delegate implementation from settled tickets: throughput checkpoint, briefs, review, checkers.
+description: "Delegate implementation from settled tickets: throughput checkpoint, briefs, review, checkers."
 disable-model-invocation: true
 ---
 
@@ -31,7 +31,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 
 - Consumed: spec draft at `.scratch/<feature>/spec.md` or settled at `docs/specs/<slug>.md`; tickets draft at `.scratch/<feature>/tickets/NN-<slug>.md` or settled as tracker issues.
 - Produced: code merged on the integration branch per repo convention.
-- Decision notes for non-trivial decisions land under the repo's `.agents/notes/` tree per DESIGN.md section 5.
+- Decision notes for non-trivial decisions land under the repo's `.agents/notes/` tree.
 
 ## Done
 
@@ -43,7 +43,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 
 ## Harness
 
-- DSH: fan-out uses the subagent tool, with per-role routing from host configuration when configured, never from this file; missing decisions go through the native question tool; checkers are `node scripts/verify-artifacts.mjs <repo>` and `node scripts/verify-notes.mjs <repo>`.
+- DSH: fan-out uses the subagent tool, with per-role routing from host configuration when configured, never from this file; missing decisions go through the native question tool; the checkers ship in `zw`'s `scripts/` directory and run against the target repo.
 - Claude Code: fan-out uses Task; questions use AskUserQuestion; the same steps apply.
 - Codex: no subagents, so run the graph sequentially and say so; no question tool, so ask inline.
 

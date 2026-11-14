@@ -35,7 +35,7 @@ The user starts a task that will change code, docs, or a running system, and no 
 - Name the data shape before writing code that models one.
 - The main thread owns plan, review and verification. Write code directly by default; fan out only when at least three subtasks touch disjoint files and the interfaces are already settled.
 - Facts are yours to check; decisions are the user's. A question that a command could answer never goes to the user.
-- Artifacts land per DESIGN.md section 5: drafts in `.scratch/<feature>/`, settled files in `docs/`, or the repo's tracker when it has one.
+- Artifacts land by state: drafts in `.scratch/<feature>/`, settled files in `docs/`, or the repo's tracker when it has one. Drafts are gitignored.
 - A decision note is written for non-trivial change only: behaviour, architecture, cross-file contract, process or tooling, test strategy, or a persisted format. Formatting, renames, dependency bumps and routine CRUD do not qualify.
 
 ## Style
@@ -48,7 +48,7 @@ The user starts a task that will change code, docs, or a running system, and no 
 
 - Playbook steps are in the todo list, with every skip carrying a reason.
 - Every claimed artifact exists at its path.
-- `node scripts/verify-artifacts.mjs <repo>` and `node scripts/verify-notes.mjs <repo>` exit zero.
+- Both checkers exit zero, run from this skill's own `scripts/` directory against the target repo.
 - The reply opens with the restated goal and closes with what was verified, and how.
 
 ## Harness

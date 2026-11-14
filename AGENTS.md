@@ -12,9 +12,9 @@ Rules for any agent working in this repo. Read this before writing a skill.
 skills/<name>/SKILL.md        the skill itself (one directory per skill)
 skills/<name>/references/*.md detail loaded on demand, not up front
 skills/<name>/scripts/*       skill-local helpers, executable, no dependencies
+skills/zw/scripts/verify-notes.mjs      note checker, ships with the entry skill
+skills/zw/scripts/verify-artifacts.mjs  spec/ticket checker, ships with the entry skill
 scripts/link-skills.sh        install: symlink every skill into the harness roots
-scripts/verify-notes.mjs      note checker
-scripts/verify-artifacts.mjs  spec/ticket checker
 docs/adr/                     architecture decisions
 samples/                      proof runs
 ```
@@ -43,7 +43,11 @@ Zero dependencies: node ESM or POSIX shell, nothing to install. Exit non-zero on
 
 ## Gates
 
-`node scripts/verify-notes.mjs <repo>` and `node scripts/verify-artifacts.mjs <repo>` run in the closing step of `zw` and the last step of `zw-implement`. A repo that skips them is unverified, not clean.
+The two checkers live under `skills/zw/scripts/` so `npx skills add` ships them with the entry skill. They run in the closing step of `zw` and the last step of `zw-implement`. A repo that skips them is unverified, not clean.
+
+## Install contract
+
+`npx skills add zengsipei/z-workflow` must produce a complete, runnable workflow on a machine with nothing else installed. That means every skill is discovered (valid YAML frontmatter, one directory per skill), every `references/` and `scripts/` file the body names ships with it, and no skill body depends on a path outside its own directory except the target repo it works on. A change that adds a file outside `skills/` which a skill body names breaks this contract.
 
 ## Frozen list
 

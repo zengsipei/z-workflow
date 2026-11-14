@@ -3,8 +3,8 @@
  * verify-notes.mjs - zero-dependency decision note checker.
  *
  * Usage:
- *   node scripts/verify-notes.mjs <repoRoot>
- *   node scripts/verify-notes.mjs --test
+ *   node <zw-skill>/scripts/verify-notes.mjs <repoRoot>
+ *   node <zw-skill>/scripts/verify-notes.mjs --test
  *
  * Exit 0 on pass. On failure every problem prints as "<file>: <problem>"
  * and the exit code is non-zero.
@@ -295,8 +295,8 @@ function main() {
     process.exit(selfTest() ? 0 : 1);
   }
   if (args.length !== 1 || args[0].startsWith("-")) {
-    console.error("Usage: node scripts/verify-notes.mjs <repoRoot>");
-    console.error("       node scripts/verify-notes.mjs --test");
+    console.error("Usage: node <zw-skill>/scripts/verify-notes.mjs <repoRoot>");
+    console.error("       node <zw-skill>/scripts/verify-notes.mjs --test");
     process.exit(2);
   }
   const { errors, count } = runOnRepo(args[0]);
