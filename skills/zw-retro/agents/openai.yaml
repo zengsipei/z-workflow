@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw Retro"
+  short_description: "Turn session mistakes into environment fixes"
+policy:
+  allow_implicit_invocation: false

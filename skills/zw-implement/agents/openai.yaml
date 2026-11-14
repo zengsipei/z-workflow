@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw Implement"
+  short_description: "Delegate implementation from settled tickets"
+policy:
+  allow_implicit_invocation: false

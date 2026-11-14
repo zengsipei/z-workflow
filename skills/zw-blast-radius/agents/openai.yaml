@@ -1,0 +1,3 @@
+interface:
+  display_name: "Zw Blast Radius"
+  short_description: "Prove what a change could break by running real code"

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw"
+  short_description: "Start any non-trivial task here"
+policy:
+  allow_implicit_invocation: false

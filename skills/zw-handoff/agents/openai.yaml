@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw Handoff"
+  short_description: "Write a handoff so a fresh session can continue"
+policy:
+  allow_implicit_invocation: false

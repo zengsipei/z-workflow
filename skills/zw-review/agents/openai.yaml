@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw Review"
+  short_description: "Review changes on standards and spec"
+policy:
+  allow_implicit_invocation: false
