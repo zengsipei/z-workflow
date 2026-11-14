@@ -42,6 +42,11 @@ The routes bind by their wording, not by a checker: nothing validates a playbook
 - Facts are yours to check; decisions are the user's. A question that a command could answer never goes to the user.
 - Artifacts land by state: drafts in `.scratch/<feature>/`, settled files in `docs/`, or the repo's tracker when it has one. Drafts are gitignored.
 - A decision note is written for non-trivial change only: behaviour, architecture, cross-file contract, process or tooling, test strategy, or a persisted format. Formatting, renames, dependency bumps and routine CRUD do not qualify.
+- Reproduce first, then ask why until the cause is reached. A guard that silences a crash, a retry that hides a failure and a nil check that keeps going are not fixes.
+- Subtract before you add. Delete dead code, redundant validators and stub references first, then build on the simpler base, and take the smallest change that solves the problem.
+- Re-running must converge. A command, a migration or a lifecycle step reaches the same end state when it runs again after a partial failure.
+- Count what the reader must hold. Count the layers between a question and its answer and the state a reader keeps in their head; collapse a one-caller wrapper and shrink the scope that can change.
+- Guard at the boundary, trust inside. Validate once where the system meets the outside, such as a CLI, a config file, the network or a parsed file, then trust the type.
 
 ## Style
 
@@ -69,3 +74,4 @@ The routes bind by their wording, not by a checker: nothing validates a playbook
 - Upstream: pstack `poteto-mode` at commit `3dbd22f` (playbook shape, throughput checkpoint, name-the-data-shape rule) and the matt skill set's invocation split (a user command whose body points at the skill that does the work). Reference only: no step calls an installed skill.
 - Changed: the 23 poteto playbooks collapsed to five shapes, then moved out of this file into `playbooks/`, with a project and a user layer over them, on 2026-11-14; the four throughput checkpoints kept verbatim; reply style, autonomy and the explain-before-design rule absorbed from `zsp-mode` when that skill was retired on 2026-11-14, then repointed at `zw-how`; every harness tool name moved to Harness.
 - Verification gate added 2026-11-14 from poteto, `The Complete Guide to pstack Pt. 1` (x.com/poteto/status/2094457600259842065), read through the unofficial transcript at `pstack.ganhai.cloud`; the claim it rests on is that verification is the step that lets an agent close its own loop.
+- Five standing rules added 2026-11-14 from pstack's principle set as shipped in pstack-dsh 0.2.5: fix the root cause, subtract before you add, make re-runs converge, minimize reader load, and guard at the boundary. Kept as rules in this file rather than adopted as skills.
