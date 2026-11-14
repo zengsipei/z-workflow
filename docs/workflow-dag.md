@@ -2,7 +2,7 @@
 
 Status: derived from `DESIGN.md` section 4 and `skills/*/SKILL.md`. Regenerate by hand when the frozen list changes.
 
-The workflow is a directed graph with one back edge. The spine runs once per task, top to bottom. Three side lanes hang off it, plus two support skills any node may call. Every node is a skill; every edge carries one artifact or one approval.
+The workflow is a directed graph with one back edge. The spine runs once per task, top to bottom. Three side lanes hang off it, plus three support skills any node may call. Every node is a skill; every edge carries one artifact or one approval.
 
 No step names a skill from outside this repo. A capability the spine needs is a `zw-` skill; an installed skill is reference material, never a step.
 
@@ -42,6 +42,7 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 | `zw-map` | `zw-spec` | Destination named, open decisions sliced | `map.md`, decision tickets |
 | `zw-spec` | `zw-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
 | `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
+| `zw` | `zw-write` | Text a person will read is written or reviewed | The text, tightened |
 | `zw-implement` | `zw-tdd` | A cycle reaches a confirmed seam | Failing test, then green |
 | `zw-tickets` | `zw-implement` | Ticket graph approved and published | `tickets/NN-<slug>.md` |
 | `zw-implement` | `zw-verify` | Frontier closed, integration branch builds | Code on the integration branch |
@@ -58,7 +59,7 @@ zw --(no drivable route)--> zw-verify --(a route found)--> back to the route's f
                                                                  and the route waits for the user
 ```
 
-The verification gate runs before implementation can be delegated, and only the routes that carry it take it: Feature and Refactor. Bug fix needs no separate gate, because reproducing on the real surface is itself a drivable route. Ship implements nothing. An agent is never handed work it cannot check.
+A drivable route exists before implementation is delegated, and the shipped routes that carry it are Feature and Refactor. Bug fix needs nothing separate, because reproducing on the real surface is itself a drivable route. Ship implements nothing. The rule binds by wording rather than by a checker: a repo with no route gets a named blocker, not a silent skip.
 
 ## Side lanes and support skills
 
@@ -69,13 +70,14 @@ The verification gate runs before implementation can be delegated, and only the 
 | `zw-retro` -> written standard | The mistake needs judgement | A documented standard the review reads |
 | `zw-handoff` -> a fresh session | The session ends and another continues it | One document in the OS temporary directory |
 | `zw-how` -> any node that changes code | A nontrivial change starts in code nobody has read | One explanation, then the change |
+| `zw-write` -> any node that writes text | Text a person reads is being written or reviewed | The text, tightened |
 | `zw-review` -> the user | The verdict is blocked | The findings, and what would unblock them |
 
 Side lanes never block the spine. `zw-handoff` and `zw-retro` are leaves: nothing downstream consumes their output in the same task.
 
 ## Playbook routes
 
-Five routes cross the same nodes. `zw` picks one and copies its steps into the todo list verbatim.
+Five routes cross the same nodes, one file each under `skills/zw/playbooks/`, and `.agents/zw-playbooks/` layers a repo's own and the user's over them, nearest name wins. `zw` resolves the routes in effect, picks the matching one, and copies its steps into the todo list. The table below mirrors the shipped five; `playbooks.mjs --list` is what a given repo actually runs.
 
 | Shape | Route |
 |---|---|
@@ -87,12 +89,13 @@ Five routes cross the same nodes. `zw` picks one and copies its steps into the t
 
 ## Gates
 
-Both checkers are leaves on the spine, not hooks: they run in the closing step of `zw` and the last step of `zw-implement`.
+The target-repo checkers are leaves on the spine, not hooks: they run in the closing step of `zw` and the last step of `zw-implement`.
 
 | Checker | Checks |
 |---|---|
 | `verify-notes.mjs` | Path-as-state, the closed lifecycle and class sets, the fixed header block, Alternatives and the revisit signal |
 | `verify-artifacts.mjs` | Ticket numbering and dependency order, spec to ticket links, the no-file-paths rule |
+| `playbooks.mjs` | Which routes are in effect for a repo, by layer. It validates nothing: a playbook is a recommendation |
 | `verify-install.mjs` | This repo only: frontmatter in the portable subset, name matching the directory, description a YAML parser reads intact, every named helper shipped inside its own skill |
 
 The first two ship inside `skills/zw/scripts/`, so `npx skills add` carries them with the entry skill.
@@ -101,4 +104,4 @@ A repo that skips them is unverified, not clean.
 
 ## Context cost
 
-Four nodes are model-invoked, so four carry their description in context permanently: `zw-note`, `zw-verify-maintain`, `zw-how` and `zw-tdd`. The other nine are human-invoked commands and cost nothing until they run.
+Five nodes are model-invoked, so five carry their description in context permanently: `zw-note`, `zw-verify-maintain`, `zw-how`, `zw-tdd` and `zw-write`. The other nine are human-invoked commands and cost nothing until they run.

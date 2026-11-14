@@ -37,7 +37,7 @@ The user has an approved spec and asks for tickets, or the zw playbook reaches t
 
 ## Harness
 
-- DSH: tracker native blocking and child issues; each ticket can be dispatched to a subagent.
+- DSH: tracker native blocking and child issues; each ticket can be dispatched as an `impl` child through `../zw/references/harness/index.md`.
 - Claude Code: Task per ticket, native blocking on the tracker.
 - Codex: no subagents, so tickets run sequentially in number order; no question tool, so the quiz goes inline in the reply.
 

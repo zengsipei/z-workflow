@@ -15,23 +15,25 @@ The user starts a task that will change code, docs, or a running system, and no 
 ## Steps
 
 1. Restate the goal in your own words: what they want, the problem behind it, and the smallest change that would satisfy it. Do not wait for confirmation. If the evidence rules out the change they asked for, show that and stop.
-2. Pick the playbook from the table below. Open the todo list and copy the playbook's steps into it verbatim, then add the task's own steps after them. A step you are skipping stays in the list marked `skip: <reason>`.
+2. Pick the playbook. `scripts/playbooks.mjs --list` prints the routes in effect for this repo, nearest layer first, and `scripts/playbooks.mjs <name>` prints the one that wins. Copy its steps into the todo list, then add the task's own steps after them. These are procedures, not suggestions: follow them as written. A step you cannot take stays in the list marked `skip: <reason>`, and a step marked Mandatory is not skippable at all.
 3. Settle the drivable route before the spine reaches anything that delegates implementation: a project-local verification skill, or an equivalent script that launches the app and drives one user path. Feature and Refactor run `zw-verify` first when the repo has none, and finish it before implementation starts. A Bug fix whose reproduction on the real surface fails stops there instead of building one. Name the route you found.
 4. Run the spine for the matched playbook, in order, handing off to the named skill at each step. A step whose artifact already exists is verified, not redone.
 5. Before any delegation, write the four throughput checkpoints as todos: blocking prerequisite, independent work stream, shared mutable state, smallest safe decomposition. Then delegate.
-6. At the end, run both checkers and state the result in the reply.
+6. At the end, run the two repo checkers and state the result in the reply.
 
 ## Playbooks
 
-| Shape | Steps |
-|---|---|
-| Feature | `zw-verify` first when the repo has no drivable route; `zw-map` when one session cannot hold the decisions, else straight to `zw-spec`; then `zw-tickets`; then `zw-implement` per ticket; then `zw-verify`; then `zw-note`; then `zw-review` |
-| Bug fix | Reproduce on the real surface first; bisect to the root cause; fix with `zw-implement`; re-run the same surface; `zw-note` if the cause was non-obvious |
-| Investigation | Answer from evidence only; `zw-note` the finding; build nothing unless the answer needs a sketch |
-| Refactor | `zw-verify` first when the repo has no drivable route; `zw-map` for the target shape; `zw-spec` with the seam decided; `zw-tickets` as expand-contract slices; `zw-implement`; `zw-verify` |
-| Ship | `zw-review` on the whole diff, then `zw-verify` for evidence, then land by repo convention |
+Five routes, one file each under `playbooks/`. Anything under `.agents/zw-playbooks/` replaces or adds to them, the project layer first, then the user's, then these. Whatever the file says is the route: it is prose, so it binds by its wording rather than by a checker. `references/playbooks.md` has the lookup order and the convention.
 
-The routes that delegate implementation confirm a drivable route first. Feature and Refactor carry the gate in their own row, so an implementation is never handed to an agent that cannot check its own work. Bug fix takes no separate gate, because reproducing on the real surface is itself that route. Ship implements nothing, so it never takes one.
+| Route | When it fits |
+|---|---|
+| Feature | new behaviour, landing as reviewed code |
+| Bug fix | something broken, cause unknown |
+| Investigation | an answer, not a change |
+| Refactor | same behaviour, new shape |
+| Ship | the work exists, only landing remains |
+
+The routes bind by their wording, not by a checker: nothing validates a playbook file and nothing refuses to run one. A Mandatory line is the part that is not negotiable, verification first among them, and a route that cannot be followed is a blocker the reply names rather than a step quietly dropped.
 
 ## Standing rules
 
@@ -50,20 +52,20 @@ The routes that delegate implementation confirm a drivable route first. Feature 
 ## Done
 
 - Playbook steps are in the todo list, with every skip carrying a reason.
-- The verification gate was answered before any delegation: either the route found and named, or `zw-verify` run and finished first.
+- The verification route was settled before any delegation: found and named, or `zw-verify` run and finished first.
 - Every claimed artifact exists at its path.
 - Both checkers exit zero, run from this skill's own `scripts/` directory against the target repo.
 - The reply opens with the restated goal and closes with what was verified, and how.
 
 ## Harness
 
-- Every harness: a `zw-` step names only a `zw-` skill, so the spine runs with no other skill set installed. An installed skill is reference material, never a step.
-- DSH: delegate with the `subagent` tool; ask with the native question tool; per-role model routing, when configured, comes from host configuration, never from this file.
-- Claude Code: delegate with Task; ask with AskUserQuestion; the same playbooks apply.
+- Every harness: a `zw-` step names only a `zw-` skill, so the spine runs with no other skill set installed; an installed skill is reference material, never a step. Delegation goes through the adapter for the harness you are running, `references/harness/index.md`, which holds the five roles, the route resolution order, and what degrades.
+- DSH: the adapter is `references/harness/dsh.md`, the role table is resolved by `scripts/role-route.mjs`; questions go through the native question tool.
+- Claude Code: no adapter is written yet, so delegate with Task and ask with AskUserQuestion; the same playbooks apply.
 - Codex: no subagents, so run playbooks sequentially and say so; no question tool, so put questions inline in the reply.
 
 ## Provenance
 
 - Upstream: pstack `poteto-mode` at commit `3dbd22f` (playbook shape, throughput checkpoint, name-the-data-shape rule) and the matt skill set's invocation split (a user command whose body points at the skill that does the work). Reference only: no step calls an installed skill.
-- Changed: the 23 poteto playbooks collapsed to five shapes; the four throughput checkpoints kept verbatim; reply style, autonomy and the explain-before-design rule absorbed from `zsp-mode` when that skill was retired on 2026-11-14, then repointed at `zw-how`; every harness tool name moved to Harness.
+- Changed: the 23 poteto playbooks collapsed to five shapes, then moved out of this file into `playbooks/`, with a project and a user layer over them, on 2026-11-14; the four throughput checkpoints kept verbatim; reply style, autonomy and the explain-before-design rule absorbed from `zsp-mode` when that skill was retired on 2026-11-14, then repointed at `zw-how`; every harness tool name moved to Harness.
 - Verification gate added 2026-11-14 from poteto, `The Complete Guide to pstack Pt. 1` (x.com/poteto/status/2094457600259842065), read through the unofficial transcript at `pstack.ganhai.cloud`; the claim it rests on is that verification is the step that lets an agent close its own loop.

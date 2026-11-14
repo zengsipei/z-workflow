@@ -11,6 +11,8 @@ Rules for any agent working in this repo. Read this before writing a skill.
 ```
 skills/<name>/SKILL.md        the skill itself (one directory per skill)
 skills/<name>/references/*.md detail loaded on demand, not up front
+skills/zw/references/harness/  the harness adapters, one shared copy every delegating skill points at
+skills/zw/playbooks/*.md      the five routes, one file each, binding by wording, with project and user layers over them
 skills/<name>/scripts/*       skill-local helpers, executable, no dependencies
 skills/zw/scripts/verify-notes.mjs      note checker, ships with the entry skill
 skills/zw/scripts/verify-artifacts.mjs  spec/ticket checker, ships with the entry skill
@@ -46,11 +48,12 @@ Zero dependencies: node ESM or POSIX shell, nothing to install. Exit non-zero on
 The checkers live under `skills/zw/scripts/` so `npx skills add` ships them with the entry skill.
 
 - `verify-notes.mjs` and `verify-artifacts.mjs` run against the target repo, in the closing step of `zw` and the last step of `zw-implement`. A repo that skips them is unverified, not clean.
-- `verify-install.mjs` runs against `skills/` and is this repo's own gate: frontmatter inside the portable subset, name matching the directory, a description a YAML parser reads back intact, and every `references/` or `scripts/` path in a body shipped inside that same skill.
+- `playbooks.mjs` resolves the routes in effect for a repo: the project layer first, then the user's, then the built-ins. It checks nothing: a playbook binds by its wording, so a bad one gets edited rather than rejected.
+- `verify-install.mjs` runs against `skills/` and is this repo's own gate: frontmatter inside the portable subset, name matching the directory, a description a YAML parser reads back intact, and every `references/` or `scripts/` path in a body either shipped inside that same skill or resolved as a sibling path inside the skills root.
 
 ## Install contract
 
-`npx skills add zengsipei/z-workflow` must produce a complete, runnable workflow on a machine with nothing else installed. `node skills/zw/scripts/verify-install.mjs skills` is that contract as a check. That means every skill is discovered (valid YAML frontmatter, one directory per skill), every `references/` and `scripts/` file the body names ships with it, and no skill body depends on a path outside its own directory except the target repo it works on. A change that adds a file outside `skills/` which a skill body names breaks this contract.
+`npx skills add zengsipei/z-workflow` must produce a complete, runnable workflow on a machine with nothing else installed. `node skills/zw/scripts/verify-install.mjs skills` is that contract as a check. That means every skill is discovered (valid YAML frontmatter, one directory per skill), every `references/` and `scripts/` file the body names ships with it, and no skill body depends on a path outside its own directory except two: the target repo it works on, and the shared harness adapter under `zw/references/harness/`, which a delegating skill names by sibling path (`../zw/references/harness/index.md`). `verify-install.mjs` resolves a sibling path against the skills root, so a missing adapter fails the install check instead of failing silently at runtime. A change that adds any other file outside `skills/` which a skill body names breaks this contract.
 
 ## Frozen list
 

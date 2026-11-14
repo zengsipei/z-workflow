@@ -44,7 +44,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 
 ## Harness
 
-- DSH: fan-out uses the subagent tool, with per-role routing from host configuration when configured, never from this file; missing decisions go through the native question tool; the checkers ship in `zw`'s `scripts/` directory and run against the target repo.
+- DSH: fan-out goes through the harness adapter at `../zw/references/harness/index.md`, which owns the call, the role mapping and the fallbacks. A ticket is an `impl` child, an audit or an investigation is `explore`, competing experiments and a contested design call are `judge`. Missing decisions go through the native question tool; the checkers ship in `zw`'s `scripts/` directory and run against the target repo.
 - Claude Code: fan-out uses Task; questions use AskUserQuestion; the same steps apply.
 - Codex: no subagents, so run the graph sequentially and say so; no question tool, so ask inline.
 

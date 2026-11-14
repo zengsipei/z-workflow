@@ -1,6 +1,6 @@
 # z-workflow
 
-A portable agent workflow: thirteen skills plus zero-dependency checkers, in the `.agents/skills`
+A portable agent workflow: fourteen skills plus zero-dependency checkers, in the `.agents/skills`
 convention so every harness reads the same files. `DESIGN.md` is the contract.
 
 ## Install
@@ -20,7 +20,7 @@ spine.
 
 | Skill | Job |
 |---|---|
-| `zw` | Entry: working style, playbook table, the spine, and the checkers |
+| `zw` | Entry: working style, the playbook routes, the spine, and the checkers |
 | `zw-how` | Explain a subsystem before changing it |
 | `zw-tdd` | Red to green at a confirmed seam, plus the bug regression path |
 | `zw-map` | Decision map with fog-of-war tickets for work too large for one session |
@@ -33,6 +33,14 @@ spine.
 | `zw-review` | Two-axis review: standards and spec, side by side |
 | `zw-retro` | Turn mistakes into checks or standards |
 | `zw-handoff` | Hand the work to a fresh session |
+| `zw-write` | Prose, commit and PR text, and code comments |
+
+## Playbooks
+
+Five routes ship by default, each a procedure written in prose. A repo replaces or adds one in
+`.agents/zw-playbooks/`, and `~/.agents/zw-playbooks/` does the same for every repo: the nearest layer
+wins, and whatever the file says is the route. `node <skills-root>/zw/scripts/playbooks.mjs --list`
+prints what is in effect.
 
 ## Verify the install
 

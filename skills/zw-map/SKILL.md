@@ -53,7 +53,7 @@ Use when the user names an existing map or ticket.
 
 ## Harness
 
-- DSH: when a task board is installed, its parent and child links plus blocking edges render the frontier and assignment is the claim; with no board, the map file and ticket numbers carry it; research tickets can fan out in parallel.
+- DSH: when a task board is installed, its parent and child links plus blocking edges render the frontier and assignment is the claim; with no board, the map file and ticket numbers carry it; research tickets fan out in parallel as `explore` children through `../zw/references/harness/index.md`.
 - Claude Code: the same tracker or local files; research tickets fan out with Task.
 - Codex: no parallel workers, so research tickets resolve sequentially; no question tool, so questions go inline in the reply.
 

@@ -23,6 +23,9 @@
  *   reported, because the skills CLI skips such a skill as invalid YAML.
  * - Every references/ and scripts/ path named in the body exists inside the
  *   skill own directory, which is all an installer copies.
+ * - A path named as a sibling, ../<skill>/references/... or ../<skill>/scripts/...,
+ *   resolves inside the skills root, so the shared harness adapter is checked
+ *   rather than skipped.
  * - The body names no file that only exists at the repository root.
  *
  * The self-test builds its fixtures in a temporary directory, because shipping
@@ -39,6 +42,7 @@ const ROOT_ONLY = [
   { re: /samples\//, label: "samples/" },
 ];
 const RELATIVE = /(?:^|[\s`(\[])((?:references|scripts)\/[A-Za-z0-9_.\/-]+)/g;
+const SIBLING = /(?:^|[\s`(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts)\/[A-Za-z0-9_.\/-]+)/g;
 
 function parseFrontmatter(raw, push) {
   const lines = raw.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
@@ -80,10 +84,14 @@ function checkDescription(value, push) {
   }
 }
 
-function checkBody(body, skillDir, push) {
+function checkBody(body, skillDir, skillsRoot, push) {
   for (const m of body.matchAll(RELATIVE)) {
     const target = m[1].replace(/[.,;:]+$/, "");
     if (!existsSync(join(skillDir, target))) push("body names " + target + " but the skill does not ship it");
+  }
+  for (const m of body.matchAll(SIBLING)) {
+    const target = m[2].replace(/[.,;:]+$/, "");
+    if (!existsSync(join(skillsRoot, m[1], target))) push("body names ../" + m[1] + "/" + target + ", which the installed skill set does not ship");
   }
   for (const { re, label } of ROOT_ONLY) {
     if (re.test(body)) push("body names " + label + ", which exists only at the repository root and is not installed");
@@ -120,7 +128,7 @@ function runOnSkills(skillsRoot) {
     if (!parsed) continue;
     if (parsed.fields.name !== entry.name) push("frontmatter name " + JSON.stringify(parsed.fields.name || "") + " does not match the directory name");
     checkDescription(parsed.fields.description, push);
-    checkBody(parsed.body, skillDir, push);
+    checkBody(parsed.body, skillDir, skillsRoot, push);
     for (const nested of findNestedSkillFiles(skillDir, skillDir, [])) {
       push("ships a nested SKILL.md at " + nested.slice(skillDir.length + 1) + ", which an installer rewrites as a packaged skill");
     }
@@ -147,7 +155,7 @@ function selfTest() {
     "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A well formed skill.\ndisable-model-invocation: true\n" + FENCE + "\n\n# alpha\n\nRead references/detail.md and run scripts/check.mjs.\n",
     "alpha/references/detail.md": "detail\n",
     "alpha/scripts/check.mjs": "console.log(1);\n",
-    "beta/SKILL.md": FENCE + "\nname: beta\ndescription: \"Quoted: because the value holds a colon.\"\n" + FENCE + "\n\n# beta\n\nNo helpers of its own.\n",
+    "beta/SKILL.md": FENCE + "\nname: beta\ndescription: \"Quoted: because the value holds a colon.\"\n" + FENCE + "\n\n# beta\n\nNo helpers of its own, but it points at ../alpha/references/detail.md.\n",
   });
   const good = runOnSkills(goodRoot);
   if (good.errors.length !== 0) failures.push("good fixture: expected 0 errors, got " + good.errors.join(" | "));
@@ -163,6 +171,7 @@ function selfTest() {
     "zeta-nested/SKILL.md": FENCE + "\nname: zeta-nested\ndescription: Ships a nested fixture skill.\n" + FENCE + "\n\n# zeta-nested\n",
     "zeta-nested/scripts/fixtures/bad/inner/SKILL.md": FENCE + "\nname: inner\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n",
     "eta-nofile/README.md": "no SKILL.md here\n",
+    "theta-dangling/SKILL.md": FENCE + "\nname: theta-dangling\ndescription: Points at a skill that is not installed.\n" + FENCE + "\n\n# theta-dangling\n\nRead ../ghost/references/absent.md.\n",
   });
   const bad = runOnSkills(badRoot);
   if (bad.errors.length === 0) failures.push("bad fixture: expected errors, got none");
@@ -174,6 +183,7 @@ function selfTest() {
     "outside the portable subset",
     "nested SKILL.md",
     "no SKILL.md",
+    "which the installed skill set does not ship",
   ];
   for (const needle of needles) {
     if (!bad.errors.some((e) => e.includes(needle))) failures.push("bad fixture: expected an error containing " + JSON.stringify(needle));
