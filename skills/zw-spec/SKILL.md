@@ -41,4 +41,4 @@ The user has finished shaping a feature, fix, or refactor in conversation and as
 
 ## Provenance
 
-Copied from mattpocock/skills, `engineering/to-spec`, commit `5863806`. Changed: the seven-section template kept; tracker setup wording dropped; paths rewritten to this repo's `.scratch/<feature>/` and `docs/specs/<slug>.md` from DESIGN.md section 5; the seam rule kept with the ideal of one made explicit. Template: `references/spec-template.md`.
+Copied from mattpocock/skills, `engineering/to-spec`, commit `5863806`. Changed: the seven-section template kept; tracker setup wording dropped; paths rewritten to this workflow's `.scratch/<feature>/` and `docs/specs/<slug>.md`; the seam rule kept with the ideal of one made explicit. Template: `references/spec-template.md`.

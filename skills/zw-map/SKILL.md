@@ -59,4 +59,4 @@ Use when the user names an existing map or ticket.
 
 ## Provenance
 
-Copied from mattpocock/skills, `engineering/wayfinder`, commit `5863806`. Changed: tracker-specific paths rewritten to this repo's `.scratch/<feature>/` and `docs/` paths from DESIGN.md section 5; the upstream setup command and harness files dropped; decision-tree wording made explicit; map, fog-of-war, claim, and one-ticket-per-session rules kept. Details: `references/map-template.md`, `references/working-the-map.md`.
+Copied from mattpocock/skills, `engineering/wayfinder`, commit `5863806`. Changed: tracker-specific paths rewritten to this workflow's `.scratch/<feature>/` and `docs/` paths; the upstream setup command and harness files dropped; decision-tree wording made explicit; map, fog-of-war, claim, and one-ticket-per-session rules kept. Details: `references/map-template.md`, `references/working-the-map.md`.

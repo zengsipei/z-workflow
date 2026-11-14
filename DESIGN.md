@@ -73,7 +73,7 @@ Drafts are gitignored; only settled artifacts are committed. Tickets and specs d
 
 ## 6. Gates
 
-`verify-notes.mjs` checks path-as-state, the closed lifecycle and class sets, the fixed header block, and that Alternatives and the revisit signal exist. `verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule. Both ship inside `skills/zw/scripts/` so a skills-CLI install carries them.
+`verify-notes.mjs` checks path-as-state, the closed lifecycle and class sets, the fixed header block, and that Alternatives and the revisit signal exist. `verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule. Both ship inside `skills/zw/scripts/` so a skills-CLI install carries them. `verify-install.mjs` is this repo's own gate: it proves the skill set installs complete, by checking frontmatter, directory names, and that every helper a body names ships inside that skill.
 
 No host hooks: the gate runs where the workflow already runs, namely the closing step of `zw` and the last step of `zw-implement`. Both exit non-zero and print what failed.
 

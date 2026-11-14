@@ -43,11 +43,14 @@ Zero dependencies: node ESM or POSIX shell, nothing to install. Exit non-zero on
 
 ## Gates
 
-The two checkers live under `skills/zw/scripts/` so `npx skills add` ships them with the entry skill. They run in the closing step of `zw` and the last step of `zw-implement`. A repo that skips them is unverified, not clean.
+The checkers live under `skills/zw/scripts/` so `npx skills add` ships them with the entry skill.
+
+- `verify-notes.mjs` and `verify-artifacts.mjs` run against the target repo, in the closing step of `zw` and the last step of `zw-implement`. A repo that skips them is unverified, not clean.
+- `verify-install.mjs` runs against `skills/` and is this repo's own gate: frontmatter inside the portable subset, name matching the directory, a description a YAML parser reads back intact, and every `references/` or `scripts/` path in a body shipped inside that same skill.
 
 ## Install contract
 
-`npx skills add zengsipei/z-workflow` must produce a complete, runnable workflow on a machine with nothing else installed. That means every skill is discovered (valid YAML frontmatter, one directory per skill), every `references/` and `scripts/` file the body names ships with it, and no skill body depends on a path outside its own directory except the target repo it works on. A change that adds a file outside `skills/` which a skill body names breaks this contract.
+`npx skills add zengsipei/z-workflow` must produce a complete, runnable workflow on a machine with nothing else installed. `node skills/zw/scripts/verify-install.mjs skills` is that contract as a check. That means every skill is discovered (valid YAML frontmatter, one directory per skill), every `references/` and `scripts/` file the body names ships with it, and no skill body depends on a path outside its own directory except the target repo it works on. A change that adds a file outside `skills/` which a skill body names breaks this contract.
 
 ## Frozen list
 
