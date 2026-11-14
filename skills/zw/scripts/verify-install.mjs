@@ -10,7 +10,11 @@
  * and the exit code is non-zero.
  *
  * What it enforces, per skill directory:
- * - SKILL.md exists and starts with a --- delimited frontmatter block.
+ * - SKILL.md exists at the skill root and starts with a --- delimited
+ *   frontmatter block.
+ * - No other SKILL.md sits anywhere below that root. An installer that treats
+ *   every nested SKILL.md as a packaged skill rewrites them too, and a
+ *   deliberately malformed fixture then fails the whole install.
  * - Frontmatter keys stay inside the portable subset: name, description,
  *   disable-model-invocation.
  * - name equals the directory name.
@@ -18,13 +22,15 @@
  *   exact string. An unquoted value holding a colon-space or a space-hash is
  *   reported, because the skills CLI skips such a skill as invalid YAML.
  * - Every references/ and scripts/ path named in the body exists inside the
- *   skill's own directory, which is all an installer copies.
+ *   skill own directory, which is all an installer copies.
  * - The body names no file that only exists at the repository root.
+ *
+ * The self-test builds its fixtures in a temporary directory, because shipping
+ * a malformed SKILL.md inside this skill is exactly the defect it checks for.
  */
-import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, rmSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const ALLOWED_KEYS = new Set(["name", "description", "disable-model-invocation"]);
 const ROOT_ONLY = [
@@ -32,7 +38,7 @@ const ROOT_ONLY = [
   { re: /link-skills[.]sh/, label: "link-skills.sh" },
   { re: /samples\//, label: "samples/" },
 ];
-const RELATIVE = /(?:^|[\s\x60(\[])((?:references|scripts)\/[A-Za-z0-9_.\/-]+)/g;
+const RELATIVE = /(?:^|[\s`(\[])((?:references|scripts)\/[A-Za-z0-9_.\/-]+)/g;
 
 function parseFrontmatter(raw, push) {
   const lines = raw.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
@@ -67,9 +73,10 @@ function checkDescription(value, push) {
     push("frontmatter has no description");
     return;
   }
-  const quoted = (value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"));
+  const quoted = (value.startsWith(String.fromCharCode(34)) && value.endsWith(String.fromCharCode(34))) ||
+    (value.startsWith(String.fromCharCode(39)) && value.endsWith(String.fromCharCode(39)));
   if (!quoted && /:\s|\s#/.test(value)) {
-    push('description is an unquoted value holding a colon-space or a space-hash, which a YAML parser reads as a nested mapping; quote it');
+    push("description is an unquoted value holding a colon-space or a space-hash, which a YAML parser reads as a nested mapping; quote it");
   }
 }
 
@@ -81,6 +88,15 @@ function checkBody(body, skillDir, push) {
   for (const { re, label } of ROOT_ONLY) {
     if (re.test(body)) push("body names " + label + ", which exists only at the repository root and is not installed");
   }
+}
+
+function findNestedSkillFiles(dir, root, out) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) findNestedSkillFiles(full, root, out);
+    else if (entry.name.toLowerCase() === "skill.md" && full !== join(root, "SKILL.md")) out.push(full);
+  }
+  return out;
 }
 
 function runOnSkills(skillsRoot) {
@@ -105,20 +121,50 @@ function runOnSkills(skillsRoot) {
     if (parsed.fields.name !== entry.name) push("frontmatter name " + JSON.stringify(parsed.fields.name || "") + " does not match the directory name");
     checkDescription(parsed.fields.description, push);
     checkBody(parsed.body, skillDir, push);
+    for (const nested of findNestedSkillFiles(skillDir, skillDir, [])) {
+      push("ships a nested SKILL.md at " + nested.slice(skillDir.length + 1) + ", which an installer rewrites as a packaged skill");
+    }
   }
   return { errors, count };
 }
 
+function writeTree(root, files) {
+  for (const [rel, content] of Object.entries(files)) {
+    const full = join(root, rel);
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, content, "utf8");
+  }
+}
+
+const FENCE = "---";
+
 function selfTest() {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const fixtures = join(here, "fixtures", "install");
+  const tmp = mkdtempSync(join(tmpdir(), "verify-install-"));
   const failures = [];
 
-  const good = runOnSkills(join(fixtures, "good"));
+  const goodRoot = join(tmp, "good");
+  writeTree(goodRoot, {
+    "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A well formed skill.\ndisable-model-invocation: true\n" + FENCE + "\n\n# alpha\n\nRead references/detail.md and run scripts/check.mjs.\n",
+    "alpha/references/detail.md": "detail\n",
+    "alpha/scripts/check.mjs": "console.log(1);\n",
+    "beta/SKILL.md": FENCE + "\nname: beta\ndescription: \"Quoted: because the value holds a colon.\"\n" + FENCE + "\n\n# beta\n\nNo helpers of its own.\n",
+  });
+  const good = runOnSkills(goodRoot);
   if (good.errors.length !== 0) failures.push("good fixture: expected 0 errors, got " + good.errors.join(" | "));
   if (good.count !== 2) failures.push("good fixture: expected 2 skills, got " + good.count);
 
-  const bad = runOnSkills(join(fixtures, "bad"));
+  const badRoot = join(tmp, "bad");
+  writeTree(badRoot, {
+    "alpha-name/SKILL.md": FENCE + "\nname: not-alpha-name\ndescription: Name disagrees with the directory.\n" + FENCE + "\n\n# alpha-name\n",
+    "beta-yaml/SKILL.md": FENCE + "\nname: beta-yaml\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n\n# beta-yaml\n",
+    "gamma-missing/SKILL.md": FENCE + "\nname: gamma-missing\ndescription: Names a file it does not ship.\n" + FENCE + "\n\n# gamma-missing\n\nSee references/absent.md.\n",
+    "delta-root/SKILL.md": FENCE + "\nname: delta-root\ndescription: Names a repository root file.\n" + FENCE + "\n\n# delta-root\n\nPaths come from DESIGN.md, which only exists in the source repo.\n",
+    "epsilon-key/SKILL.md": FENCE + "\nname: epsilon-key\ndescription: Carries a harness specific key.\nallowed-tools: bash\n" + FENCE + "\n\n# epsilon-key\n",
+    "zeta-nested/SKILL.md": FENCE + "\nname: zeta-nested\ndescription: Ships a nested fixture skill.\n" + FENCE + "\n\n# zeta-nested\n",
+    "zeta-nested/scripts/fixtures/bad/inner/SKILL.md": FENCE + "\nname: inner\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n",
+    "eta-nofile/README.md": "no SKILL.md here\n",
+  });
+  const bad = runOnSkills(badRoot);
   if (bad.errors.length === 0) failures.push("bad fixture: expected errors, got none");
   const needles = [
     "does not match the directory name",
@@ -126,16 +172,18 @@ function selfTest() {
     "but the skill does not ship it",
     "repository root",
     "outside the portable subset",
+    "nested SKILL.md",
     "no SKILL.md",
   ];
   for (const needle of needles) {
     if (!bad.errors.some((e) => e.includes(needle))) failures.push("bad fixture: expected an error containing " + JSON.stringify(needle));
   }
 
-  const tmp = mkdtempSync(join(tmpdir(), "verify-install-empty-"));
-  mkdirSync(join(tmp, "skills"));
-  const empty = runOnSkills(join(tmp, "skills"));
+  const emptyRoot = join(tmp, "empty");
+  mkdirSync(emptyRoot);
+  const empty = runOnSkills(emptyRoot);
   if (empty.errors.length !== 0 || empty.count !== 0) failures.push("empty fixture: expected 0 skills and 0 errors");
+
   rmSync(tmp, { recursive: true, force: true });
 
   console.log("install --test: good=" + (good.errors.length === 0 ? "ok" : "FAIL") + " skills=" + good.count);
