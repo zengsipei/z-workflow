@@ -47,7 +47,7 @@ Edit only the verification skill's own directory: its SKILL.md, features, and an
 
 ## Harness
 
-- DSH: source wave workers run through the subagent tool; per-role routing comes from the host overlay when configured; questions go through the native question tool.
+- DSH: source wave workers run through the subagent tool; per-role routing comes from host configuration when configured; questions go through the native question tool.
 - Claude Code: workers through Task; questions through AskUserQuestion.
 - Codex: no subagents, so the source wave runs sequentially and says so; no question tool, so questions go inline.
 

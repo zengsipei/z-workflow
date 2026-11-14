@@ -23,7 +23,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
    See `references/delegation.md` for the full checkpoint and brief contract.
 3. Decide the topology. Write directly by default. Fan out only when at least three subtasks touch disjoint files and the interfaces are already settled. When fanning out, the main thread stops writing code and keeps only plan, review and verification.
 4. When fanning out, hand each worker a brief: goal, scope as behaviour and interfaces, the data shape decided before code, success criteria, and pointers to the spec, tickets and notes. Spec, ticket, and note bodies never carry file paths or line numbers. Each worker starts fresh and reports through the frontier, not through chat.
-5. Implement in frontier order. Use `tdd` at the pre-agreed seams. Run the typecheck often, one test file often, and the full suite once at the end.
+5. Implement in frontier order. Use `zw-tdd` at the pre-agreed seams. Run the typecheck often, one test file often, and the full suite once at the end.
 6. Review the finished work against the spec, then run `zw-review` on the whole diff. Fix raised issues in one fresh pass.
 7. Run both repo checkers and confirm both exit zero. A repo that skips them is unverified, not clean.
 
@@ -43,7 +43,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 
 ## Harness
 
-- DSH: fan-out uses the subagent tool, with per-role routing from the host overlay when configured, never from this file; missing decisions go through the native question tool; checkers are `node scripts/verify-artifacts.mjs <repo>` and `node scripts/verify-notes.mjs <repo>`.
+- DSH: fan-out uses the subagent tool, with per-role routing from host configuration when configured, never from this file; missing decisions go through the native question tool; checkers are `node scripts/verify-artifacts.mjs <repo>` and `node scripts/verify-notes.mjs <repo>`.
 - Claude Code: fan-out uses Task; questions use AskUserQuestion; the same steps apply.
 - Codex: no subagents, so run the graph sequentially and say so; no question tool, so ask inline.
 

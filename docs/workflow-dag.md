@@ -2,7 +2,9 @@
 
 Status: derived from `DESIGN.md` section 4 and `skills/*/SKILL.md`. Regenerate by hand when the frozen list changes.
 
-The workflow is a directed graph with one back edge. The spine runs once per task, top to bottom. Three side lanes hang off it. Every node is a skill; every edge carries one artifact or one approval.
+The workflow is a directed graph with one back edge. The spine runs once per task, top to bottom. Three side lanes hang off it, plus two support skills any node may call. Every node is a skill; every edge carries one artifact or one approval.
+
+No step names a skill from outside this repo. A capability the spine needs is a `zw-` skill; an installed skill is reference material, never a step.
 
 ## Spine
 
@@ -38,6 +40,8 @@ The workflow is a directed graph with one back edge. The spine runs once per tas
 | `zw` | `zw-spec` | The work fits one session | Playbook choice, goal restated |
 | `zw-map` | `zw-spec` | Destination named, open decisions sliced | `map.md`, decision tickets |
 | `zw-spec` | `zw-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
+| `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
+| `zw-implement` | `zw-tdd` | A cycle reaches a confirmed seam | Failing test, then green |
 | `zw-tickets` | `zw-implement` | Ticket graph approved and published | `tickets/NN-<slug>.md` |
 | `zw-implement` | `zw-verify` | Frontier closed, integration branch builds | Code on the integration branch |
 | `zw-verify` | `zw-note` | Evidence captured, generated skill proved once | `verify-<app>/` skill |
@@ -47,7 +51,7 @@ The workflow is a directed graph with one back edge. The spine runs once per tas
 
 The last row is the only back edge. It is bounded by construction: findings are fixed in one pass, and the graph is acyclic everywhere else.
 
-## Side lanes
+## Side lanes and support skills
 
 | Lane | Trigger | Lands as |
 |---|---|---|
@@ -55,6 +59,7 @@ The last row is the only back edge. It is bounded by construction: findings are 
 | `zw-retro` -> deterministic check | The mistake is mechanical: a pattern a script can detect | A check in the repo's check command, wired in |
 | `zw-retro` -> written standard | The mistake needs judgement | A documented standard the review reads |
 | `zw-handoff` -> a fresh session | The session ends and another continues it | One document in the OS temporary directory |
+| `zw-how` -> any node that changes code | A nontrivial change starts in code nobody has read | One explanation, then the change |
 
 Side lanes never block the spine. `zw-handoff` and `zw-retro` are leaves: nothing downstream consumes their output in the same task.
 
@@ -83,4 +88,4 @@ A repo that skips them is unverified, not clean.
 
 ## Context cost
 
-Only two nodes are model-invoked, so only two carry their description in context permanently: `zw-note` and `zw-verify-maintain`. The other nine are human-invoked commands and cost nothing until they run.
+Four nodes are model-invoked, so four carry their description in context permanently: `zw-note`, `zw-verify-maintain`, `zw-how` and `zw-tdd`. The other nine are human-invoked commands and cost nothing until they run.

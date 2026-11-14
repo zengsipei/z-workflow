@@ -6,7 +6,7 @@ Status: design, awaiting owner sign-off. Date 2026-11-14.
 
 A portable personal agent workflow, shipped as skills in the `.agents/skills` convention and harness-neutral by construction. This repo is the only source of truth; `scripts/link-skills.sh` symlinks every skill into `~/.agents/skills` (and `~/.claude/skills` when it exists), so `git pull` updates every harness at once.
 
-Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `domain-modeling` and `codebase-design`), no team or multi-agent product, no event-driven automations.
+Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `domain-modeling` and `codebase-design` as reference), no team or multi-agent product, no event-driven automations.
 
 ## 2. Settled decisions
 
@@ -18,7 +18,8 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 | D4 | Skills plus zero-dependency check scripts | Discipline needs mechanical teeth, not more prose |
 | D5 | Decision notes live in `<repo>/.agents/notes` with a unified format and a checker | Notes travel with the code and show up in review |
 | D6 | Local artifacts by default; a repo with a tracker uses the tracker | psst (Gitea) keeps its single ledger; empty repos still work |
-| D7 | Scope: the spine plus verification plus notes, 10-12 skills | Each skill must be one the owner actually reaches for |
+| D7 | Scope: the spine plus verification plus notes, 10-13 skills | Each skill must be one the owner actually reaches for |
+| D9 | No step names an external skill. A capability the spine needs is copied in as a `zw-` skill; installed skills are reference only | The workflow must run with no host-specific skill set present |
 | D8 | v1 is done when the spine runs once on a real repo, artifacts kept as samples | Otherwise this becomes a documentation project |
 
 ## 3. Repo layout
@@ -54,6 +55,8 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | `zw-review` | Two-axis review: standards and spec, in parallel | matt `code-review` | human |
 | `zw-retro` | Retro: mechanical error becomes a deterministic check, judgement becomes a standard | matt `retro` | human |
 | `zw-handoff` | Hand the work to a fresh session | matt `handoff` | human |
+| `zw-how` | Explain a subsystem before it is changed: entry points, flow, where things live, gotchas | pstack `how` | model |
+| `zw-tdd` | Red-green at a pre-agreed seam, and the failing regression test for a bug | matt `tdd` + pstack `tdd` | model |
 
 ## 5. Artifact contract
 
@@ -84,6 +87,6 @@ Run the spine once on psst: `zw` -> `zw-map` -> `zw-spec` -> `zw-tickets` -> `zw
 
 ## 9. Risks
 
-- Eleven self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
+- Thirteen self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
 - Self-contained copies drift from upstream; each skill records the upstream commit it was taken from.
 - Without host hooks the gates are honour-system wherever a human skips the closing step.
