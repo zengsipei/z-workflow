@@ -2,7 +2,7 @@
 
 ## Throughput checkpoints
 
-The four checkpoints are written as todo items before any fan-out, and rewritten at phase boundaries. A dimension that genuinely does not apply stays present with `n/a: reason`; it is never dropped.
+The four checkpoints are written as todo items before any fan-out, and rewritten at every phase boundary, which is a blocking gate passing, the shared writer changing, or the decomposition changing. A dimension that genuinely does not apply stays present with `n/a: reason`; it is never dropped.
 
 - Blocking first steps. Gates that must run before any parallel work: typecheck, seed data, schema decisions, contract freezes.
 - Independent workstreams. Disjoint files, services, or layers parallelize. Anything that writes the same file, table, or key serializes.
@@ -24,7 +24,7 @@ Each worker receives one brief. The brief names:
 
 - Default is direct execution. Fan out only when at least three subtasks touch disjoint files and the interfaces are already settled.
 - Code-coupled work (one feature, one migration) goes to a single owner with the checkpoints inline. That owner fans out internally after its blocking phase. Parent-level fan-out is for slices that produce independent artifacts: audits, cross-subsystem investigations, competing experiments.
-- Rewrite the checkpoints at every phase boundary, and spawn a fresh owner rather than chaining interrupts.
+- Rewrite the checkpoints at every phase boundary, and start a fresh owner rather than resuming one mid-flight.
 - Each worker starts with a fresh context and reports only its result. Communication is sparse: pointers, not copies.
 - A worker that would cross the settled interface stops and reports the break instead of improvising.
 - The main thread merges, reviews, and verifies. It does not edit a worker's scope while that worker runs.

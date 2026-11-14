@@ -32,6 +32,10 @@ The Spec review answers, quoting the spec line for each finding: requirements th
 
 The fixed point is whatever the user named: a commit, branch, tag, or relative reference. Confirm it resolves and the diff is non-empty before any review runs; a bad ref or an empty diff fails at the gate, not inside a review.
 
+## Closing a finding
+
+Every finding carries its evidence: the observed behaviour for `not a defect`, the route attempted for `cannot reproduce`. A finding closed on assertion alone stays open, and the report says so. A review may block the change; `blocked` is a verdict, not a failure.
+
 ## Report shape
 
 Present two sections, Standards and Spec, with the reports verbatim or lightly cleaned. End with one line: total findings per axis and the worst issue within each axis, if any. Never pick a single winner across axes.

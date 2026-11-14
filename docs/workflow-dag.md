@@ -38,7 +38,7 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 |---|---|---|---|
 | `zw` | `zw-map` | One session cannot hold the decisions | Playbook choice, goal restated |
 | `zw` | `zw-spec` | The work fits one session | Playbook choice, goal restated |
-| `zw` | `zw-verify` | The repo has no drivable route to its own behaviour | A generated `verify-<app>/` skill, or the gap report |
+| `zw` | `zw-verify` | The repo has no drivable route to its own behaviour | A generated `verify-<app>/` skill, or a precise report of what blocks one, which stops that route until the user decides |
 | `zw-map` | `zw-spec` | Destination named, open decisions sliced | `map.md`, decision tickets |
 | `zw-spec` | `zw-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
 | `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
@@ -50,19 +50,26 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 | `zw-implement` | `zw-review` | Finished work reviewed against the spec | The whole diff |
 | `zw-review` | `zw-implement` | Findings raised | One fresh fix pass, then re-verify |
 
-The last row is the only back edge. It is bounded by construction: findings are fixed in one pass, and the graph is acyclic everywhere else.
+The last row is the only back edge. It is bounded by construction: findings are fixed in one pass, and the graph is acyclic everywhere else. A `blocked` verdict leaves the graph instead, carrying the findings and what would unblock them to the user.
 
-The verification gate is the one edge that runs before implementation. Every route that ends in code passes it, so an agent is never handed work it cannot check.
+```text
+zw --(no drivable route)--> zw-verify --(a route found)--> back to the route's first step
+                                                 \--(blocked)--> a precise report of what blocks one,
+                                                                 and the route waits for the user
+```
+
+The verification gate runs before implementation can be delegated, and only the routes that carry it take it: Feature and Refactor. Bug fix needs no separate gate, because reproducing on the real surface is itself a drivable route. Ship implements nothing. An agent is never handed work it cannot check.
 
 ## Side lanes and support skills
 
 | Lane | Trigger | Lands as |
 |---|---|---|
-| `zw-verify` -> `zw-verify-maintain` | The app changed under a generated verify skill | The maintained verify skill, or a gap report |
+| `zw-verify` -> `zw-verify-maintain` | The app changed under a generated verify skill | The maintained verify skill, a change-set of proven corrections, or a blocked report |
 | `zw-retro` -> deterministic check | The mistake is mechanical: a pattern a script can detect | A check in the repo's check command, wired in |
 | `zw-retro` -> written standard | The mistake needs judgement | A documented standard the review reads |
 | `zw-handoff` -> a fresh session | The session ends and another continues it | One document in the OS temporary directory |
 | `zw-how` -> any node that changes code | A nontrivial change starts in code nobody has read | One explanation, then the change |
+| `zw-review` -> the user | The verdict is blocked | The findings, and what would unblock them |
 
 Side lanes never block the spine. `zw-handoff` and `zw-retro` are leaves: nothing downstream consumes their output in the same task.
 

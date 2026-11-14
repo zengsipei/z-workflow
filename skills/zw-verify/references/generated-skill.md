@@ -14,6 +14,8 @@ One read-only check that answers "is this instance worth driving": process up, r
 
 The harness recipe with real selectors and commands from the repo, never examples. Prefer stable handles: ARIA labels, data attributes, prompt strings, route paths, over coordinates and tab order.
 
+When a control CLI exists, Drive calls it instead of re-deriving commands, and the Helpers section names it and where it lives.
+
 ## Evidence
 
 What to capture and where it goes. Proof standards: exercise the real user path, not internal setters or test-only endpoints; capture the action and the resulting state, not only the final screen; verify side effects (files written, rows inserted, messages sent) alongside what is visible; mocks only where a production boundary already isolates the external system. When a dry-run or test mode is the safe path, observe what it actually skips rather than trusting its name.

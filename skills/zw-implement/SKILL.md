@@ -21,7 +21,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
    - Shared mutable state: split the target by default; serialize only for real invariants.
    - Smallest safe decomposition: if one writer is best, name why.
    See `references/delegation.md` for the full checkpoint and brief contract.
-3. Decide the topology. Write directly by default. Fan out only when at least three subtasks touch disjoint files and the interfaces are already settled. Code-coupled work, one feature or one migration, goes to a single owner that carries the checkpoints inline and fans out internally only after its blocking phase; parent-level fan-out is for slices that produce independent artifacts, such as audits, cross-subsystem investigations or competing experiments. Rewrite the checkpoints at every phase boundary, and start a fresh owner rather than chaining interrupts. When fanning out, the main thread stops writing code and keeps only plan, review and verification.
+3. Decide the topology. Write directly by default. Fan out only when at least three subtasks touch disjoint files and the interfaces are already settled. Code-coupled work, one feature or one migration, goes to a single owner that carries the checkpoints inline and fans out internally only after its blocking phase; parent-level fan-out is for slices that produce independent artifacts, such as audits, cross-subsystem investigations or competing experiments. Rewrite the checkpoints at every phase boundary, and start a fresh owner rather than resuming one mid-flight. When fanning out, the main thread stops writing code and keeps only plan, review and verification.
 4. When fanning out, hand each worker a brief: goal, scope as behaviour and interfaces, the data shape decided before code, success criteria, and pointers to the spec, tickets and notes. Spec, ticket, and note bodies never carry file paths or line numbers. Each worker starts fresh and reports through the frontier, not through chat. Every brief carries its stop conditions: the outcomes that end the work without a fix. Not a defect, cannot reproduce, and risk too large are terminal results, reported as such, never overridden by an improvised fix.
 5. Implement in frontier order. Use `zw-tdd` at the pre-agreed seams. Run the typecheck often, one test file often, and the full suite once at the end.
 6. Review the finished work against the spec, then run `zw-review` on the whole diff. Fix raised issues in one fresh pass.
@@ -36,7 +36,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 ## Done
 
 - Every ticket on the frontier is closed the way the repo closes work, and the integration branch builds.
-- The four checkpoints are in the todo list, each with a reason or `n/a`, and were rewritten at each phase boundary.
+- The four checkpoints are in the todo list, each with a reason or `n/a`, and were rewritten whenever a blocking gate passed, the shared writer changed, or the decomposition changed.
 - Every brief carried its stop conditions, and a worker that stopped reported a terminal result instead of a workaround.
 - Review findings are fixed and re-verified.
 - Both repo checkers exit zero.

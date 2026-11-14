@@ -16,16 +16,16 @@ The user asks for a retrospective on a session, or asks what to change so a mist
 
 1. Read the session the user names; default to the current one when they do not.
 2. Collect candidate improvements across the categories in references/categories.md.
-3. Classify each mistake before proposing a fix. Mechanical means a fixed pattern a script can detect with no judgement: a banned API, an import shape, a file location, a naming pattern. Judgement means it needs context or taste: cross-file consistency, matching surrounding style, a design call. Route mechanical errors to a deterministic check and judgement errors to a written standard.
-4. Fix a mechanical mistake as high in this order as the repo allows: architecture first, then the type system and lint, then a behavioural test, and documentation last. A new check has to reject the historical mistake, not describe it. Record one row per rule in a rule-to-enforcer table: the rule, what enforces it, and where that runs.
+3. Classify each mistake before proposing a fix. Mechanical means a fixed pattern a script can detect with no judgement: a banned API, an import shape, a file location, a naming pattern. Judgement means it needs context or taste: cross-file consistency, matching surrounding style, a design call. Route a mechanical error to the highest rung the repo allows, in the order this skill sets out, and a judgement error to a written standard.
+4. Fix a mechanical mistake as high in this order as the repo allows: architecture first, then the type system and lint, then a behavioural test. Documentation is not a destination for a mechanical mistake; a judgement rule lands there only because no enforcer can carry it. A new check has to reject the historical mistake, not describe it. Record one row per rule in a rule-to-enforcer table kept beside the repo's check command, never in the standards file.
 5. Read the repo's existing check command and guardrail before adding a new one. A check that exists but is not wired in is the finding; a repo with no guardrail running its checks is itself a finding.
 6. Present the candidates ordered by severity, each with the routed fix and where it lands.
 
 ## Done
 
-- Every mechanical error is routed to a deterministic check, never to prose.
+- Every mechanical error becomes a rule the repo enforces at the highest rung available, never prose.
 - Every judgement error is routed to a standard, never to a script.
-- A mechanical fix lands as high in the order as the repo allows: architecture, then types or lint, then a behavioural test, documentation last.
+- A mechanical fix lands as high in the order as the repo allows: architecture, then types or lint, then a behavioural test, never prose.
 - Each new check rejects the historical mistake, and the rule-to-enforcer table has a row for it.
 - The repo's existing check command and guardrail were read before any new check was proposed.
 - The reply is ordered by severity and names where each change lands.

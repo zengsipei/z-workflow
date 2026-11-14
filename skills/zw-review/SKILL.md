@@ -18,7 +18,7 @@ The user asks to review a branch, a PR, or work-in-progress changes, or says "re
 2. Find the spec source, in order: issue references in commit messages, a path the user passed, a spec file matching the branch or feature, then ask the user. If there is no spec, the Spec review reports "no spec available".
 3. Find the standards sources: every repo file that documents how code should be written, plus the smell baseline in references/smell-baseline.md. A documented repo standard overrides the baseline.
 4. Run the two reviews in parallel, each in a fresh context. The Standards review checks the diff against the standards sources and the baseline; the Spec review checks the diff against the spec. Each finding quotes the rule or spec line it violates.
-5. Present the two reports side by side under Standards and Spec. Do not merge or rerank them. End with one line: findings per axis and the worst issue within each axis.
+5. Present the two reports side by side under Standards and Spec. Do not merge or rerank them. End with one line: findings per axis and the worst issue within each axis, then let step 6 state the verdict.
 6. The review can block the change, and it can close a finding only with evidence: `not a defect` needs the behaviour the code actually has, and `cannot reproduce` needs the route attempted. A finding closed on assertion alone stays open and the reply says so.
 
 ## Done
