@@ -17,8 +17,9 @@ The user starts a task that will change code, docs, or a running system, and no 
 1. Restate the goal in your own words: what they want, the problem behind it, and the smallest change that would satisfy it. Do not wait for confirmation. If the evidence rules out the change they asked for, show that and stop.
 2. Pick the playbook from the table below. Open the todo list and copy the playbook's steps into it verbatim, then add the task's own steps after them. A step you are skipping stays in the list marked `skip: <reason>`.
 3. Run the spine for the matched playbook, in order, handing off to the named skill at each step. A step whose artifact already exists is verified, not redone.
-4. Before any delegation, write the four throughput checkpoints as todos: blocking prerequisite, independent work stream, shared mutable state, smallest safe decomposition. Then delegate.
-5. At the end, run both checkers and state the result in the reply.
+4. Take the verification gate before any delegation. The repo must have a drivable route to its own behaviour: a project-local verification skill, or an equivalent script that launches the app and drives one user path. When it has none, run `zw-verify` first and finish that before implementation starts. Name the route you found.
+5. Before any delegation, write the four throughput checkpoints as todos: blocking prerequisite, independent work stream, shared mutable state, smallest safe decomposition. Then delegate.
+6. At the end, run both checkers and state the result in the reply.
 
 ## Playbooks
 
@@ -29,6 +30,8 @@ The user starts a task that will change code, docs, or a running system, and no 
 | Investigation | Answer from evidence only; `zw-note` the finding; build nothing unless the answer needs a sketch |
 | Refactor | `zw-map` for the target shape; `zw-spec` with the seam decided; `zw-tickets` as expand-contract slices; `zw-implement`; `zw-verify` |
 | Ship | `zw-review` on the whole diff, then `zw-verify` for evidence, then land by repo convention |
+
+Every playbook that ends in code starts with the verification gate. When the repo has no drivable route to its own behaviour, `zw-verify` runs before anything else, because an implementation handed to an agent that cannot check its own work is unverified rather than fast.
 
 ## Standing rules
 
@@ -47,6 +50,7 @@ The user starts a task that will change code, docs, or a running system, and no 
 ## Done
 
 - Playbook steps are in the todo list, with every skip carrying a reason.
+- The verification gate was answered before any delegation: either the route found and named, or `zw-verify` run first.
 - Every claimed artifact exists at its path.
 - Both checkers exit zero, run from this skill's own `scripts/` directory against the target repo.
 - The reply opens with the restated goal and closes with what was verified, and how.
@@ -62,3 +66,4 @@ The user starts a task that will change code, docs, or a running system, and no 
 
 - Upstream: pstack `poteto-mode` at commit `3dbd22f` (playbook shape, throughput checkpoint, name-the-data-shape rule) and the matt skill set's invocation split (a user command whose body points at the skill that does the work). Reference only: no step calls an installed skill.
 - Changed: the 23 poteto playbooks collapsed to five shapes; the four throughput checkpoints kept verbatim; reply style, autonomy and the explain-before-design rule absorbed from `zsp-mode` when that skill was retired on 2026-11-14, then repointed at `zw-how`; every harness tool name moved to Harness.
+- Verification gate added 2026-11-14 from poteto, `The Complete Guide to pstack Pt. 1` (x.com/poteto/status/2094457600259842065), read through the unofficial transcript at `pstack.ganhai.cloud`; the claim it rests on is that verification is the step that lets an agent close its own loop.

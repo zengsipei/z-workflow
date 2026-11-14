@@ -21,8 +21,8 @@ The user says implement, build, or land this, and a spec or ticket graph already
    - Shared mutable state: split the target by default; serialize only for real invariants.
    - Smallest safe decomposition: if one writer is best, name why.
    See `references/delegation.md` for the full checkpoint and brief contract.
-3. Decide the topology. Write directly by default. Fan out only when at least three subtasks touch disjoint files and the interfaces are already settled. When fanning out, the main thread stops writing code and keeps only plan, review and verification.
-4. When fanning out, hand each worker a brief: goal, scope as behaviour and interfaces, the data shape decided before code, success criteria, and pointers to the spec, tickets and notes. Spec, ticket, and note bodies never carry file paths or line numbers. Each worker starts fresh and reports through the frontier, not through chat.
+3. Decide the topology. Write directly by default. Fan out only when at least three subtasks touch disjoint files and the interfaces are already settled. Code-coupled work, one feature or one migration, goes to a single owner that carries the checkpoints inline and fans out internally only after its blocking phase; parent-level fan-out is for slices that produce independent artifacts, such as audits, cross-subsystem investigations or competing experiments. Rewrite the checkpoints at every phase boundary, and start a fresh owner rather than chaining interrupts. When fanning out, the main thread stops writing code and keeps only plan, review and verification.
+4. When fanning out, hand each worker a brief: goal, scope as behaviour and interfaces, the data shape decided before code, success criteria, and pointers to the spec, tickets and notes. Spec, ticket, and note bodies never carry file paths or line numbers. Each worker starts fresh and reports through the frontier, not through chat. Every brief carries its stop conditions: the outcomes that end the work without a fix. Not a defect, cannot reproduce, and risk too large are terminal results, reported as such, never overridden by an improvised fix.
 5. Implement in frontier order. Use `zw-tdd` at the pre-agreed seams. Run the typecheck often, one test file often, and the full suite once at the end.
 6. Review the finished work against the spec, then run `zw-review` on the whole diff. Fix raised issues in one fresh pass.
 7. Run both repo checkers and confirm both exit zero. A repo that skips them is unverified, not clean.
@@ -36,7 +36,8 @@ The user says implement, build, or land this, and a spec or ticket graph already
 ## Done
 
 - Every ticket on the frontier is closed the way the repo closes work, and the integration branch builds.
-- The four checkpoints are in the todo list, each with a reason or `n/a`.
+- The four checkpoints are in the todo list, each with a reason or `n/a`, and were rewritten at each phase boundary.
+- Every brief carried its stop conditions, and a worker that stopped reported a terminal result instead of a workaround.
 - Review findings are fixed and re-verified.
 - Both repo checkers exit zero.
 - The reply names what was built, what was delegated and why, and what was verified.
@@ -51,3 +52,4 @@ The user says implement, build, or land this, and a spec or ticket graph already
 
 - Upstream: mattpocock/skills `implement` and `implement-spec` at commit `5863806`; pstack `poteto-mode` playbook `feature.md` at commit `3dbd22f`.
 - Changed: merged the single-ticket and spec-scale flows into one skill, kept the frontier semantics, replaced the worktree plus merger topology with direct-by-default and fan-out at three or more orthogonal subtasks, added the four throughput checkpoints, and moved harness specifics to Harness.
+- Phase-boundary fan-out and stop conditions added 2026-11-14 from pstack `poteto-mode/playbooks/feature.md:19` at commit `3dbd22f`: parent-level fan-out is for slices that produce independent artifacts, and a stage that can stop the line is what makes a loop trustworthy.

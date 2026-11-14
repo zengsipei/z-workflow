@@ -18,10 +18,13 @@ Each worker receives one brief. The brief names:
 3. Data shape: the named structure decided before code is written.
 4. Success criteria: checkable statements, not adjectives.
 5. Pointers: the spec, tickets, notes, and prior commits, never a paraphrase of what the pointer already says.
+6. Stop conditions: the outcomes that end the work without a fix, such as not a defect, cannot reproduce, or risk too large. A worker that hits one reports it; it does not improvise a fix so the work looks finished.
 
 ## Fan-out rules
 
 - Default is direct execution. Fan out only when at least three subtasks touch disjoint files and the interfaces are already settled.
+- Code-coupled work (one feature, one migration) goes to a single owner with the checkpoints inline. That owner fans out internally after its blocking phase. Parent-level fan-out is for slices that produce independent artifacts: audits, cross-subsystem investigations, competing experiments.
+- Rewrite the checkpoints at every phase boundary, and spawn a fresh owner rather than chaining interrupts.
 - Each worker starts with a fresh context and reports only its result. Communication is sparse: pointers, not copies.
 - A worker that would cross the settled interface stops and reports the break instead of improvising.
 - The main thread merges, reviews, and verifies. It does not edit a worker's scope while that worker runs.

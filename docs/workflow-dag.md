@@ -38,6 +38,7 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 |---|---|---|---|
 | `zw` | `zw-map` | One session cannot hold the decisions | Playbook choice, goal restated |
 | `zw` | `zw-spec` | The work fits one session | Playbook choice, goal restated |
+| `zw` | `zw-verify` | The repo has no drivable route to its own behaviour | A generated `verify-<app>/` skill, or the gap report |
 | `zw-map` | `zw-spec` | Destination named, open decisions sliced | `map.md`, decision tickets |
 | `zw-spec` | `zw-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
 | `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
@@ -50,6 +51,8 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 | `zw-review` | `zw-implement` | Findings raised | One fresh fix pass, then re-verify |
 
 The last row is the only back edge. It is bounded by construction: findings are fixed in one pass, and the graph is acyclic everywhere else.
+
+The verification gate is the one edge that runs before implementation. Every route that ends in code passes it, so an agent is never handed work it cannot check.
 
 ## Side lanes and support skills
 
@@ -69,10 +72,10 @@ Five routes cross the same nodes. `zw` picks one and copies its steps into the t
 
 | Shape | Route |
 |---|---|
-| Feature | `zw-map` when needed, else `zw-spec`; `zw-tickets`; `zw-implement` per ticket; `zw-verify`; `zw-note`; `zw-review` |
+| Feature | `zw-verify` when the repo has no drivable route; `zw-map` when needed, else `zw-spec`; `zw-tickets`; `zw-implement` per ticket; `zw-verify`; `zw-note`; `zw-review` |
 | Bug fix | Reproduce on the real surface, bisect to the root cause, `zw-implement`, re-run the same surface, `zw-note` when the cause was not obvious |
 | Investigation | Answer from evidence, `zw-note` the finding, build nothing unless the answer needs a sketch |
-| Refactor | `zw-map` for the target shape, `zw-spec` with the seam decided, `zw-tickets` as expand-contract slices, `zw-implement`, `zw-verify` |
+| Refactor | `zw-verify` when the repo has no drivable route, `zw-map` for the target shape, `zw-spec` with the seam decided, `zw-tickets` as expand-contract slices, `zw-implement`, `zw-verify` |
 | Ship | `zw-review` on the whole diff, `zw-verify` for evidence, then land by repo convention |
 
 ## Gates

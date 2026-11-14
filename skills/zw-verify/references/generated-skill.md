@@ -25,3 +25,7 @@ Tear down only what the run started; never kill by process name. Cleanup removes
 ## Helpers
 
 Any script the skill ships is executable and its invocation is shown in the skill body. A helper the reader must reverse-engineer is not a helper.
+
+When agents keep writing throwaway scripts to click through the app, the helper worth building is a small control CLI the skill calls. It is agent-drivable when it has a few composable subcommands that each do real work rather than many thin ones, `--dry-run` on anything destructive, subcommands that reveal functionality gradually instead of all at once, error messages that say what to do instead, rich `--help` text, and machine-readable output such as JSON. When there is no CLI to build, name the existing tool the skill drives and keep its invocation in the body.
+
+Make the environment repeatable too: seeded data, test users, and one command that brings the environment up the same way every time.

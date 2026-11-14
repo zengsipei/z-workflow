@@ -10,6 +10,21 @@ Judgement: a mistake that needs context or taste to spot. Examples: cross-file c
 
 When a mistake could be either, prefer the mechanical check. Only when no script could ever substitute for the judgement does it become a standard.
 
+## Order of the fix
+
+A mechanical mistake is fixed as high in this order as the repo allows, because each step makes the mistake harder to reintroduce.
+
+1. Architecture. Remove the shape that allowed it: a type that cannot represent the bad state, a module that no longer has a second way to do the same thing.
+2. Types and lint. A rule the compiler or the linter enforces on every change.
+3. A behavioural test. Slower and later than the two above, so it carries what they cannot express.
+4. Documentation. Last, because prose is the only entry that fails no build when it is ignored.
+
+A new check has to reject the historical mistake. A check that passes on the code that caused the problem is decoration.
+
+## Rule-to-enforcer table
+
+Keep one table in the repo's standards file, one row per rule: the rule, what enforces it, and where that runs. A rule with no enforcer, and an enforcer nobody runs, are then visible in the table instead of being rediscovered every time.
+
 ## Why standards are enforced at review
 
 Every change passes through two stages with different context pressure. The implementation stage carries the most pressure: exploration, writing, debugging. The review stage carries the least: it receives a diff, so it needs no exploration. The stage with the least pressure owns the standards. Standards files are read at review, not implementation.
