@@ -1,6 +1,6 @@
 # z-workflow
 
-A portable agent workflow: fifteen skills plus zero-dependency checkers, in the `.agents/skills`
+A portable agent workflow: sixteen skills plus zero-dependency checkers, in the `.agents/skills`
 convention so every harness reads the same files. `DESIGN.md` is the contract.
 
 ## Install
@@ -35,6 +35,7 @@ spine.
 | `zw-handoff` | Hand the work to a fresh session |
 | `zw-write` | Prose, commit and PR text, and code comments |
 | `zw-blast-radius` | What a change breaks beyond the diff, with the one safety fact proven |
+| `zw-bro` | Restate the last reply in plain language |
 
 ## Playbooks
 

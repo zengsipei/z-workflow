@@ -53,7 +53,6 @@ Rigor scales with the risk rather than with the effort: a one-way door or a wide
 ## Style
 
 - Reply in Chinese, answer first and short, with bold section headers and tables for status and evidence. Repo artifacts, commits and docs stay English. No em dash, no filler, no jargon; restate a jargon-heavy reply plainly.
-- A request to speak plainly, or a complaint that the last reply was jargon: restate that reply in plain language and shorter, with no jargon and no hedging.
 - Reversible work: do it and present the result. Irreversible writes pause and ask first, which covers a force-push to a shared branch, a deploy, data deletion and a message to a customer. Never ask for a fact the repo or a running system can answer, and resolve a blocker yourself before asking.
 - Nontrivial change: run `zw-how` before design. When the user asks for gaps, compare against the plan document or a reference product, not a feature tour.
 
@@ -78,4 +77,4 @@ Rigor scales with the risk rather than with the effort: a one-way door or a wide
 - Changed: the 23 poteto playbooks collapsed to five shapes, then moved out of this file into `playbooks/`, with a project and a user layer over them, on 2026-11-14; the four throughput checkpoints kept verbatim; reply style, autonomy and the explain-before-design rule absorbed from `zsp-mode` when that skill was retired on 2026-11-14, then repointed at `zw-how`; every harness tool name moved to Harness.
 - Verification gate added 2026-11-14 from poteto, `The Complete Guide to pstack Pt. 1` (x.com/poteto/status/2094457600259842065), read through the unofficial transcript at `pstack.ganhai.cloud`; the claim it rests on is that verification is the step that lets an agent close its own loop.
 - Five standing rules added 2026-11-14 from pstack's principle set as shipped in pstack-dsh 0.2.5: fix the root cause, subtract before you add, make re-runs converge, minimize reader load, and guard at the boundary. Kept as rules in this file rather than adopted as skills.
-- Rigor scaling, the three-way verdict, and the plain-restatement trigger added 2026-11-14 from pstack `figure-it-out` and `bro` as shipped in pstack-dsh 0.2.5, kept as rules in this file rather than adopted as skills.
+- Rigor scaling and the three-way verdict added 2026-11-14 from pstack `figure-it-out` as shipped in pstack-dsh 0.2.5, kept as rules in this file rather than as a skill; the plain-restatement trigger moved out to `zw-bro`.
