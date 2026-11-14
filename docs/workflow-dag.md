@@ -2,7 +2,7 @@
 
 Status: derived from `DESIGN.md` section 4 and `skills/*/SKILL.md`. Regenerate by hand when the frozen list changes.
 
-The workflow is a directed graph with one back edge. The spine runs once per task, top to bottom. Three side lanes hang off it, plus three support skills any node may call. Every node is a skill; every edge carries one artifact or one approval.
+The workflow is a directed graph with one back edge. The spine runs once per task, top to bottom. Three side lanes hang off it, plus four support skills any node may call. Every node is a skill; every edge carries one artifact or one approval.
 
 No step names a skill from outside this repo. A capability the spine needs is a `zw-` skill; an installed skill is reference material, never a step.
 
@@ -43,6 +43,7 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 | `zw-spec` | `zw-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
 | `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
 | `zw` | `zw-write` | Text a person will read is written or reviewed | The text, tightened |
+| `zw-review` | `zw-blast-radius` | A diff's risk turns on something the diff does not show | The one safety fact, proven or marked unproven |
 | `zw-implement` | `zw-tdd` | A cycle reaches a confirmed seam | Failing test, then green |
 | `zw-tickets` | `zw-implement` | Ticket graph approved and published | `tickets/NN-<slug>.md` |
 | `zw-implement` | `zw-verify` | Frontier closed, integration branch builds | Code on the integration branch |
@@ -71,6 +72,7 @@ A drivable route exists before implementation is delegated, and the shipped rout
 | `zw-handoff` -> a fresh session | The session ends and another continues it | One document in the OS temporary directory |
 | `zw-how` -> any node that changes code | A nontrivial change starts in code nobody has read | One explanation, then the change |
 | `zw-write` -> any node that writes text | Text a person reads is being written or reviewed | The text, tightened |
+| `zw-blast-radius` -> any node that lands a change | The change's blast radius is not obvious from the diff | Confirmed and cleared risks, and the one safety fact proven |
 | `zw-review` -> the user | The verdict is blocked | The findings, and what would unblock them |
 
 Side lanes never block the spine. `zw-handoff` and `zw-retro` are leaves: nothing downstream consumes their output in the same task.
@@ -104,4 +106,4 @@ A repo that skips them is unverified, not clean.
 
 ## Context cost
 
-Five nodes are model-invoked, so five carry their description in context permanently: `zw-note`, `zw-verify-maintain`, `zw-how`, `zw-tdd` and `zw-write`. The other nine are human-invoked commands and cost nothing until they run.
+Six nodes are model-invoked, so six carry their description in context permanently: `zw-note`, `zw-verify-maintain`, `zw-how`, `zw-tdd`, `zw-write` and `zw-blast-radius`. The other nine are human-invoked commands and cost nothing until they run.
