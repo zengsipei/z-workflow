@@ -16,7 +16,7 @@ A change is non-trivial: it changes behavior, architecture, a cross-file contrac
 1. Apply the write gate. Skip the note when the change is only mechanical. When in doubt, ask: can a later reader derive why this is so from code and tests alone? If not, write.
 2. Search the active notes (proposed, implemented, rejected) by module name or keyword before writing anything. Classify every hit now: unrelated, partial overlap (cross-link), fully absorbed (delete or archive), or dead proposal (reject or delete).
 3. Prefer updating the note that already owns this decision. Fix facts such as paths, symbols, and defaults in place, in the present tense. A flipped decision or reason opens a new note and cross-links; never rewrite an old Decision into its opposite.
-4. Write the note under the repo's notes tree at the lifecycle and class path that matches it, using the fixed header block and the sections for that lifecycle. Record only alternatives that were actually weighed, each with its strongest case first and then why it lost. Close Consequences with cost, benefit, and a Revisit signal.
+4. Write the note under the repo's notes tree at the lifecycle and class path that matches it, using the fixed header block and the sections for that lifecycle. Record only alternatives that were actually weighed, each with its strongest case first and then why it lost. Write Consequences with cost and benefit, then close the note with a standalone Revisit signal section.
 5. When a proposed note lands in the same change, move it to implemented, keep the date, rewrite the proposal as a present-tense Decision, and fold acceptance criteria and risks into Consequences.
 6. Run the note checker and fix every failure before finishing.
 
@@ -31,7 +31,7 @@ Class is a closed set of six: feature, bug-fix, simplification, architecture, pr
 ## Done
 
 - The note sits at the path matching its lifecycle and class, with the fixed header block and the date of first proposal.
-- Alternatives are real options, strongest case before rejection; Consequences names cost, benefit, and a Revisit signal.
+- Alternatives are real options, strongest case before rejection; Consequences names cost and benefit, and a standalone Revisit signal section closes the note.
 - Existing notes were searched first, and an owned decision was updated in place, not duplicated.
 - node scripts/verify-notes.mjs <repo> exits zero.
 
