@@ -1,7 +1,6 @@
 ---
 name: zw-code-review
-description: "Two-axis review of the changes since a fixed point: Standards and Spec."
-disable-model-invocation: true
+description: Use when a change is finished and needs review before it lands, when the user asks to review a diff or a branch, or when a spec and the code may disagree; reviews the Standards and the Spec axes side by side.
 ---
 
 # zw-code-review

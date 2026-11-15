@@ -18,7 +18,7 @@ The user starts a task that will change code, docs, or a running system, and no 
 2. Pick the playbook. `scripts/playbooks.mjs --list` prints the routes in effect for this repo, nearest layer first, and `scripts/playbooks.mjs <name>` prints the one that wins. Copy its steps into the todo list, then add the task's own steps after them. These are procedures, not suggestions: follow them as written. A step you cannot take stays in the list marked `skip: <reason>`, and a step marked Mandatory is not skippable at all.
 3. If the repo records no issue tracker, triage labels, domain layout or build and test topology, write them now from `references/repo-setup.md`, in the files that skill names. Every later step reads those files instead of guessing.
 4. Settle the drivable route before the spine reaches anything that delegates implementation: a project-local verification skill, or an equivalent script that launches the app and drives one user path. Feature and Refactor run `zw-create-verification-skill` first when the repo has none, and finish it before implementation starts. A Bug fix whose reproduction on the real surface fails stops there instead of building one. Name the route you found.
-5. Run the spine for the matched playbook, in order, handing off to the named skill at each step. A step whose artifact already exists is verified, not redone.
+5. Run the spine for the matched playbook, in order, handing off to the named skill at each step. A model-invoked skill is loaded; a human-invoked one is read, by opening its `SKILL.md` at its sibling path such as `../zw-how/SKILL.md` and following it. A step whose artifact already exists is verified, not redone.
 6. Before any delegation, write the four throughput checkpoints as todos: blocking prerequisite, independent work stream, shared mutable state, smallest safe decomposition. Then delegate.
 7. At the end, run the notes gate and the artifact checker against the target repo, and state both results in the reply.
 
@@ -55,7 +55,7 @@ Rigor scales with the risk rather than with the effort: a one-way door or a wide
 
 - Reply in Chinese, answer first and short, with bold section headers and tables for status and evidence. Repo artifacts, commits and docs stay English. No em dash, no filler, no jargon; restate a jargon-heavy reply plainly.
 - Reversible work: do it and present the result. Irreversible writes pause and ask first, which covers a force-push to a shared branch, a deploy, data deletion and a message to a customer. Never ask for a fact the repo or a running system can answer, and resolve a blocker yourself before asking.
-- Nontrivial change: run `zw-how` before design. When the user asks for gaps, compare against the plan document or a reference product, not a feature tour.
+- Nontrivial change: read `../zw-how/SKILL.md` and follow it before design. When the user asks for gaps, compare against the plan document or a reference product, not a feature tour.
 
 ## Done
 

@@ -1,6 +1,7 @@
 ---
 name: zw-maintain-verification-skill
-description: Use when the user asks to audit a verification skill, checks whether a project's verify skill still matches the app, or wants the feature map kept honest.
+description: Keep a project verification skill and its feature map honest as the app changes.
+disable-model-invocation: true
 ---
 
 # zw-maintain-verification-skill

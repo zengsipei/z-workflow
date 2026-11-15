@@ -1,6 +1,7 @@
 ---
 name: zw-why
-description: Use for "why does X work this way", why a design was picked over another, an unexplained regression or postmortem, or a threshold that ought to have data behind it, when the reason is not readable from the code. Mines source control, the repo's tracker, its docs and notes, session history and incidents in parallel, then returns a cited read that names what it could not find.
+description: Reconstruct why an existing shape is the way it is from the record, in tiers, with the searches that found nothing named.
+disable-model-invocation: true
 ---
 
 # zw-why
@@ -9,7 +10,7 @@ Reconstruct why an existing thing is the way it is, from the record it left, nev
 
 ## Fires when
 
-"Why does X work this way", "why did we pick Y", an unexplained regression, a postmortem, or a threshold that ought to have data behind it. Also before changing code whose shape looks deliberate and unexplained. Not for what the code does now, which is `zw-how`, and not for a decision being made now, which is `zw-note`.
+"Why does X work this way", "why did we pick Y", an unexplained regression, a postmortem, or a threshold that ought to have data behind it. Also before changing code whose shape looks deliberate and unexplained. Not for what the code does now, which is `zw-how`, and not for a decision being made now, which is `zw-write-notes-like-deepseek`.
 
 ## Posture
 
@@ -40,7 +41,7 @@ Reconstruct why an existing thing is the way it is, from the record it left, nev
 
 ## Artifacts
 
-None committed. The read is the artifact, in the reply. Keep it as a note through `zw-note` when the user asks.
+None committed. The read is the artifact, in the reply. Keep it as a note through `zw-write-notes-like-deepseek` when the user asks.
 
 ## Done
 

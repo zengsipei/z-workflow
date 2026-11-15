@@ -1,6 +1,7 @@
 ---
 name: zw-blast-radius
-description: Use before a change lands when its blast radius is not obvious from the diff, when asked for the blast radius of something or what it could break, or to review a small diff nobody trusts yet. Finds the breakage grep cannot show, and proves the one fact the change is safe because of by running real code.
+description: Find what a change breaks beyond the diff, and prove the one fact the change is safe because of by running real code.
+disable-model-invocation: true
 ---
 
 # zw-blast-radius

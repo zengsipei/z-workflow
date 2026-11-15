@@ -28,6 +28,8 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 | D14 | Anything a step writes is the file the upstream skill expects, at its path, in its format: `.agents/notes/`, `docs/agents/{issue-tracker,triage-labels,domain}.md`, `GLOSSARY.md`, `agents/openai.yaml`, `decision.tsv` | Uninstalling z-workflow and installing upstream must leave the working tree unchanged |
 | D15 | A vendored script keeps its own runtime; the zero-dependency rule covers z-workflow's own scripts only | Vendoring a TypeScript checker means running it as TypeScript, or the copy stops being verbatim |
 | D16 | A repo's build and test topology is recorded once in `docs/agents/build-and-test.md`, written by the setup step beside the three upstream files; it is the one file z-workflow writes that upstream does not expect, so D14 stays true of the other three | The minutes a full run costs, and the build a stale `dist` needs, are paid once per repo instead of once per run; the exception is written down rather than left to read like a mistake |
+| D17 | A skill that tracks one upstream keeps the upstream name behind the `zw-` prefix (`zw-how`, `zw-wayfinder`, `zw-create-verification-skill`); a skill merged from several upstreams keeps its merged name and records every source in `Provenance` | The name is what tells a reader which upstream file to diff against when upstream moves; inventing a single source for a merged skill would misreport what was taken |
+| D18 | Invocation follows the upstream skill: one shipped human-invoked stays human-invoked here, one shipped model-invoked stays model-invoked. A merged skill takes the mode of the source the workflow routes to, and says so in `Provenance`. A step that needs a human-invoked skill reads its body by sibling path (`../zw-how/SKILL.md`) and follows it | A description in context is the price of a model-invoked skill, and upstream already decided which skills earn it; the read is one file open, paid only when a step needs it, where a wrong guess about the mode is silent |
 
 ## 3. Repo layout
 
@@ -66,17 +68,17 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | `zw-create-formal-verification-skill` | Formal verification where a bug costs the most and tests reach the least: pick the property, let the question pick the tool, generate a project-local formal verify skill, prove it once | pstack `create-formal-verification-skill` | human |
 | `zw-maintain-formal-verification-skill` | Bring a project's formal verification back in line with code that changed, and say whether each failure is drift in the verification or a bug in the code | pstack `maintain-formal-verification-skill` | human |
 | `zw-write-notes-like-deepseek` | Decision note: drives the vendored write-notes-like-deepseek skill, its write gate, lifecycle, sealing and archive CLI, with no second implementation | notes project, vendored verbatim | model |
-| `zw-code-review` | Two-axis review: standards and spec, in parallel | matt `code-review` | human |
+| `zw-code-review` | Two-axis review: standards and spec, in parallel | matt `code-review` | model |
 | `zw-retro` | Retro: mechanical error becomes a deterministic check, judgement becomes a standard | matt `retro` | human |
 | `zw-handoff` | Hand the work to a fresh session | matt `handoff` | human |
-| `zw-how` | Explain a subsystem before it is changed: entry points, flow, where things live, gotchas | pstack `how` | model |
+| `zw-how` | Explain a subsystem before it is changed: entry points, flow, where things live, gotchas | pstack `how` | human |
 | `zw-tdd` | Red-green at a pre-agreed seam, and the failing regression test for a bug | matt `tdd` + pstack `tdd` | model |
 | `zw-unslop` | Cut the patterns that make text read machine-written: the catalog, the rewrite pass, the formatting tells | pstack `unslop` | human |
 | `zw-technical-writing` | The writing standard: Diátaxis mode, sentence rules, load limits, disambiguation, and PR and commit text | pstack `technical-writing` | human |
 | `zw-no-comments` | Comment discipline: the exception list, the deletions, the report-only comment pass, and encoding a constraint instead of describing it | pstack `no-comments` | human |
-| `zw-blast-radius` | What a change breaks somewhere else, and the one fact it is safe because of, proven by running real code | pstack `blast-radius` | model |
+| `zw-blast-radius` | What a change breaks somewhere else, and the one fact it is safe because of, proven by running real code | pstack `blast-radius` | human |
 | `zw-bro` | Restate the last reply in plain language, shorter | pstack `bro` | human |
-| `zw-why` | Why an existing thing is the way it is, from the record, in tiers, with the searches that found nothing named | pstack `why` | model |
+| `zw-why` | Why an existing thing is the way it is, from the record, in tiers, with the searches that found nothing named | pstack `why` | human |
 
 ## 5. Artifact contract
 
@@ -99,7 +101,7 @@ Drafts are gitignored; only settled artifacts are committed. Tickets and specs d
 
 ## 6. Gates
 
-The notes gate is the vendored copy of write-notes-like-deepseek: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx` against the notes tree. z-workflow adds no note rule of its own, so a tree that passes here passes the upstream skill, and the reverse holds too. Sealing and the archive move are the same vendored scripts, `verify-archived-agent-notes.ts --write` and `archive-agent-note.ts`. `verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule. Both ship inside `skills/zw/scripts/` so a skills-CLI install carries them. `verify-install.mjs` is this repo's own gate: it proves the skill set installs complete, by checking frontmatter, directory names, and that every helper a body names ships inside that skill.
+The notes gate is the vendored copy of write-notes-like-deepseek: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx` against the notes tree. z-workflow adds no note rule of its own, so a tree that passes here passes the upstream skill, and the reverse holds too. Sealing and the archive move are the same vendored scripts, `verify-archived-agent-notes.ts --write` and `archive-agent-note.ts`. `verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule. Both ship inside `skills/zw/scripts/` so a skills-CLI install carries them. `verify-install.mjs` is this repo's own gate: it proves the skill set installs complete, by checking frontmatter, directory names, that every helper a body names ships inside that skill, and that a sibling body a step reads by path (`../<skill>/SKILL.md`) is installed beside it.
 
 `playbooks.mjs` resolves which routes are in effect for a repo: the project layer first, then the user's, then the built-ins. It validates nothing: a playbook binds by its wording, so the checker has nothing to add.
 

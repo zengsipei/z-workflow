@@ -9,28 +9,28 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 ## Spine
 
 ```text
-                     +-------------+
-     zw (entry) ---> | fits one    | --no--> zw-wayfinder: decisions, fog-of-war tickets --+
-                     | session?    |                                                 |
-                     +-------------+                                                 |
-                           | yes                                                     |
-                           v                                                         |
-                        zw-to-spec <----------------------------------------------------+
+                     +------------+
+     zw (entry) ---> | fits one    | --no--> zw-wayfinder
+                     | session?    |                    |
+                     +------------+                    |
+                           | yes                        |
+                           v                            |
+                        zw-to-spec <-------------------+
                            |
                            v
-                       zw-to-tickets
+                        zw-to-tickets
                            |
                            v
-                      zw-implement <------------------+
-                           |                          |
-                           v                          |
-                       zw-create-verification-skill                      |
-                           |                          |
-                           v                          |
-                       zw-write-notes-like-deepseek                        |
-                           |                          |
-                           v                          |
-                       zw-code-review --------------------+
+                        zw-implement <-----------------+
+                           |                            |
+                           v                            |
+                        zw-create-verification-skill
+                           |                            |
+                           v                            |
+                        zw-write-notes-like-deepseek
+                           |                            |
+                           v                            |
+                        zw-code-review -----------------+
                      findings, fixed in one fresh pass
 ```
 
@@ -80,6 +80,8 @@ A drivable route exists before implementation is delegated, and the shipped rout
 | `zw-why` -> any node that questions an existing shape | The reason is not readable from the code | A cited read, its tiers, and the searches that found nothing |
 | `zw-code-review` -> the user | The verdict is blocked | The findings, and what would unblock them |
 
+Invocation follows upstream: a skill its source ships as human-invoked stays human-invoked here, the three writing skills included. No step loads such a skill. The step reads the body by sibling path (`../zw-technical-writing/SKILL.md`) and follows it, the route pstack's own playbooks take when a skill cannot be called.
+
 Side lanes never block the spine. `zw-handoff` and `zw-retro` are leaves: nothing downstream consumes their output in the same task.
 
 ## Playbook routes
@@ -111,4 +113,4 @@ A repo that skips them is unverified, not clean.
 
 ## Context cost
 
-Seven nodes are model-invoked, so seven carry their description in context permanently: `zw-write-notes-like-deepseek`, `zw-maintain-verification-skill`, `zw-how`, `zw-tdd`, `zw-write`, `zw-blast-radius` and `zw-why`. The other ten are human-invoked commands and cost nothing until they run.
+Three nodes are model-invoked, so three carry their description in context permanently: `zw-write-notes-like-deepseek`, `zw-tdd` and `zw-code-review`. The other eighteen are human-invoked commands: they cost nothing until they run, and the step that needs one reads its `SKILL.md` by sibling path instead of loading it.

@@ -15,7 +15,9 @@ By file name, nearest layer first:
 
 A file with a new name adds a route. A file named after one of the five replaces it whole. There is no
 merge and no schema: a `zw-` skill named in a step is a handoff, and a step that names none is
-carried out directly.
+carried out directly. A model-invoked skill is loaded; a human-invoked one is read, by opening its
+`SKILL.md` at its sibling path (`../zw-how/SKILL.md`) and following it, which is what pstack's own
+playbooks do where a skill cannot be called.
 
 ## Reading them
 

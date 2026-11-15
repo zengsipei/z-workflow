@@ -1,6 +1,7 @@
 ---
 name: zw-how
-description: Use for "how does X work", a walkthrough before changing a subsystem, or a placement and ownership question (where should this live, which layer owns it). Explains entry points, runtime flow, where things live and the gotchas, without annotating the source.
+description: Explain a subsystem before it changes, covering its entry points, flow, where things live, the gotchas, and where a piece of behaviour belongs.
+disable-model-invocation: true
 ---
 
 # zw-how
