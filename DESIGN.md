@@ -18,7 +18,7 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 | D4 | Skills plus zero-dependency check scripts | Discipline needs mechanical teeth, not more prose |
 | D5 | Decision notes live in `<repo>/.agents/notes` with a unified format and a checker | Notes travel with the code and show up in review |
 | D6 | Local artifacts by default; a repo with a tracker uses the tracker | psst (Gitea) keeps its single ledger; empty repos still work |
-| D7 | Scope: the spine plus verification plus notes, 10-17 skills | Each skill must be one the owner actually reaches for |
+| D7 | Scope: the spine plus verification plus notes, 10-19 skills | Each skill must be one the owner actually reaches for |
 | D9 | No step names an external skill. A capability the spine needs is copied in as a `zw-` skill; installed skills are reference only | The workflow must run with no host-specific skill set present |
 | D8 | v1 is done when the spine runs once on a real repo, artifacts kept as samples | Otherwise this becomes a documentation project |
 | D10 | Delegation is one adapter per harness under `skills/zw/references/harness/`, pointed at by sibling path; the two agent definitions are pstack's own files, vendored verbatim, and every route keyed by playbook, sub-workload or agent type comes from z-workflow's own key table at `~/.agents/zw-roles.md` | The harness-specific part gets one home, and nothing in the workflow depends on an installed plugin |
@@ -63,6 +63,8 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | `zw-implement` | Delegate implementation: throughput checkpoint, then briefs | matt `implement` + pstack fan-out rule | human |
 | `zw-create-verification-skill` | Build a project verification skill: Launch / Doctor / Drive / Evidence / Cleanup / Helpers, then prove it once | pstack `create-verification-skill` | human |
 | `zw-maintain-verification-skill` | Keep the verification map honest (source wave, live pass, triage) | pstack `maintain-verification-skill` | human |
+| `zw-create-formal-verification-skill` | Formal verification where a bug costs the most and tests reach the least: pick the property, let the question pick the tool, generate a project-local formal verify skill, prove it once | pstack `create-formal-verification-skill` | human |
+| `zw-maintain-formal-verification-skill` | Bring a project's formal verification back in line with code that changed, and say whether each failure is drift in the verification or a bug in the code | pstack `maintain-formal-verification-skill` | human |
 | `zw-write-notes-like-deepseek` | Decision note: drives the vendored write-notes-like-deepseek skill, its write gate, lifecycle, sealing and archive CLI, with no second implementation | notes project, vendored verbatim | model |
 | `zw-code-review` | Two-axis review: standards and spec, in parallel | matt `code-review` | human |
 | `zw-retro` | Retro: mechanical error becomes a deterministic check, judgement becomes a standard | matt `retro` | human |
@@ -87,6 +89,7 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | Experiment log | `<repo>/.scratch/<feature>/decision.tsv` | never settles; it is a running log and stays gitignored |
 | Run log | `<repo>/.scratch/<feature>/decisions.tsv`, or `<repo>/.audit/<task-slug>.tsv` when several runs share a repo | never settles; written with the vendored `log.sh`, gitignored like the rest of `.scratch/` |
 | Verification skill | — | `<repo>/.agents/skills/verify-<app>/`, or `<repo>/.dsh/skills/verify-<app>/` when the repo is DSH-only and has no `.agents` convention |
+| Formal verification skill | — | `<repo>/.agents/skills/verify-<app>-formal/`, or `<repo>/.dsh/skills/verify-<app>-formal/` under the same DSH-only criterion |
 | Playbook | — | `<repo>/.agents/zw-playbooks/<name>.md` for one repo, `~/.agents/zw-playbooks/<name>.md` for the user |
 | Architecture decision | — | `docs/adr/NNNN-<slug>.md` |
 
@@ -114,7 +117,7 @@ Run the spine once on psst: `zw` -> `zw-wayfinder` -> `zw-to-spec` -> `zw-to-tic
 
 ## 9. Risks
 
-- Seventeen self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
+- Nineteen self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
 - Self-contained copies drift from upstream; each skill records the upstream commit it was taken from.
 - Without host hooks the gates are honour-system wherever a human skips the closing step.
 - `docs/agents/build-and-test.md` is prose nobody checks: a build command that changes costs one wrong diagnosis before the file is fixed. That is still cheaper than the same diagnosis on every run.

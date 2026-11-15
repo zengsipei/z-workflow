@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw Create Formal Verification Skill"
+  short_description: "Formally verify the promise whose break costs the most"
+policy:
+  allow_implicit_invocation: false

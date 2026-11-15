@@ -1,6 +1,6 @@
 # z-workflow
 
-A portable agent workflow: seventeen skills plus checkers, in the `.agents/skills` convention so
+A portable agent workflow: nineteen skills plus checkers, in the `.agents/skills` convention so
 every harness reads the same files. `DESIGN.md` is the contract. The notes gate is the upstream
 write-notes-like-deepseek skill vendored verbatim, so the two tools read one tree the same way.
 
@@ -31,6 +31,8 @@ spine.
 | `zw-implement` | Throughput checkpoints, briefs, review, checkers |
 | `zw-create-verification-skill` | Build a project verification skill, then prove it once |
 | `zw-maintain-verification-skill` | Keep that verification map honest |
+| `zw-create-formal-verification-skill` | Formal verify skill for the code where a bug costs the most |
+| `zw-maintain-formal-verification-skill` | Keep formal verification true to the code it describes |
 | `zw-write-notes-like-deepseek` | Decision notes with a write gate and a closed lifecycle |
 | `zw-code-review` | Two-axis review: standards and spec, side by side |
 | `zw-retro` | Turn mistakes into checks or standards |
