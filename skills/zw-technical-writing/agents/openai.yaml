@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw Technical Writing"
+  short_description: "The writing standard for docs, PRs and commits"
+policy:
+  allow_implicit_invocation: false

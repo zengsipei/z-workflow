@@ -43,7 +43,7 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 | `zw-to-spec` | `zw-to-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
 | `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
 | `zw-how` | `zw-why` | The flow raises why the shape is this way | The cited rationale, in tiers, with the gaps named |
-| `zw` | `zw-write` | Text a person will read is written or reviewed | The text, tightened |
+| `zw` | `zw-technical-writing` | Text a person will read is written or reviewed | The text, tightened |
 | `zw-code-review` | `zw-blast-radius` | A diff's risk turns on something the diff does not show | The one safety fact, proven or marked unproven |
 | `zw-implement` | `zw-tdd` | A cycle reaches a confirmed seam | Failing test, then green |
 | `zw-to-tickets` | `zw-implement` | Ticket graph approved and published | `tickets/NN-<slug>.md` |
@@ -72,7 +72,9 @@ A drivable route exists before implementation is delegated, and the shipped rout
 | `zw-retro` -> written standard | The mistake needs judgement | A documented standard the review reads |
 | `zw-handoff` -> a fresh session | The session ends and another continues it | One document in the OS temporary directory |
 | `zw-how` -> any node that changes code | A nontrivial change starts in code nobody has read | One explanation, then the change |
-| `zw-write` -> any node that writes text | Text a person reads is being written or reviewed | The text, tightened |
+| `zw-technical-writing` -> any node that writes text | Text a person reads is being written or reviewed | The text, tightened |
+| `zw-unslop` -> `zw-technical-writing` | A draft exists and reads machine-written | The same meaning, the tells cut |
+| `zw-no-comments` -> any node that lands a diff | A diff carries comments to settle | Deleted comments, encoded constraints, and the ones that stay open with a reason |
 | `zw-blast-radius` -> any node that lands a change | The change's blast radius is not obvious from the diff | Confirmed and cleared risks, and the one safety fact proven |
 | `zw-bro` -> the user | The last reply was jargon | The same content, plainly and shorter |
 | `zw-why` -> any node that questions an existing shape | The reason is not readable from the code | A cited read, its tiers, and the searches that found nothing |

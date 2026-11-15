@@ -1,0 +1,50 @@
+---
+name: zw-technical-writing
+description: The writing standard for technical text, covering the document mode, the sentence rules, the load limits, disambiguation, and PR and commit text.
+disable-model-invocation: true
+---
+
+# zw-technical-writing
+
+Write technical text a tired engineer understands on the first read, in one document mode, one thought per sentence, and the words the codebase already uses.
+
+## Fires when
+
+The user invokes this skill directly, for a doc, README, RFC, PR body, commit message, review reply, or error string that is being written or reviewed. Two neighbours own the jobs beside this one: `zw-unslop` owns the catalog of tells that make text read machine-written, including the formatting tells, and `zw-no-comments` owns code comments and nothing else. Take this skill for the document mode, the sentences, and the repo specifics, and bring the other two in beside it when the text needs their passes.
+
+## Steps
+
+1. Hold three rules above every layer. Cut every word that does no work, use the short everyday word, and when a rule makes a sentence worse, fix the sentence another way or leave it alone. "In order to" is "to", "utilize" is "use", "facilitate" is "help", "perform" is "do", and a long word buys its length with precision. Artifact: the sentence under your hand. Done when the sentence survives without the spare word so the word goes, and a sentence that obeyed every rule yet still reads machine-written has been rewritten another way.
+2. Name the reader's job in one line before drafting: the action, the fact, or the number the reader must leave with. Artifact: that line. Done when it could not sit unchanged in another project's docs, because it names this mechanism rather than a feeling.
+3. Take the codebase as the word list. Write the real symbol, file, flag, or command name, never a synonym or a description of it, and prefer the words a developer says out loud, so "move" and "a budget that only decreases" beat "evacuate" and "ratchet". A named pattern is fine once the text says what it means on first use. When a word breaks this and the slop catalog misses it, report the word, its replacement, and the reason as one line for `zw-unslop`, and never edit that skill. Artifact: the drafted text plus that report line. Done when no invented word survives and the line names all three parts.
+4. Pick one document mode for the whole document. Action plus learning is a tutorial, where the learner builds something and every step shows the result they should see. Action plus work is a how-to, which assumes competence, gives the steps, and links the background. Understanding plus work is reference, which states facts, options, limits, and errors with no instruction and no opinion. Understanding plus learning is explanation, one bounded topic carrying the decisions, the alternatives, and the only opinion the modes allow. Take the craft detail for each mode from `references/modes.md`. Modes never mix, so a reference table inside a tutorial, hand-holding inside reference, or an argument inside a how-to is moved out and linked. Artifact: the mode named for the document. Done when one mode holds and the material of another mode is a link instead.
+5. Vary the rhythm on purpose. A short sentence after a long one lands a point. One thought per sentence does not mean one length per sentence, so split the sentence carrying two thoughts and keep the long one carrying a fact with its condition. Have a view where the mode allows it, and be specific rather than sterile, since "a column rename fails the build" says more than "schema changes can cause issues". Artifact: the drafted prose. Done when the text is not a flat run of clipped sentences.
+6. Write sentences to the reader. Talk to them as "you" in the present tense, and say who does what, so "the compiler checks" replaces "is checked" except where the actor is unknown or beside the point. Write instructions as commands, never "should be done", and put the condition before the instruction and the common case before the exception. Sound like a knowledgeable friend, with no buzzword, no "please", and never "simply", "easy", or "quickly" in a procedure. Do not pre-announce work, do not open consecutive sentences the same way, and link with a page title or a short description, never "click here". Headings carry the point rather than the topic, with one top-level heading and no skipped levels. Number the sequences, bullet the rest, introduce a list with a complete sentence, and keep the items parallel. Artifact: the sentence and heading pass. Done when no instruction is narrated, passive where the actor is known, or softened into a question.
+7. Load one statement at a time. One instruction per sentence, split an instruction past about 20 words and any other sentence past about 25, and put a warning or condition before the step it guards. Keep "the" and "a", because "remove backup file" reads two ways. Give each word one meaning and one job, and pick one word per action, so "start" here stays "start" there. Write a procedure as a direct command, never as narration and never in the passive, and avoid "-ing" words where you can. Artifact: the list of sentences to split, with each one's count. Done when no sentence carries two statements and none runs past the limit its type allows.
+8. Leave no sentence open to two readings. Keep "only" and "not" next to the word they change, because "only fails on growth" and "fails only on growth" say different things. Break a long noun string into a clause, so "the proto import budget check script" becomes "the script that checks the proto-import budget". Make every "it", "they", and "this" point at one obvious thing, and never use "this" or "which" for a whole clause. Keep the dropped verb, the "that" in "ensure that the switch is off", and the repeated article where a series can group two ways. Use periods rather than semicolons, and write "a, b, or both" rather than a slash. Make parenthesized text a full grammatical unit, and never form a plural as "(s)". Call each thing by one name across the whole text, and never reword a sentence you did not otherwise change. Skip idioms, colloquialisms, and Latin abbreviations. Artifact: the disambiguation pass. Done when one read leaves nothing to backtrack through.
+9. Apply the repo specifics. A PR body is a briefing a reviewer reads in under a minute, so it carries the change and the reason, applies every layer except the document mode, and links the logs, the SHA list, and the metric tables instead of pasting them. A commit message is writing under the same rules. Product UI strings are not documentation, so the product's own copy guidelines own them. Indent code snippets with tabs, write real paths, and make every count and tree claim true at the commit that lands the text, with the command that regenerates the count. Artifact: the PR body, commit message, or doc. Done when a reviewer could act from it and every number in it is true at the landing commit.
+10. Re-read against the worked example, which applies the three rules of step 1 to one paragraph. Before: "Configuration of the proto import budget script parameters is performed via budget.json. Note that it is important to remember that running with the write option, which updates the committed budget to reflect the current count, should only be done when lowering it. If exceeded, CI fails." After: "`budget.mjs` reads the committed budget from `budget.json` and counts the files that import protos. If the count exceeds the budget, CI fails. Use the write option only to lower the budget." Artifact: the paragraph you rewrote this way. Done when it lost its nominalization, its filler, and its trailing condition, and cannot be cut again without losing a fact.
+
+## Artifacts
+
+None of its own. The real artifact is the text itself, in place or in the reply, plus one report line for `zw-unslop` when a word broke step 3 and the catalog missed it.
+
+## Done
+
+- The reader's job is named up front and answered by the last line.
+- One document mode holds, and another mode's material is a link.
+- Every sentence carries one statement, sits under its load limit, and reads one way.
+- No word is invented where the codebase has a name, and any word the catalog missed went out as a report line for `zw-unslop`.
+- Every count, path, and tree claim is true at the commit that lands the text, with the command that regenerates it.
+
+## Harness
+
+- DSH: the standard applies in place. A step that needs these rules reads this file by sibling path `../zw-technical-writing/SKILL.md`, which is the route this workflow uses where a skill cannot be called, and a question about a rule that would change code goes through the native question tool.
+- Claude Code: the same standard and the same sibling-path read, with AskUserQuestion where a rule change needs approval.
+- Codex: no question tool and no subagents, so the pass runs sequentially and a proposed change is stated inline and applied once the user answers. Nothing else degrades, because the file reads the same way.
+
+## Provenance
+
+- Upstream: pstack `technical-writing`, as shipped in pstack-dsh 0.2.5.
+- Split back out of the merged `zw-write` on 2026-11-15. That skill is deleted in the same change, so the name is history here and no step points a reader at it.
+- Changed in this port: kept the three rules above the layers, the codebase word list, the rhythm, the four Diataxis modes with the no-mixing rule, the Google sentence rules, the STE load limits, the Global English disambiguation, the repo specifics, and the worked example. Compressed each mode to one sentence and grouped the sentence rules to fit under the line limit, and gave every step an artifact and a done test where upstream wrote rules alone. Dropped the stable rule-id numbering and the instruction to edit the slop skill, which became a report line for `zw-unslop` because no step may edit another skill. "Diataxis" is spelled without its accent to keep the file ASCII.

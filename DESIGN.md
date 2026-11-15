@@ -18,7 +18,7 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 | D4 | Skills plus zero-dependency check scripts | Discipline needs mechanical teeth, not more prose |
 | D5 | Decision notes live in `<repo>/.agents/notes` with a unified format and a checker | Notes travel with the code and show up in review |
 | D6 | Local artifacts by default; a repo with a tracker uses the tracker | psst (Gitea) keeps its single ledger; empty repos still work |
-| D7 | Scope: the spine plus verification plus notes, 10-19 skills | Each skill must be one the owner actually reaches for |
+| D7 | Scope: the spine plus verification plus notes, 10-21 skills | Each skill must be one the owner actually reaches for |
 | D9 | No step names an external skill. A capability the spine needs is copied in as a `zw-` skill; installed skills are reference only | The workflow must run with no host-specific skill set present |
 | D8 | v1 is done when the spine runs once on a real repo, artifacts kept as samples | Otherwise this becomes a documentation project |
 | D10 | Delegation is one adapter per harness under `skills/zw/references/harness/`, pointed at by sibling path; the two agent definitions are pstack's own files, vendored verbatim, and every route keyed by playbook, sub-workload or agent type comes from z-workflow's own key table at `~/.agents/zw-roles.md` | The harness-specific part gets one home, and nothing in the workflow depends on an installed plugin |
@@ -71,7 +71,9 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | `zw-handoff` | Hand the work to a fresh session | matt `handoff` | human |
 | `zw-how` | Explain a subsystem before it is changed: entry points, flow, where things live, gotchas | pstack `how` | model |
 | `zw-tdd` | Red-green at a pre-agreed seam, and the failing regression test for a bug | matt `tdd` + pstack `tdd` | model |
-| `zw-write` | Prose, commit and PR text, and code comments: the document mode, the sentence rules, and the AI tells to cut | pstack `unslop` + `technical-writing` + `no-comments` | model |
+| `zw-unslop` | Cut the patterns that make text read machine-written: the catalog, the rewrite pass, the formatting tells | pstack `unslop` | human |
+| `zw-technical-writing` | The writing standard: Diátaxis mode, sentence rules, load limits, disambiguation, and PR and commit text | pstack `technical-writing` | human |
+| `zw-no-comments` | Comment discipline: the exception list, the deletions, the report-only comment pass, and encoding a constraint instead of describing it | pstack `no-comments` | human |
 | `zw-blast-radius` | What a change breaks somewhere else, and the one fact it is safe because of, proven by running real code | pstack `blast-radius` | model |
 | `zw-bro` | Restate the last reply in plain language, shorter | pstack `bro` | human |
 | `zw-why` | Why an existing thing is the way it is, from the record, in tiers, with the searches that found nothing named | pstack `why` | model |
@@ -117,7 +119,7 @@ Run the spine once on psst: `zw` -> `zw-wayfinder` -> `zw-to-spec` -> `zw-to-tic
 
 ## 9. Risks
 
-- Nineteen self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
+- Twenty-one self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
 - Self-contained copies drift from upstream; each skill records the upstream commit it was taken from.
 - Without host hooks the gates are honour-system wherever a human skips the closing step.
 - `docs/agents/build-and-test.md` is prose nobody checks: a build command that changes costs one wrong diagnosis before the file is fixed. That is still cheaper than the same diagnosis on every run.

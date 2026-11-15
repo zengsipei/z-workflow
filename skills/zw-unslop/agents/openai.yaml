@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw Unslop"
+  short_description: "Cut the tells that make writing read machine-written"
+policy:
+  allow_implicit_invocation: false

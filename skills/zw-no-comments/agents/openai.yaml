@@ -1,0 +1,5 @@
+interface:
+  display_name: "Zw No Comments"
+  short_description: "Delete comments, or encode the constraint they claim"
+policy:
+  allow_implicit_invocation: false

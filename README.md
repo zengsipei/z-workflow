@@ -1,6 +1,6 @@
 # z-workflow
 
-A portable agent workflow: nineteen skills plus checkers, in the `.agents/skills` convention so
+A portable agent workflow: twenty-one skills plus checkers, in the `.agents/skills` convention so
 every harness reads the same files. `DESIGN.md` is the contract. The notes gate is the upstream
 write-notes-like-deepseek skill vendored verbatim, so the two tools read one tree the same way.
 
@@ -37,7 +37,9 @@ spine.
 | `zw-code-review` | Two-axis review: standards and spec, side by side |
 | `zw-retro` | Turn mistakes into checks or standards |
 | `zw-handoff` | Hand the work to a fresh session |
-| `zw-write` | Prose, commit and PR text, and code comments |
+| `zw-unslop` | Cut the tells that make writing read machine-written |
+| `zw-technical-writing` | The writing standard for docs, PRs and commits |
+| `zw-no-comments` | Settle comments: delete them, or encode the constraint |
 | `zw-blast-radius` | What a change breaks beyond the diff, with the one safety fact proven |
 | `zw-bro` | Restate the last reply in plain language |
 | `zw-why` | Why an existing shape is that way, from the record, with the gaps named |

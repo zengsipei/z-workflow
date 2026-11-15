@@ -23,9 +23,9 @@
  *   reported, because the skills CLI skips such a skill as invalid YAML.
  * - Every references/ and scripts/ path named in the body exists inside the
  *   skill own directory, which is all an installer copies.
- * - A path named as a sibling, ../<skill>/references/... or ../<skill>/scripts/...,
- *   resolves inside the skills root, so the shared harness adapter is checked
- *   rather than skipped.
+ * - A path named as a sibling, ../<skill>/references/..., ../<skill>/scripts/...,
+ *   ../<skill>/vendor/... or ../<skill>/SKILL.md, resolves inside the skills root, so
+ *   the shared harness adapter and a skill body read by path are checked rather than skipped.
  * - The body names no file that only exists at the repository root.
  * - A vendor/ tree carries a VENDOR.md whose table lists every file with a
  *   sha256 and a state. A vendored file must hash to its listed value, a file
@@ -47,7 +47,7 @@ const ROOT_ONLY = [
   { re: /samples\//, label: "samples/" },
 ];
 const RELATIVE = /(?:^|[\s`(\[])((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+)/g;
-const SIBLING = /(?:^|[\s`(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+)/g;
+const SIBLING = /(?:^|[\s`(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
 const VENDOR_ROOT = "vendor";
 const VENDOR_MANIFEST = "VENDOR.md";
 
@@ -238,7 +238,7 @@ function selfTest() {
     "alpha/scripts/check.mjs": "console.log(1);\n",
     "alpha/vendor/lib/tool.ts": vendorSource,
     "alpha/vendor/VENDOR.md": vendorManifest,
-    "beta/SKILL.md": FENCE + "\nname: beta\ndescription: \"Quoted: because the value holds a colon.\"\n" + FENCE + "\n\n# beta\n\nNo helpers of its own, but it points at ../alpha/references/detail.md.\n",
+    "beta/SKILL.md": FENCE + "\nname: beta\ndescription: \"Quoted: because the value holds a colon.\"\n" + FENCE + "\n\n# beta\n\nNo helpers of its own, but it points at ../alpha/references/detail.md and is read by ../alpha/SKILL.md.\n",
   });
   const good = runOnSkills(goodRoot);
   if (good.errors.length !== 0) failures.push("good fixture: expected 0 errors, got " + good.errors.join(" | "));
@@ -254,6 +254,7 @@ function selfTest() {
     "zeta-nested/SKILL.md": FENCE + "\nname: zeta-nested\ndescription: Ships a nested fixture skill.\n" + FENCE + "\n\n# zeta-nested\n",
     "zeta-nested/scripts/fixtures/bad/inner/SKILL.md": FENCE + "\nname: inner\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n",
     "eta-nofile/README.md": "no SKILL.md here\n",
+    "kappa-sibling/SKILL.md": FENCE + "\nname: kappa-sibling\ndescription: Reads a skill body that is not installed.\n" + FENCE + "\n\n# kappa-sibling\n\nRead ../ghost/SKILL.md for the rules.\n",
     "theta-dangling/SKILL.md": FENCE + "\nname: theta-dangling\ndescription: Points at a skill that is not installed.\n" + FENCE + "\n\n# theta-dangling\n\nRead ../ghost/references/absent.md.\n",
     "theta-vendor/SKILL.md": FENCE + "\nname: theta-vendor\ndescription: Ships an edited vendor copy.\n" + FENCE + "\n\n# theta-vendor\n\nLoad vendor/lib/tool.ts.\n",
     "theta-vendor/vendor/lib/tool.ts": "export const tool = 2;\n",
@@ -273,6 +274,7 @@ function selfTest() {
     "nested SKILL.md",
     "no SKILL.md",
     "which the installed skill set does not ship",
+    "../ghost/SKILL.md",
     "does not match its VENDOR.md sha256",
     "is not listed in VENDOR.md",
     "but no vendor/VENDOR.md",
