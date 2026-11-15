@@ -1,5 +1,0 @@
-interface:
-  display_name: "Zw Map"
-  short_description: "Map large work as a decision map with fog of war"
-policy:
-  allow_implicit_invocation: false

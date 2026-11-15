@@ -37,9 +37,9 @@ numbered list of steps:
 
 Recommended when a design question needs a throwaway answer.
 
-1. `zw-map` the decisions the spike has to settle
+1. `zw-wayfinder` the decisions the spike has to settle
 2. `zw-implement` prototype only
-3. `zw-verify`
+3. `zw-create-verification-skill`
 ```
 
 Naming a `zw-` skill in a step hands off to that skill. Naming none, as the reproduction step of Bug

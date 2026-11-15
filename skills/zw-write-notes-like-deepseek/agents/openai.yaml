@@ -1,0 +1,3 @@
+interface:
+  display_name: "Zw Write Notes Like Deepseek"
+  short_description: "Record the why of non-trivial changes in notes"

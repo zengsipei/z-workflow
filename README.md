@@ -25,14 +25,14 @@ spine.
 | `zw` | Entry: working style, the playbook routes, the spine, and the checkers |
 | `zw-how` | Explain a subsystem before changing it |
 | `zw-tdd` | Red to green at a confirmed seam, plus the bug regression path |
-| `zw-map` | Decision map with fog-of-war tickets for work too large for one session |
-| `zw-spec` | Conversation to spec, no re-interviewing |
-| `zw-tickets` | Spec to tracer-bullet tickets, numbering equals dependency order |
+| `zw-wayfinder` | Decision map with fog-of-war tickets for work too large for one session |
+| `zw-to-spec` | Conversation to spec, no re-interviewing |
+| `zw-to-tickets` | Spec to tracer-bullet tickets, numbering equals dependency order |
 | `zw-implement` | Throughput checkpoints, briefs, review, checkers |
-| `zw-verify` | Build a project verification skill, then prove it once |
-| `zw-verify-maintain` | Keep that verification map honest |
-| `zw-note` | Decision notes with a write gate and a closed lifecycle |
-| `zw-review` | Two-axis review: standards and spec, side by side |
+| `zw-create-verification-skill` | Build a project verification skill, then prove it once |
+| `zw-maintain-verification-skill` | Keep that verification map honest |
+| `zw-write-notes-like-deepseek` | Decision notes with a write gate and a closed lifecycle |
+| `zw-code-review` | Two-axis review: standards and spec, side by side |
 | `zw-retro` | Turn mistakes into checks or standards |
 | `zw-handoff` | Hand the work to a fresh session |
 | `zw-write` | Prose, commit and PR text, and code comments |

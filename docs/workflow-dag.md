@@ -10,53 +10,53 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 
 ```text
                      +-------------+
-     zw (entry) ---> | fits one    | --no--> zw-map: decisions, fog-of-war tickets --+
+     zw (entry) ---> | fits one    | --no--> zw-wayfinder: decisions, fog-of-war tickets --+
                      | session?    |                                                 |
                      +-------------+                                                 |
                            | yes                                                     |
                            v                                                         |
-                        zw-spec <----------------------------------------------------+
+                        zw-to-spec <----------------------------------------------------+
                            |
                            v
-                       zw-tickets
+                       zw-to-tickets
                            |
                            v
                       zw-implement <------------------+
                            |                          |
                            v                          |
-                       zw-verify                      |
+                       zw-create-verification-skill                      |
                            |                          |
                            v                          |
-                       zw-note                        |
+                       zw-write-notes-like-deepseek                        |
                            |                          |
                            v                          |
-                       zw-review --------------------+
+                       zw-code-review --------------------+
                      findings, fixed in one fresh pass
 ```
 
 | From | To | Condition | Carries |
 |---|---|---|---|
-| `zw` | `zw-map` | One session cannot hold the decisions | Playbook choice, goal restated |
-| `zw` | `zw-spec` | The work fits one session | Playbook choice, goal restated |
-| `zw` | `zw-verify` | The repo has no drivable route to its own behaviour | A generated `verify-<app>/` skill, or a precise report of what blocks one, which stops that route until the user decides |
-| `zw-map` | `zw-spec` | Destination named, open decisions sliced | `map.md`, decision tickets |
-| `zw-spec` | `zw-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
+| `zw` | `zw-wayfinder` | One session cannot hold the decisions | Playbook choice, goal restated |
+| `zw` | `zw-to-spec` | The work fits one session | Playbook choice, goal restated |
+| `zw` | `zw-create-verification-skill` | The repo has no drivable route to its own behaviour | A generated `verify-<app>/` skill, or a precise report of what blocks one, which stops that route until the user decides |
+| `zw-wayfinder` | `zw-to-spec` | Destination named, open decisions sliced | `map.md`, decision tickets |
+| `zw-to-spec` | `zw-to-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
 | `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
 | `zw-how` | `zw-why` | The flow raises why the shape is this way | The cited rationale, in tiers, with the gaps named |
 | `zw` | `zw-write` | Text a person will read is written or reviewed | The text, tightened |
-| `zw-review` | `zw-blast-radius` | A diff's risk turns on something the diff does not show | The one safety fact, proven or marked unproven |
+| `zw-code-review` | `zw-blast-radius` | A diff's risk turns on something the diff does not show | The one safety fact, proven or marked unproven |
 | `zw-implement` | `zw-tdd` | A cycle reaches a confirmed seam | Failing test, then green |
-| `zw-tickets` | `zw-implement` | Ticket graph approved and published | `tickets/NN-<slug>.md` |
-| `zw-implement` | `zw-verify` | Frontier closed, integration branch builds | Code on the integration branch |
-| `zw-verify` | `zw-note` | Evidence captured, generated skill proved once | `verify-<app>/` skill |
-| `zw-note` | `zw-review` | Non-trivial decisions recorded | Note under `.agents/notes/` |
-| `zw-implement` | `zw-review` | Finished work reviewed against the spec | The whole diff |
-| `zw-review` | `zw-implement` | Findings raised | One fresh fix pass, then re-verify |
+| `zw-to-tickets` | `zw-implement` | Ticket graph approved and published | `tickets/NN-<slug>.md` |
+| `zw-implement` | `zw-create-verification-skill` | Frontier closed, integration branch builds | Code on the integration branch |
+| `zw-create-verification-skill` | `zw-write-notes-like-deepseek` | Evidence captured, generated skill proved once | `verify-<app>/` skill |
+| `zw-write-notes-like-deepseek` | `zw-code-review` | Non-trivial decisions recorded | Note under `.agents/notes/` |
+| `zw-implement` | `zw-code-review` | Finished work reviewed against the spec | The whole diff |
+| `zw-code-review` | `zw-implement` | Findings raised | One fresh fix pass, then re-verify |
 
 The last row is the only back edge. It is bounded by construction: findings are fixed in one pass, and the graph is acyclic everywhere else. A `blocked` verdict leaves the graph instead, carrying the findings and what would unblock them to the user.
 
 ```text
-zw --(no drivable route)--> zw-verify --(a route found)--> back to the route's first step
+zw --(no drivable route)--> zw-create-verification-skill --(a route found)--> back to the route's first step
                                                  \--(blocked)--> a precise report of what blocks one,
                                                                  and the route waits for the user
 ```
@@ -67,7 +67,7 @@ A drivable route exists before implementation is delegated, and the shipped rout
 
 | Lane | Trigger | Lands as |
 |---|---|---|
-| `zw-verify` -> `zw-verify-maintain` | The app changed under a generated verify skill | The maintained verify skill, a change-set of proven corrections, or a blocked report |
+| `zw-create-verification-skill` -> `zw-maintain-verification-skill` | The app changed under a generated verify skill | The maintained verify skill, a change-set of proven corrections, or a blocked report |
 | `zw-retro` -> deterministic check | The mistake is mechanical: a pattern a script can detect | A check in the repo's check command, wired in |
 | `zw-retro` -> written standard | The mistake needs judgement | A documented standard the review reads |
 | `zw-handoff` -> a fresh session | The session ends and another continues it | One document in the OS temporary directory |
@@ -76,7 +76,7 @@ A drivable route exists before implementation is delegated, and the shipped rout
 | `zw-blast-radius` -> any node that lands a change | The change's blast radius is not obvious from the diff | Confirmed and cleared risks, and the one safety fact proven |
 | `zw-bro` -> the user | The last reply was jargon | The same content, plainly and shorter |
 | `zw-why` -> any node that questions an existing shape | The reason is not readable from the code | A cited read, its tiers, and the searches that found nothing |
-| `zw-review` -> the user | The verdict is blocked | The findings, and what would unblock them |
+| `zw-code-review` -> the user | The verdict is blocked | The findings, and what would unblock them |
 
 Side lanes never block the spine. `zw-handoff` and `zw-retro` are leaves: nothing downstream consumes their output in the same task.
 
@@ -86,11 +86,11 @@ Five routes cross the same nodes, one file each under `skills/zw/playbooks/`, an
 
 | Shape | Route |
 |---|---|
-| Feature | `zw-verify` when the repo has no drivable route; `zw-map` when needed, else `zw-spec`; `zw-tickets`; `zw-implement` per ticket; `zw-verify`; `zw-note`; `zw-review` |
-| Bug fix | Reproduce on the real surface, bisect to the root cause, `zw-implement`, re-run the same surface, `zw-note` when the cause was not obvious |
-| Investigation | Answer from evidence, `zw-note` the finding, build nothing unless the answer needs a sketch |
-| Refactor | `zw-verify` when the repo has no drivable route, `zw-map` for the target shape, `zw-spec` with the seam decided, `zw-tickets` as expand-contract slices, `zw-implement`, `zw-verify` |
-| Ship | `zw-review` on the whole diff, `zw-verify` for evidence, then land by repo convention |
+| Feature | `zw-create-verification-skill` when the repo has no drivable route; `zw-wayfinder` when needed, else `zw-to-spec`; `zw-to-tickets`; `zw-implement` per ticket; `zw-create-verification-skill`; `zw-write-notes-like-deepseek`; `zw-code-review` |
+| Bug fix | Reproduce on the real surface, bisect to the root cause, `zw-implement`, re-run the same surface, `zw-write-notes-like-deepseek` when the cause was not obvious |
+| Investigation | Answer from evidence, `zw-write-notes-like-deepseek` the finding, build nothing unless the answer needs a sketch |
+| Refactor | `zw-create-verification-skill` when the repo has no drivable route, `zw-wayfinder` for the target shape, `zw-to-spec` with the seam decided, `zw-to-tickets` as expand-contract slices, `zw-implement`, `zw-create-verification-skill` |
+| Ship | `zw-code-review` on the whole diff, `zw-create-verification-skill` for evidence, then land by repo convention |
 
 ## Gates
 
@@ -98,7 +98,7 @@ The target-repo checkers are leaves on the spine, not hooks: they run in the clo
 
 | Checker | Checks |
 |---|---|
-| `zw-note/vendor/write-notes-like-deepseek/scripts/*.ts` | The whole notes contract, run through `npx tsx`: tree and lifecycle shape, note format, relative links, and the sha256 seals of archived notes. Vendored verbatim, so the upstream skill judges a tree the same way |
+| `zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/scripts/*.ts` | The whole notes contract, run through `npx tsx`: tree and lifecycle shape, note format, relative links, and the sha256 seals of archived notes. Vendored verbatim, so the upstream skill judges a tree the same way |
 | `verify-artifacts.mjs` | Ticket numbering and dependency order, spec to ticket links, the no-file-paths rule |
 | `playbooks.mjs` | Which routes are in effect for a repo, by layer. It validates nothing: a playbook is a recommendation |
 | `verify-install.mjs` | This repo only: frontmatter in the portable subset, name matching the directory, description a YAML parser reads intact, every named helper shipped inside its own skill |
@@ -109,4 +109,4 @@ A repo that skips them is unverified, not clean.
 
 ## Context cost
 
-Seven nodes are model-invoked, so seven carry their description in context permanently: `zw-note`, `zw-verify-maintain`, `zw-how`, `zw-tdd`, `zw-write`, `zw-blast-radius` and `zw-why`. The other ten are human-invoked commands and cost nothing until they run.
+Seven nodes are model-invoked, so seven carry their description in context permanently: `zw-write-notes-like-deepseek`, `zw-maintain-verification-skill`, `zw-how`, `zw-tdd`, `zw-write`, `zw-blast-radius` and `zw-why`. The other ten are human-invoked commands and cost nothing until they run.

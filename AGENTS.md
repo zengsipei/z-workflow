@@ -18,7 +18,7 @@ skills/<name>/vendor/<src>/   third-party files, byte-identical, VENDOR.md besid
 skills/<name>/agents/         per-skill harness metadata (openai.yaml), never a SKILL.md
 skills/zw/scripts/verify-artifacts.mjs  spec/ticket checker, ships with the entry skill
 skills/zw/scripts/verify-install.mjs    install and vendor-integrity checker, ships with the entry skill
-skills/zw-note/vendor/write-notes-like-deepseek/  the notes skill's checkers and references, verbatim
+skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/  the notes skill's checkers and references, verbatim
 scripts/link-skills.sh        install: symlink every skill into the harness roots
 docs/adr/                     architecture decisions
 samples/                      proof runs

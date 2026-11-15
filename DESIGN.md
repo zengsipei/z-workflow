@@ -45,7 +45,7 @@ z-workflow/
   scripts/link-skills.sh     symlink skills into the harness roots
   skills/zw/scripts/verify-artifacts.mjs  spec/ticket contract checker (zero deps)
   skills/zw/scripts/verify-install.mjs    install and vendor-integrity checker (zero deps)
-  skills/zw-note/vendor/write-notes-like-deepseek/  the notes skill and its checkers, verbatim
+  skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/  the notes skill and its checkers, verbatim
   docs/adr/                  architecture decision records
   samples/                   proof runs (v1 acceptance)
 ```
@@ -57,14 +57,14 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | Skill | Job | Source | Reachable by |
 |---|---|---|---|
 | `zw` | Entry: trigger table, playbook steps written verbatim into the todo list, spine state machine | pstack `poteto-mode` + matt invocation split | human only |
-| `zw-map` | Decision map and fog-of-war for work too large for one session | matt `wayfinder` | human |
-| `zw-spec` | Session to spec, without re-interviewing | matt `to-spec` | human |
-| `zw-tickets` | Spec to tracer-bullet ticket graph, numbering equals dependency order | matt `to-tickets` | human |
+| `zw-wayfinder` | Decision map and fog-of-war for work too large for one session | matt `wayfinder` | human |
+| `zw-to-spec` | Session to spec, without re-interviewing | matt `to-spec` | human |
+| `zw-to-tickets` | Spec to tracer-bullet ticket graph, numbering equals dependency order | matt `to-tickets` | human |
 | `zw-implement` | Delegate implementation: throughput checkpoint, then briefs | matt `implement` + pstack fan-out rule | human |
-| `zw-verify` | Build a project verification skill: Launch / Doctor / Drive / Evidence / Cleanup / Helpers, then prove it once | pstack `create-verification-skill` | human |
-| `zw-verify-maintain` | Keep the verification map honest (source wave, live pass, triage) | pstack `maintain-verification-skill` | human |
-| `zw-note` | Decision note: drives the vendored write-notes-like-deepseek skill, its write gate, lifecycle, sealing and archive CLI, with no second implementation | notes project, vendored verbatim | model |
-| `zw-review` | Two-axis review: standards and spec, in parallel | matt `code-review` | human |
+| `zw-create-verification-skill` | Build a project verification skill: Launch / Doctor / Drive / Evidence / Cleanup / Helpers, then prove it once | pstack `create-verification-skill` | human |
+| `zw-maintain-verification-skill` | Keep the verification map honest (source wave, live pass, triage) | pstack `maintain-verification-skill` | human |
+| `zw-write-notes-like-deepseek` | Decision note: drives the vendored write-notes-like-deepseek skill, its write gate, lifecycle, sealing and archive CLI, with no second implementation | notes project, vendored verbatim | model |
+| `zw-code-review` | Two-axis review: standards and spec, in parallel | matt `code-review` | human |
 | `zw-retro` | Retro: mechanical error becomes a deterministic check, judgement becomes a standard | matt `retro` | human |
 | `zw-handoff` | Hand the work to a fresh session | matt `handoff` | human |
 | `zw-how` | Explain a subsystem before it is changed: entry points, flow, where things live, gotchas | pstack `how` | model |
@@ -110,7 +110,7 @@ Each skill still ends with one `## Harness` block naming the three cases: DSH (s
 
 ## 8. v1 acceptance (done means)
 
-Run the spine once on psst: `zw` -> `zw-map` -> `zw-spec` -> `zw-tickets` -> `zw-implement` (at least one delegated ticket) -> `zw-verify` (browser evidence, before and after) -> `zw-note`. Typecheck, build and tests green. Artifacts kept under `samples/psst-<date>/`. No skill needs a capability the target harness lacks.
+Run the spine once on psst: `zw` -> `zw-wayfinder` -> `zw-to-spec` -> `zw-to-tickets` -> `zw-implement` (at least one delegated ticket) -> `zw-create-verification-skill` (browser evidence, before and after) -> `zw-write-notes-like-deepseek`. Typecheck, build and tests green. Artifacts kept under `samples/psst-<date>/`. No skill needs a capability the target harness lacks.
 
 ## 9. Risks
 

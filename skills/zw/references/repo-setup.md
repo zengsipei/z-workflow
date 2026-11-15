@@ -6,19 +6,19 @@ The four files that let every later step stop guessing. Three are copied from th
 
 Copy the one that matches the repo: `vendor/matt/setup-matt-pocock-skills/issue-tracker-local.md`, `issue-tracker-github.md` or `issue-tracker-gitlab.md`. It records where issues and specs live, and whether external pull requests are part of the request surface, which is off unless the repo turns it on.
 
-Read by `zw-spec` before a spec is published, by `zw-tickets` before tickets are filed, and by `zw-map` before a map is settled. Without it a step guesses the tracker, and a guess sends an artifact to the wrong place.
+Read by `zw-to-spec` before a spec is published, by `zw-to-tickets` before tickets are filed, and by `zw-wayfinder` before a map is settled. Without it a step guesses the tracker, and a guess sends an artifact to the wrong place.
 
 ## docs/agents/triage-labels.md
 
 Copy `vendor/matt/setup-matt-pocock-skills/triage-labels.md` and replace the right column with this tracker's real label strings: the five roles are `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human` and `wontfix`.
 
-Only a repo with a tracker that has labels needs this file. `zw-spec` and `zw-tickets` read it before applying `ready-for-agent`.
+Only a repo with a tracker that has labels needs this file. `zw-to-spec` and `zw-to-tickets` read it before applying `ready-for-agent`.
 
 ## docs/agents/domain.md
 
 Copy `vendor/matt/setup-matt-pocock-skills/domain.md`. It says where the domain vocabulary and the decisions live: `GLOSSARY.md` at the repo root, or `GLOSSARY-MAP.md` pointing at one `GLOSSARY.md` per context, plus `docs/adr/`.
 
-Read when `zw-how` or `zw-map` needs the vocabulary before explaining or shaping a subsystem.
+Read when `zw-how` or `zw-wayfinder` needs the vocabulary before explaining or shaping a subsystem.
 
 ## docs/agents/build-and-test.md
 
