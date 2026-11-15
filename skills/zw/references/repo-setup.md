@@ -1,6 +1,6 @@
 # Repo setup
 
-The three files that let every later step stop guessing. Each is copied from the vendored matt template beside this skill, filled in with the repo's own answer, and committed. A repo that already carries them is read, never re-derived.
+The four files that let every later step stop guessing. Three are copied from the vendored matt template beside this skill; the fourth is z-workflow's own, because no upstream skill writes it. Each is filled in with the repo's own answer and committed. A repo that already carries them is read, never re-derived.
 
 ## docs/agents/issue-tracker.md
 
@@ -19,6 +19,17 @@ Only a repo with a tracker that has labels needs this file. `zw-spec` and `zw-ti
 Copy `vendor/matt/setup-matt-pocock-skills/domain.md`. It says where the domain vocabulary and the decisions live: `GLOSSARY.md` at the repo root, or `GLOSSARY-MAP.md` pointing at one `GLOSSARY.md` per context, plus `docs/adr/`.
 
 Read when `zw-how` or `zw-map` needs the vocabulary before explaining or shaping a subsystem.
+
+## docs/agents/build-and-test.md
+
+z-workflow's own file. It records the repo's build and test topology, which is the one thing every later step pays for by rediscovering it:
+
+- Which packages must be built before the tests run, and the command that builds them. A monorepo whose tests import a package's `dist` fails inside the change under test when that copy is stale, and a type error there reads like a broken implementation.
+- Whether tests resolve workspace packages from source or from `dist`, and the alias that makes them resolve from source when one exists. The alias is the fix; this file is only the reminder.
+- The full-suite command, and what one run costs in minutes on this machine.
+- Whether the suite runs in parallel, and the cheap subset: one file, one package, or a changed-since filter.
+
+Read before the first verification command of a run. A missing entry costs a diagnosis the first time a change touches two packages, and the minutes a full run costs are what decide whether it runs once or three times.
 
 ## GLOSSARY.md
 

@@ -61,6 +61,18 @@ A child returns a subagent id and notifies on its own when it ends, so never pol
 More work goes to a settled child with `send_message`, and the current turn stops with
 `interrupt_agent`.
 
+## Long commands
+
+A foreground tool call dies at the harness deadline of 120 s with nothing kept, and a test suite, a
+typecheck or a build routinely outlasts that. Anything measured in minutes goes to a background job
+and comes back through its wait; a foreground call with a large timeout does not help, because the
+harness deadline overrides it.
+
+A CPU-bound gate owns the machine. Running the full suite beside a dev server, a browser drive or a
+second build does not overlap the work, it slows both: a serial suite measured at 255 s took 413 s
+with a browser probe running beside it. Start the gate, then read or review, and leave anything that
+compiles or renders for after it settles.
+
 ## Isolation
 
 DSH has no isolation field: children share the parent's working directory. When workers must not

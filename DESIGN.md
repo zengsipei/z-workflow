@@ -27,6 +27,7 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 | D13 | The upstream checker is the gate, never a re-implementation: the notes gate runs write-notes-like-deepseek's own three TypeScript checkers through `npx tsx`, and `verify-notes.mjs` is deleted | Two implementations of one rule diverge, and the divergence surfaces only when a repo moves between tools |
 | D14 | Anything a step writes is the file the upstream skill expects, at its path, in its format: `.agents/notes/`, `docs/agents/{issue-tracker,triage-labels,domain}.md`, `GLOSSARY.md`, `agents/openai.yaml`, `decision.tsv` | Uninstalling z-workflow and installing upstream must leave the working tree unchanged |
 | D15 | A vendored script keeps its own runtime; the zero-dependency rule covers z-workflow's own scripts only | Vendoring a TypeScript checker means running it as TypeScript, or the copy stops being verbatim |
+| D16 | A repo's build and test topology is recorded once in `docs/agents/build-and-test.md`, written by the setup step beside the three upstream files; it is the one file z-workflow writes that upstream does not expect, so D14 stays true of the other three | The minutes a full run costs, and the build a stale `dist` needs, are paid once per repo instead of once per run; the exception is written down rather than left to read like a mistake |
 
 ## 3. Repo layout
 
@@ -61,7 +62,7 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | `zw-tickets` | Spec to tracer-bullet ticket graph, numbering equals dependency order | matt `to-tickets` | human |
 | `zw-implement` | Delegate implementation: throughput checkpoint, then briefs | matt `implement` + pstack fan-out rule | human |
 | `zw-verify` | Build a project verification skill: Launch / Doctor / Drive / Evidence / Cleanup / Helpers, then prove it once | pstack `create-verification-skill` | human |
-| `zw-verify-maintain` | Keep the verification map honest (source wave, live pass, triage) | pstack `maintain-verification-skill` | model |
+| `zw-verify-maintain` | Keep the verification map honest (source wave, live pass, triage) | pstack `maintain-verification-skill` | human |
 | `zw-note` | Decision note: drives the vendored write-notes-like-deepseek skill, its write gate, lifecycle, sealing and archive CLI, with no second implementation | notes project, vendored verbatim | model |
 | `zw-review` | Two-axis review: standards and spec, in parallel | matt `code-review` | human |
 | `zw-retro` | Retro: mechanical error becomes a deterministic check, judgement becomes a standard | matt `retro` | human |
@@ -81,7 +82,7 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | Spec | `.scratch/<feature>/spec.md` | `docs/specs/<slug>.md` or tracker |
 | Tickets | `.scratch/<feature>/tickets/NN-<slug>.md` | tracker issues (psst: Gitea, commit carries `Closes #n`) |
 | Decision note | — | `<repo>/.agents/notes/{proposed,implemented,rejected,archived}/<class>/yyyy-mm-dd-topic.md`, sealed by its own `archived/manifest.json` |
-| Repo config | — | `<repo>/docs/agents/issue-tracker.md`, `<repo>/docs/agents/triage-labels.md`, `<repo>/docs/agents/domain.md` |
+| Repo config | — | `<repo>/docs/agents/issue-tracker.md`, `<repo>/docs/agents/triage-labels.md`, `<repo>/docs/agents/domain.md`, and z-workflow's own `<repo>/docs/agents/build-and-test.md` |
 | Glossary | — | `<repo>/GLOSSARY.md` |
 | Experiment log | `<repo>/.scratch/<feature>/decision.tsv` | never settles; it is a running log and stays gitignored |
 | Run log | `<repo>/.scratch/<feature>/decisions.tsv`, or `<repo>/.audit/<task-slug>.tsv` when several runs share a repo | never settles; written with the vendored `log.sh`, gitignored like the rest of `.scratch/` |
@@ -116,5 +117,6 @@ Run the spine once on psst: `zw` -> `zw-map` -> `zw-spec` -> `zw-tickets` -> `zw
 - Seventeen self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
 - Self-contained copies drift from upstream; each skill records the upstream commit it was taken from.
 - Without host hooks the gates are honour-system wherever a human skips the closing step.
+- `docs/agents/build-and-test.md` is prose nobody checks: a build command that changes costs one wrong diagnosis before the file is fixed. That is still cheaper than the same diagnosis on every run.
 - The vendored checkers need `npx tsx` on first run, so a machine with no network and no cache runs the notes gate only after one install. That is the price of running the upstream script instead of a port.
 - A vendor tree drifts silently if nobody notices an upstream commit. `VENDOR.md` carries a sha256 per file and `verify-install.mjs` compares the tree against it, so an edited copy fails instead of passing as the original.
