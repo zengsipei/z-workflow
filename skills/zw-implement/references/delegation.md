@@ -26,5 +26,6 @@ Each worker receives one brief. The brief names:
 - Code-coupled work (one feature, one migration) goes to a single owner with the checkpoints inline. That owner fans out internally after its blocking phase. Parent-level fan-out is for slices that produce independent artifacts: audits, cross-subsystem investigations, competing experiments.
 - Rewrite the checkpoints at every phase boundary, and start a fresh owner rather than resuming one mid-flight.
 - Each worker starts with a fresh context and reports only its result. Communication is sparse: pointers, not copies.
+- Ownership follows the obligation, not the discovery. Work a worker finds while working its ticket belongs to the scope that owns it: record it on that scope's frontier as a new ticket or a note, and either do it there or leave it undone. Doing it in the ticket that found it silently moves the obligation to a scope nobody assigned it to.
 - A worker that would cross the settled interface stops and reports the break instead of improvising.
 - The main thread merges, reviews, and verifies. It does not edit a worker's scope while that worker runs.
