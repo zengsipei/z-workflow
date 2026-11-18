@@ -28,6 +28,7 @@ Do not silently skip it. Before fixing, say why the test is impossible or not wo
 
 - Implementation-coupled: mocks internal collaborators, tests private methods, or asserts on call counts and order. The tell is a test that breaks on refactor while behaviour is unchanged.
 - Tautological: the expected value is recomputed the way the code computes it, so it can never disagree. Expected values come from a literal, a worked example, or the spec.
+- Hollow: every function under test could return nothing and the test would still pass. Assert the value a user sees; a check that only proves a call happened belongs on a mock of a system boundary.
 - Verifying through a side channel: querying the database or reading a file instead of going through the interface.
 
 Mock at system boundaries only: an external API, a database, time and randomness. Never mock the code under test or its internal collaborators.
@@ -60,3 +61,4 @@ None of its own. The tests are the artifact, at the confirmed seam.
 
 - Upstream: mattpocock/skills `tdd` at commit `5863806` (seam rule, anti-patterns, loop rules) and pstack `tdd` at commit `3dbd22f` (bug-fix regression path, the impractical-test escape, guardrails).
 - Changed: merged the two into one skill so the workflow never names an external `tdd`; dropped the reference to the installed `codebase-design` vocabulary and to a review skill by name; made it model-invoked so a step can load it.
+- Hollow test added 2026-11-18 from `unclebob/ub-mode` at commit `3da62bf`, section `Test Behavior, Not Implementation`: a test every function could satisfy by returning nothing is thrown out.
