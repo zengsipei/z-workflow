@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# local research cache: upstream clones and the reports they produced, never tracked
+refs/
