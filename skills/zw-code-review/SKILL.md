@@ -15,7 +15,7 @@ The user asks to review a branch, a PR, or work-in-progress changes, or says "re
 
 1. Pin the fixed point from what the user said. Confirm it resolves and the diff is non-empty; stop here on a bad ref or an empty diff.
 2. Find the spec source, in order: issue references in commit messages, a path the user passed, a spec file matching the branch or feature, then ask the user. If there is no spec, the Spec review reports "no spec available".
-3. Find the standards sources: every repo file that documents how code should be written, plus the smell baseline in references/smell-baseline.md. A documented repo standard overrides the baseline.
+3. Find the standards sources: every repo file that documents how code should be written, plus the smell baseline in references/smell-baseline.md. A documented repo standard overrides the baseline. When the caller names the metric gate, the standards review also reports it from references/metric-gates.md: the three numbers before and after, with the repo's own threshold or none. An overage is a finding, not a verdict.
 4. Run the two reviews in parallel, each in a fresh context. The Standards review checks the diff against the standards sources and the baseline; the Spec review checks the diff against the spec. Each finding quotes the rule or spec line it violates.
 5. Present the two reports side by side under Standards and Spec. Do not merge or rerank them. End with one line: findings per axis and the worst issue within each axis, then let step 6 state the verdict.
 6. The review can block the change, and it can close a finding only with evidence: `not a defect` needs the behaviour the code actually has, and `cannot reproduce` needs the route attempted. A finding closed on assertion alone stays open and the reply says so.
@@ -37,3 +37,4 @@ The user asks to review a branch, a PR, or work-in-progress changes, or says "re
 
 Copied from mattpocock skills (commit 5863806) and refactored for z-workflow: kept the two-axis split, the repo-overrides-baseline rule, and the under-400-words report contract; moved the review briefs into references/axes.md and the smell list into references/smell-baseline.md.
 - Veto and evidence-to-close added 2026-11-14 from poteto, `Loops You Can Trust` (x.com/poteto/status/2069824386283319343): every stage in a trustworthy loop can stop the line, and a rejection is an outcome rather than a failure.
+- Metric gate added 2026-11-18 from `unclebob/ub-mode` at commit `3da62bf` (`Crapper`, `Dryer`, `Mutator`): the three numbers are evidence and the threshold stays the repo's own, so an overage is a finding rather than a refusal.
