@@ -65,11 +65,22 @@ The checkers live under `skills/zw/scripts/` so `npx skills add` ships them with
 - The notes gate is the vendored write-notes-like-deepseek tree, not a port: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx`. z-workflow adds no note rule of its own.
 - `verify-artifacts.mjs` runs against the target repo, in the closing step of `zw` and the last step of `zw-implement`, beside the notes gate. A repo that skips either one is unverified, not clean.
 - `playbooks.mjs` resolves the routes in effect for a repo: the project layer first, then the user's, then the built-ins. It checks nothing: a playbook binds by its wording, so a bad one gets edited rather than rejected.
-- `verify-install.mjs` runs against `skills/` and is this repo's own gate: frontmatter inside the portable subset, name matching the directory, a description a YAML parser reads back intact, every `references/`, `scripts/` or `vendor/` path in a body either shipped inside that same skill or resolved as a sibling path inside the skills root, a sibling body (`../<skill>/SKILL.md`) resolved the same way, and every vendored tree matching the sha256 list in its `VENDOR.md`.
+- `verify-install.mjs` runs against `skills/` and is this repo's own gate. It checks the portable frontmatter, directory names, Codex invocation policy, resource completeness, and vendor hashes. Skill directories may be symlinks; a broken skill link fails the check. An empty skills root remains valid.
 
 ## Install contract
 
-`npx skills add zengsipei/z-workflow` must produce a complete, runnable workflow on a machine with nothing else installed. `node skills/zw/scripts/verify-install.mjs skills` is that contract as a check. That means every skill is discovered (valid YAML frontmatter, one directory per skill), every `references/`, `scripts/` and `vendor/` file the body names ships with it, every vendored tree matches its `VENDOR.md` hashes, and no skill body depends on a path outside its own directory except three: the target repo it works on, the shared harness adapter under `zw/references/harness/`, which a delegating skill names by sibling path (`../zw/references/harness/index.md`), and, for a human-invoked skill whose rules a step cannot load, that skill's own body read by sibling path (`../zw-technical-writing/SKILL.md`). `verify-install.mjs` resolves a sibling path against the skills root, so a missing adapter fails the install check instead of failing silently at runtime. A change that adds any other file outside `skills/` which a skill body names breaks this contract.
+`npx skills add zengsipei/z-workflow` must produce a complete, runnable workflow on a machine with nothing else installed.
+`node skills/zw/scripts/verify-install.mjs skills` checks that contract. Every skill must be discovered and every named resource must ship with it.
+
+Resource paths beginning with `references/`, `scripts/`, `vendor/`, `playbooks/`, or `templates/` start at the owning skill directory.
+The `<skill-dir>/` prefix names that same installed directory in a command. Paths beginning with `./` or `../references/` and other resource directories resolve from the referring document.
+A sibling resource or body, such as `../zw/references/harness/index.md` or `../zw-technical-writing/SKILL.md`, resolves inside the installed skills root.
+Other local filename links resolve from the referring Markdown file. First-party Markdown resources are followed recursively, with visited paths stopping reference cycles.
+The five built-in playbooks are named resources; checking that they ship adds no schema to their prose.
+
+Target-repo paths, including `<repo>/` paths, and citations under `## Provenance` are not install dependencies.
+Vendored resources are checked against `VENDOR.md`, including intentional omissions, rather than interpreting upstream examples as local dependencies.
+An operational skill body that depends on another file outside `skills/` breaks the install contract.
 
 ## Frozen list
 

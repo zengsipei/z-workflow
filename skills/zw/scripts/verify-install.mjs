@@ -22,8 +22,10 @@
  *   quoted. Quotes and escapes must be valid, implicit non-string scalars
  *   must be quoted, and disable-model-invocation must be a boolean.
  * - Optional Codex metadata has the same invocation policy as the frontmatter.
- * - Every references/ and scripts/ path named in the body exists inside the
- *   skill own directory, which is all an installer copies.
+ * - Named references/, scripts/, vendor/, playbooks/ and templates/ resources
+ *   exist in the installed skill set. First-party Markdown resources are
+ *   followed transitively; target-repo paths and Provenance citations are not
+ *   install dependencies. Vendor contents are checked by their manifests.
  * - A path named as a sibling, ../<skill>/references/..., ../<skill>/scripts/...,
  *   ../<skill>/vendor/... or ../<skill>/SKILL.md, resolves inside the skills root, so
  *   the shared harness adapter and a skill body read by path are checked rather than skipped.
@@ -38,9 +40,9 @@
  */
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync, symlinkSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ALLOWED_KEYS = new Set(["name", "description", "disable-model-invocation"]);
@@ -49,8 +51,10 @@ const ROOT_ONLY = [
   { re: /link-skills[.]sh/, label: "link-skills.sh" },
   { re: /samples\//, label: "samples/" },
 ];
-const RELATIVE = /(?:^|[\s`(\[])((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+)/g;
-const SIBLING = /(?:^|[\s`(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
+const RELATIVE = /(?:^|[\s`"'(\[])(?:<(?:skill-dir|zw-skill)>\/)?((?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+|(?:playbooks|templates)\/)/g;
+const DOCUMENT_RESOURCE = /(?:^|[\s`"'(\[])((?:\.{1,2}\/)+(?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+)/g;
+const SIBLING = /(?:^|[\s`"'(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
+const INSTALLED_RESOURCE = /(?:^|[\s`"'(\[])<skills-root>\/([A-Za-z0-9_-]+)\/((?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
 const VENDOR_ROOT = "vendor";
 const VENDOR_MANIFEST = "VENDOR.md";
 const YAML_ESCAPES = {
@@ -141,17 +145,72 @@ function parseFrontmatter(raw, push) {
 }
 
 function checkBody(body, skillDir, skillsRoot, push) {
-  for (const m of body.matchAll(RELATIVE)) {
-    const target = m[1].replace(/[.,;:]+$/, "");
-    if (!existsSync(join(skillDir, target))) push("body names " + target + " but the skill does not ship it");
+  const visited = new Set([realpathSync(join(skillDir, "SKILL.md"))]);
+  const checked = new Set();
+  const trimPath = (value) => value.replace(/[.,;:]+$/, "");
+
+  function inspect(target, owner, origin, token, sibling = false) {
+    const rel = relative(owner, target);
+    if (rel === ".." || rel.startsWith(".." + sep) || isAbsolute(rel)) {
+      push(origin + " names " + token + " outside its installed skill; use an explicit sibling resource path");
+      return;
+    }
+    if (checked.has(target)) return;
+    checked.add(target);
+    let info;
+    try { info = statSync(target); }
+    catch (error) {
+      if (error.code === "ENOENT" || error.code === "ENOTDIR") {
+        push(origin + " names " + token + (sibling ? ", which the installed skill set does not ship" : " but the skill does not ship it"));
+      } else push(origin + " cannot inspect " + token + " (" + error.code + ")");
+      return;
+    }
+    if (rel === VENDOR_ROOT || rel.startsWith(VENDOR_ROOT + sep)) return;
+    const real = realpathSync(target);
+    if (visited.has(real)) return;
+    visited.add(real);
+    if (info.isDirectory()) {
+      for (const entry of readdirSync(target, { withFileTypes: true })) {
+        if (entry.name.startsWith(".")) continue;
+        inspect(join(target, entry.name), owner, relative(owner, target), entry.name);
+      }
+    } else if (info.isFile() && extname(target).toLowerCase() === ".md") {
+      scan(readFileSync(target, "utf8"), target, owner);
+    }
   }
-  for (const m of body.matchAll(SIBLING)) {
-    const target = m[2].replace(/[.,;:]+$/, "");
-    if (!existsSync(join(skillsRoot, m[1], target))) push("body names ../" + m[1] + "/" + target + ", which the installed skill set does not ship");
+
+  function scan(raw, source, owner) {
+    const text = raw.split(/^## Provenance\s*$/m)[0];
+    const origin = source === join(owner, "SKILL.md") ? "body" : relative(owner, source);
+    if (origin === "body") {
+      for (const { re, label } of ROOT_ONLY) {
+        if (re.test(text)) push("body names " + label + ", which exists only at the repository root and is not installed");
+      }
+    }
+    for (const m of text.matchAll(RELATIVE)) {
+      const token = trimPath(m[1]);
+      inspect(resolve(owner, token), owner, origin, token);
+    }
+    for (const m of text.matchAll(DOCUMENT_RESOURCE)) {
+      const token = trimPath(m[1]);
+      inspect(resolve(dirname(source), token), owner, origin, token);
+    }
+    for (const re of [SIBLING, INSTALLED_RESOURCE]) {
+      for (const m of text.matchAll(re)) {
+        const token = trimPath(m[2]);
+        const siblingDir = join(skillsRoot, m[1]);
+        inspect(resolve(siblingDir, token), siblingDir, origin, "../" + m[1] + "/" + token, true);
+      }
+    }
+    for (const m of text.matchAll(/\[[^\]]*\]\(([^)\s]+)\)/g)) {
+      const token = m[1].split("#")[0];
+      if (!token || /^(?:[a-z][a-z\d+.-]*:|<|(?:\.{1,2}\/)*(?:references|scripts|vendor|playbooks|templates)\/|(?:\.\.\/)+[\w-]+\/(?:(?:references|scripts|vendor|playbooks|templates)\/|SKILL[.]md))/i.test(token)) continue;
+      if (!/\.(?:md|mjs|js|ts|sh|tsv|yaml|yml|json)$/i.test(token)) continue;
+      inspect(resolve(dirname(source), token), owner, origin, token);
+    }
   }
-  for (const { re, label } of ROOT_ONLY) {
-    if (re.test(body)) push("body names " + label + ", which exists only at the repository root and is not installed");
-  }
+
+  scan(body, join(skillDir, "SKILL.md"), skillDir);
 }
 
 function checkCodexInvocation(skillDir, disabled, push) {
@@ -455,6 +514,64 @@ function selfTest() {
       "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A skill with Codex metadata.\n" + flag + FENCE + "\n\n# alpha\n",
       "alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n' + policy,
     });
+    checkCli(label, root, status, output);
+  }
+
+  const resourceSkill = (name, body) => FENCE + "\nname: " + name + "\ndescription: A resource fixture.\n" + FENCE + "\n\n# " + name + "\n\n" + body + "\n";
+  const resourceCases = [
+    ["missing playbooks", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Choose a route under playbooks/."),
+    }, 1, "playbooks/"],
+    ["missing template", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Choose playbooks/investigation.md."),
+      "alpha/playbooks/investigation.md": "Copy ../templates/decision.tsv before the first attempt.\n",
+    }, 1, "../templates/decision.tsv"],
+    ["indirect helper", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
+      "alpha/references/guide.md": "Run scripts/missing.mjs.\n",
+    }, 1, "references/guide.md names scripts/missing.mjs"],
+    ["indirect sibling helper", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read ../beta/references/guide.md."),
+      "beta/SKILL.md": resourceSkill("beta", "No direct helper."),
+      "beta/references/guide.md": "Run scripts/missing.mjs.\n",
+    }, 1, "references/guide.md names scripts/missing.mjs"],
+    ["missing local link", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
+      "alpha/references/guide.md": "Read [the detail](detail.md).\n",
+    }, 1, "references/guide.md names detail.md"],
+    ["missing parent link", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
+      "alpha/references/guide.md": "Read [the detail](../detail.md).\n",
+    }, 1, "references/guide.md names ../detail.md"],
+    ["missing dotted resource", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read ./references/guide.md."),
+    }, 1, "./references/guide.md"],
+    ["resource cycle", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/a.md and choose playbooks/feature.md."),
+      "alpha/references/a.md": "Read [the detail](b.md).\n",
+      "alpha/references/b.md": "Read [the entry](a.md), then run scripts/check.mjs.\n",
+      "alpha/playbooks/feature.md": "Read ../references/a.md and copy ../templates/decision.tsv.\n",
+      "alpha/templates/decision.tsv": "id\tnote\n",
+      "alpha/scripts/check.mjs": "console.log(1);\n",
+    }, 0, "ok: 1 skills"],
+    ["resource escapes skill", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Run scripts/../../beta/scripts/check.mjs."),
+      "beta/SKILL.md": resourceSkill("beta", "No direct helper."),
+      "beta/scripts/check.mjs": "console.log(1);\n",
+    }, 1, "outside its installed skill"],
+    ["target and provenance paths", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Run <repo>/scripts/verify.mjs.\n\n## Provenance\n\nCopied from `skills/poteto-mode/playbooks/hillclimb.md` upstream; its DESIGN.md and references/upstream.md record the source."),
+    }, 0, "ok: 1 skills"],
+    ["installed skill command", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Run node <skill-dir>/scripts/check.mjs."),
+    }, 1, "scripts/check.mjs"],
+    ["quoted installed command", {
+      "alpha/SKILL.md": resourceSkill("alpha", 'Run node "<skill-dir>/scripts/check.mjs".'),
+    }, 1, "scripts/check.mjs"],
+  ];
+  for (const [label, files, status, output] of resourceCases) {
+    const root = join(tmp, label.replaceAll(" ", "-"));
+    writeTree(root, files);
     checkCli(label, root, status, output);
   }
 

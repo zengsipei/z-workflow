@@ -28,11 +28,11 @@ Five routes, one file each under `playbooks/`. Anything under `.agents/zw-playbo
 
 | Route | When it fits |
 |---|---|
-| Feature | new behaviour, landing as reviewed code |
-| Bug fix | something broken, cause unknown |
-| Investigation | an answer, not a change |
-| Refactor | same behaviour, new shape |
-| Ship | the work exists, only landing remains |
+| [Feature](playbooks/feature.md) | new behaviour, landing as reviewed code |
+| [Bug fix](playbooks/bug-fix.md) | something broken, cause unknown |
+| [Investigation](playbooks/investigation.md) | an answer, not a change |
+| [Refactor](playbooks/refactor.md) | same behaviour, new shape |
+| [Ship](playbooks/ship.md) | the work exists, only landing remains |
 
 The routes bind by their wording, not by a checker: nothing validates a playbook file and nothing refuses to run one. A Mandatory line is the part that is not negotiable, verification first among them, and a route that cannot be followed is a blocker the reply names rather than a step quietly dropped.
 

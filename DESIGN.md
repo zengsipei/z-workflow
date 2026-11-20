@@ -52,7 +52,7 @@ z-workflow/
   samples/                   proof runs (v1 acceptance)
 ```
 
-Frontmatter stays inside the portable subset: `name`, `description`, and optionally `disable-model-invocation`. Harness-specific metadata goes in a body section, never in frontmatter, so one file serves every harness.
+Frontmatter stays inside the portable subset: `name`, `description`, and optionally `disable-model-invocation`. The two text fields are single-line YAML strings and the invocation flag is a boolean. Harness-specific metadata stays outside frontmatter. When Codex metadata is present, its implicit-invocation policy matches that flag.
 
 ## 4. Skill inventory
 
@@ -101,7 +101,9 @@ Drafts are gitignored; only settled artifacts are committed. Tickets and specs d
 
 ## 6. Gates
 
-The notes gate is the vendored copy of write-notes-like-deepseek: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx` against the notes tree. z-workflow adds no note rule of its own, so a tree that passes here passes the upstream skill, and the reverse holds too. Sealing and the archive move are the same vendored scripts, `verify-archived-agent-notes.ts --write` and `archive-agent-note.ts`. `verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule. Both ship inside `skills/zw/scripts/` so a skills-CLI install carries them. `verify-install.mjs` is this repo's own gate: it proves the skill set installs complete, by checking frontmatter, directory names, that every helper a body names ships inside that skill, and that a sibling body a step reads by path (`../<skill>/SKILL.md`) is installed beside it.
+The notes gate is the vendored copy of write-notes-like-deepseek: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx` against the notes tree. z-workflow adds no note rule of its own, so a tree that passes here passes the upstream skill, and the reverse holds too. Sealing and the archive move are the same vendored scripts, `verify-archived-agent-notes.ts --write` and `archive-agent-note.ts`. `verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule. It ships inside `skills/zw/scripts/` so a skills-CLI install carries it.
+
+`verify-install.mjs` is this repo's own gate. It checks directories and symlinked skills, frontmatter scalar syntax and types, Codex invocation policy, and vendor integrity. It follows first-party Markdown resource references, including playbooks and templates, and resolves sibling resources inside the installed skills root. Target-repo paths and provenance citations are not install dependencies. Upstream vendor contents remain governed by their hash manifests.
 
 `playbooks.mjs` resolves which routes are in effect for a repo: the project layer first, then the user's, then the built-ins. It validates nothing: a playbook binds by its wording, so the checker has nothing to add.
 
