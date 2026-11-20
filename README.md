@@ -57,8 +57,9 @@ prints what is in effect.
 node <skills-root>/zw/scripts/verify-install.mjs <skills-root>
 ```
 
-It proves every skill has valid frontmatter, a name matching its directory, a description a YAML
-parser reads back intact, and that every helper its body names ships inside that same skill.
+It checks directories and symlinked skills, frontmatter syntax and types, directory names, and Codex
+invocation policy. Named resources must ship with the skill, including playbooks, templates, and
+helpers reached through first-party Markdown references. Vendor files must match their hash manifests.
 
 ## Working in this repo
 

@@ -9,7 +9,7 @@
  * Exit 0 on pass. On failure every problem prints as "<skill>: <problem>"
  * and the exit code is non-zero.
  *
- * What it enforces, per skill directory:
+ * What it enforces, per skill directory, including symlinked directories:
  * - SKILL.md exists at the skill root and starts with a --- delimited
  *   frontmatter block.
  * - No other SKILL.md sits anywhere below that root. An installer that treats
@@ -18,11 +18,14 @@
  * - Frontmatter keys stay inside the portable subset: name, description,
  *   disable-model-invocation.
  * - name equals the directory name.
- * - description is a plain one-line scalar a YAML parser reads back as that
- *   exact string. An unquoted value holding a colon-space or a space-hash is
- *   reported, because the skills CLI skips such a skill as invalid YAML.
- * - Every references/ and scripts/ path named in the body exists inside the
- *   skill own directory, which is all an installer copies.
+ * - name and description are non-empty single-line YAML strings, plain or
+ *   quoted. Quotes and escapes must be valid, implicit non-string scalars
+ *   must be quoted, and disable-model-invocation must be a boolean.
+ * - Optional Codex metadata has the same invocation policy as the frontmatter.
+ * - Named references/, scripts/, vendor/, playbooks/ and templates/ resources
+ *   exist in the installed skill set. First-party Markdown resources are
+ *   followed transitively; target-repo paths and Provenance citations are not
+ *   install dependencies. Vendor contents are checked by their manifests.
  * - A path named as a sibling, ../<skill>/references/..., ../<skill>/scripts/...,
  *   ../<skill>/vendor/... or ../<skill>/SKILL.md, resolves inside the skills root, so
  *   the shared harness adapter and a skill body read by path are checked rather than skipped.
@@ -36,9 +39,11 @@
  * a malformed SKILL.md inside this skill is exactly the defect it checks for.
  */
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync, symlinkSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ALLOWED_KEYS = new Set(["name", "description", "disable-model-invocation"]);
 const ROOT_ONLY = [
@@ -46,10 +51,60 @@ const ROOT_ONLY = [
   { re: /link-skills[.]sh/, label: "link-skills.sh" },
   { re: /samples\//, label: "samples/" },
 ];
-const RELATIVE = /(?:^|[\s`(\[])((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+)/g;
-const SIBLING = /(?:^|[\s`(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
+const RELATIVE = /(?:^|[\s`"'(\[])(?:<(?:skill-dir|zw-skill)>\/)?((?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+|(?:playbooks|templates)\/)/g;
+const DOCUMENT_RESOURCE = /(?:^|[\s`"'(\[])((?:\.{1,2}\/)+(?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+)/g;
+const SIBLING = /(?:^|[\s`"'(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
+const INSTALLED_RESOURCE = /(?:^|[\s`"'(\[])<skills-root>\/([A-Za-z0-9_-]+)\/((?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
 const VENDOR_ROOT = "vendor";
 const VENDOR_MANIFEST = "VENDOR.md";
+const YAML_ESCAPES = {
+  "0": "\0", a: "\x07", b: "\b", t: "\t", "\t": "\t", n: "\n", v: "\x0b", f: "\f", r: "\r", e: "\x1b",
+  " ": " ", '"': '"', "/": "/", "\\": "\\", N: "\u0085", _: "\u00a0", L: "\u2028", P: "\u2029",
+};
+const NON_STRING_SCALAR = /^(?:null|true|false|yes|no|on|off|~|[-+]?(?:0x[\da-f_]+|0b[01_]+|0o[0-7_]+|\d[\d_]*(?::[0-5]?\d)+(?:\.\d*)?|\d[\d_]*(?:\.\d[\d_]*|\.)?(?:e[-+]?\d+)?|\.\d[\d_]*(?:e[-+]?\d+)?|\.(?:inf|nan))|\d{4}-\d{1,2}-\d{1,2}(?:[t ].*)?)$/i;
+
+function parseStringScalar(value, key) {
+  let decoded = value;
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    decoded = "";
+    let closed = false;
+    for (let i = 1; i < value.length; i++) {
+      const char = value[i];
+      if (char === quote) {
+        if (quote === "'" && value[i + 1] === "'") { decoded += "'"; i++; continue; }
+        if (i !== value.length - 1) throw new Error(key + " has text after the closing quote");
+        closed = true;
+        break;
+      }
+      if (quote === '"' && char === "\\") {
+        const escape = value[++i];
+        if (Object.hasOwn(YAML_ESCAPES, escape)) decoded += YAML_ESCAPES[escape];
+        else if (escape === "x" || escape === "u" || escape === "U") {
+          const width = { x: 2, u: 4, U: 8 }[escape];
+          const hex = value.slice(i + 1, i + 1 + width);
+          if (hex.length !== width || !/^[\da-f]+$/i.test(hex)) throw new Error(key + " has an invalid YAML escape");
+          const code = Number.parseInt(hex, 16);
+          if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) throw new Error(key + " has an invalid YAML Unicode escape");
+          decoded += String.fromCodePoint(code);
+          i += width;
+        } else throw new Error(key + " has an invalid YAML escape");
+      } else decoded += char;
+    }
+    if (!closed) throw new Error(key + " has an unterminated quoted scalar");
+  } else {
+    if (!value || /^(?:[-?:](?:\s|$)|[,\[\]{}#&*!|>%@`])/.test(value) || NON_STRING_SCALAR.test(value)) {
+      throw new Error(key + " must be a single-line string");
+    }
+    if (/:(?:\s|$)|\s#/.test(value)) {
+      throw new Error(key + " is an unquoted value holding a colon-space or a space-hash, which a YAML parser does not read back intact (nested mapping or comment); quote it");
+    }
+  }
+  if (!decoded.trim() || /[\r\n\u0085\u2028\u2029\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ufffe\uffff]/.test(decoded)) {
+    throw new Error(key + " must be a single-line string");
+  }
+  return decoded;
+}
 
 function parseFrontmatter(raw, push) {
   const lines = raw.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
@@ -63,6 +118,7 @@ function parseFrontmatter(raw, push) {
     return null;
   }
   const fields = {};
+  const seen = new Set();
   for (let i = 1; i < end; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
@@ -73,35 +129,122 @@ function parseFrontmatter(raw, push) {
     }
     const key = m[1];
     const value = (m[2] ?? "").trim();
-    if (!ALLOWED_KEYS.has(key)) push("frontmatter key " + key + " is outside the portable subset");
-    fields[key] = value;
+    if (!ALLOWED_KEYS.has(key)) { push("frontmatter key " + key + " is outside the portable subset"); continue; }
+    if (seen.has(key)) { push("duplicate frontmatter key " + key); continue; }
+    seen.add(key);
+    try {
+      if (key === "disable-model-invocation") {
+        if (value !== "true" && value !== "false") throw new Error(key + " must be true or false");
+        fields[key] = value === "true";
+      } else fields[key] = parseStringScalar(value, key);
+    } catch (error) {
+      push(error.message + " at frontmatter line " + (i + 1));
+    }
   }
   return { fields, body: lines.slice(end + 1).join("\n") };
 }
 
-function checkDescription(value, push) {
-  if (!value) {
-    push("frontmatter has no description");
-    return;
+function checkBody(body, skillDir, skillsRoot, push) {
+  const visited = new Set([realpathSync(join(skillDir, "SKILL.md"))]);
+  const checked = new Set();
+  const trimPath = (value) => value.replace(/[.,;:]+$/, "");
+
+  function inspect(target, owner, origin, token, sibling = false) {
+    const rel = relative(owner, target);
+    if (rel === ".." || rel.startsWith(".." + sep) || isAbsolute(rel)) {
+      push(origin + " names " + token + " outside its installed skill; use an explicit sibling resource path");
+      return;
+    }
+    if (checked.has(target)) return;
+    checked.add(target);
+    let info;
+    try { info = statSync(target); }
+    catch (error) {
+      if (error.code === "ENOENT" || error.code === "ENOTDIR") {
+        push(origin + " names " + token + (sibling ? ", which the installed skill set does not ship" : " but the skill does not ship it"));
+      } else push(origin + " cannot inspect " + token + " (" + error.code + ")");
+      return;
+    }
+    if (rel === VENDOR_ROOT || rel.startsWith(VENDOR_ROOT + sep)) return;
+    const real = realpathSync(target);
+    if (visited.has(real)) return;
+    visited.add(real);
+    if (info.isDirectory()) {
+      for (const entry of readdirSync(target, { withFileTypes: true })) {
+        if (entry.name.startsWith(".")) continue;
+        inspect(join(target, entry.name), owner, relative(owner, target), entry.name);
+      }
+    } else if (info.isFile() && extname(target).toLowerCase() === ".md") {
+      scan(readFileSync(target, "utf8"), target, owner);
+    }
   }
-  const quoted = (value.startsWith(String.fromCharCode(34)) && value.endsWith(String.fromCharCode(34))) ||
-    (value.startsWith(String.fromCharCode(39)) && value.endsWith(String.fromCharCode(39)));
-  if (!quoted && /:\s|\s#/.test(value)) {
-    push("description is an unquoted value holding a colon-space or a space-hash, which a YAML parser reads as a nested mapping; quote it");
+
+  function scan(raw, source, owner) {
+    const text = raw.split(/^## Provenance\s*$/m)[0];
+    const origin = source === join(owner, "SKILL.md") ? "body" : relative(owner, source);
+    if (origin === "body") {
+      for (const { re, label } of ROOT_ONLY) {
+        if (re.test(text)) push("body names " + label + ", which exists only at the repository root and is not installed");
+      }
+    }
+    for (const m of text.matchAll(RELATIVE)) {
+      const token = trimPath(m[1]);
+      inspect(resolve(owner, token), owner, origin, token);
+    }
+    for (const m of text.matchAll(DOCUMENT_RESOURCE)) {
+      const token = trimPath(m[1]);
+      inspect(resolve(dirname(source), token), owner, origin, token);
+    }
+    for (const re of [SIBLING, INSTALLED_RESOURCE]) {
+      for (const m of text.matchAll(re)) {
+        const token = trimPath(m[2]);
+        const siblingDir = join(skillsRoot, m[1]);
+        inspect(resolve(siblingDir, token), siblingDir, origin, "../" + m[1] + "/" + token, true);
+      }
+    }
+    for (const m of text.matchAll(/\[[^\]]*\]\(([^)\s]+)\)/g)) {
+      const token = m[1].split("#")[0];
+      if (!token || /^(?:[a-z][a-z\d+.-]*:|<|(?:\.{1,2}\/)*(?:references|scripts|vendor|playbooks|templates)\/|(?:\.\.\/)+[\w-]+\/(?:(?:references|scripts|vendor|playbooks|templates)\/|SKILL[.]md))/i.test(token)) continue;
+      if (!/\.(?:md|mjs|js|ts|sh|tsv|yaml|yml|json)$/i.test(token)) continue;
+      inspect(resolve(dirname(source), token), owner, origin, token);
+    }
   }
+
+  scan(body, join(skillDir, "SKILL.md"), skillDir);
 }
 
-function checkBody(body, skillDir, skillsRoot, push) {
-  for (const m of body.matchAll(RELATIVE)) {
-    const target = m[1].replace(/[.,;:]+$/, "");
-    if (!existsSync(join(skillDir, target))) push("body names " + target + " but the skill does not ship it");
+function checkCodexInvocation(skillDir, disabled, push) {
+  const metadata = join(skillDir, "agents", "openai.yaml");
+  if (!existsSync(metadata)) return;
+  const lines = readFileSync(metadata, "utf8").replace(/\r\n?/g, "\n").split("\n");
+  let inPolicy = false;
+  let policySeen = false;
+  let childIndent;
+  let flagSeen = false;
+  let implicit = true;
+  for (const line of lines) {
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+    if (/^\S/.test(line)) {
+      inPolicy = /^policy:/.test(line);
+      if (!inPolicy) continue;
+      if (policySeen) { push("agents/openai.yaml has a duplicate policy key"); return; }
+      policySeen = true;
+      if (!/^policy:\s*(?:#.*)?$/.test(line)) { push("agents/openai.yaml policy must be a block mapping"); return; }
+      continue;
+    }
+    if (!inPolicy) continue;
+    const field = /^( +)([A-Za-z][A-Za-z0-9_-]*):(?:\s(.*))?$/.exec(line);
+    if (!field) { push("agents/openai.yaml policy has an invalid field"); return; }
+    childIndent ??= field[1].length;
+    if (field[1].length !== childIndent || field[2] !== "allow_implicit_invocation") continue;
+    if (flagSeen) { push("agents/openai.yaml has a duplicate allow_implicit_invocation key"); return; }
+    flagSeen = true;
+    const value = (field[3] ?? "").replace(/\s+#.*$/, "").trim();
+    if (value !== "true" && value !== "false") { push("agents/openai.yaml allow_implicit_invocation must be a boolean"); return; }
+    implicit = value === "true";
   }
-  for (const m of body.matchAll(SIBLING)) {
-    const target = m[2].replace(/[.,;:]+$/, "");
-    if (!existsSync(join(skillsRoot, m[1], target))) push("body names ../" + m[1] + "/" + target + ", which the installed skill set does not ship");
-  }
-  for (const { re, label } of ROOT_ONLY) {
-    if (re.test(body)) push("body names " + label + ", which exists only at the repository root and is not installed");
+  if (implicit !== !disabled) {
+    push("agents/openai.yaml allow_implicit_invocation must be " + !disabled + " to match disable-model-invocation");
   }
 }
 
@@ -190,10 +333,18 @@ function runOnSkills(skillsRoot) {
   }
   let count = 0;
   for (const entry of readdirSync(skillsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+    if (entry.name.startsWith(".") || (!entry.isDirectory() && !entry.isSymbolicLink())) continue;
     const skillDir = join(skillsRoot, entry.name);
-    const skillMd = join(skillDir, "SKILL.md");
     const push = (msg) => errors.push(entry.name + ": " + msg);
+    if (entry.isSymbolicLink()) {
+      try {
+        if (!statSync(skillDir).isDirectory()) continue;
+      } catch (error) {
+        push("broken skill symlink (" + error.code + ")");
+        continue;
+      }
+    }
+    const skillMd = join(skillDir, "SKILL.md");
     if (!existsSync(skillMd)) {
       push("no SKILL.md, so an installer cannot see this skill");
       continue;
@@ -202,7 +353,8 @@ function runOnSkills(skillsRoot) {
     const parsed = parseFrontmatter(readFileSync(skillMd, "utf8"), push);
     if (!parsed) continue;
     if (parsed.fields.name !== entry.name) push("frontmatter name " + JSON.stringify(parsed.fields.name || "") + " does not match the directory name");
-    checkDescription(parsed.fields.description, push);
+    if (typeof parsed.fields.description !== "string") push("frontmatter has no valid string description");
+    checkCodexInvocation(skillDir, parsed.fields["disable-model-invocation"] === true, push);
     checkBody(parsed.body, skillDir, skillsRoot, push);
     checkVendor(skillDir, push);
     for (const nested of findNestedSkillFiles(skillDir, skillDir, [])) {
@@ -225,6 +377,14 @@ const FENCE = "---";
 function selfTest() {
   const tmp = mkdtempSync(join(tmpdir(), "verify-install-"));
   const failures = [];
+  const checkCli = (label, root, status, output) => {
+    const result = spawnSync(process.execPath, [fileURLToPath(import.meta.url), root], { encoding: "utf8" });
+    const actual = result.stdout + result.stderr;
+    if (result.status !== status || !actual.includes(output)) {
+      failures.push(label + ": expected exit " + status + " and " + JSON.stringify(output) +
+        ", got exit " + result.status + " and " + JSON.stringify(actual));
+    }
+  };
 
   const vendorSource = "export const tool = 1;\n";
   const vendorManifest = "# VENDOR sample\n\n| file | sha256 | state |\n| --- | --- | --- |\n| lib/tool.ts | " +
@@ -283,10 +443,137 @@ function selfTest() {
     if (!bad.errors.some((e) => e.includes(needle))) failures.push("bad fixture: expected an error containing " + JSON.stringify(needle));
   }
 
+  const linkedRoot = join(tmp, "linked");
+  mkdirSync(linkedRoot);
+  symlinkSync(join(goodRoot, "alpha"), join(linkedRoot, "alpha"), "dir");
+  symlinkSync(join(goodRoot, "beta"), join(linkedRoot, "beta"), "dir");
+  checkCli("linked skills", linkedRoot, 0, "ok: 2 skills");
+
+  const invalidLinkRoot = join(tmp, "invalid-link");
+  mkdirSync(invalidLinkRoot);
+  symlinkSync(join(badRoot, "beta-yaml"), join(invalidLinkRoot, "beta-yaml"), "dir");
+  checkCli("invalid linked skill", invalidLinkRoot, 1, "beta-yaml: description is an unquoted value");
+
+  const brokenLinkRoot = join(tmp, "broken-link");
+  mkdirSync(brokenLinkRoot);
+  symlinkSync(join(tmp, "absent"), join(brokenLinkRoot, "ghost"), "dir");
+  checkCli("broken skill symlink", brokenLinkRoot, 1, "ghost: broken skill symlink");
+
   const emptyRoot = join(tmp, "empty");
   mkdirSync(emptyRoot);
   const empty = runOnSkills(emptyRoot);
   if (empty.errors.length !== 0 || empty.count !== 0) failures.push("empty fixture: expected 0 skills and 0 errors");
+
+  const scalarCases = [
+    ["unterminated quote", '"Use when the user asks for review', 1, "unterminated"],
+    ["invalid escape", '"Use when \\q appears"', 1, "invalid YAML escape"],
+    ["description sequence", "[Use when the user asks for review]", 1, "description must be a single-line string"],
+    ["description mapping", "{trigger: review}", 1, "description must be a single-line string"],
+    ["description boolean", "true", 1, "description must be a single-line string"],
+    ["description number", "123", 1, "description must be a single-line string"],
+    ["trailing colon", "Use when reviewing:", 1, "description is an unquoted value"],
+    ["invalid Unicode escape", '"Use when \\U00110000 appears."', 1, "invalid YAML Unicode escape"],
+    ["quoted suffix", '"Use when reviewing" extra', 1, "after the closing quote"],
+    ["quoted newline", '"Use when reviewing\\nchanges"', 1, "description must be a single-line string"],
+    ["single quote", "'Use when the user''s change needs review.'", 0, "ok: 1 skills"],
+    ["double quote escapes", '"Use when \\"review\\" or \\u0063heck appears."', 0, "ok: 1 skills"],
+    ["YAML escapes", '"Use when \\x63heck or \\U0001F600 appears."', 0, "ok: 1 skills"],
+  ];
+  for (const [label, value, status, output] of scalarCases) {
+    const root = join(tmp, "scalar-" + label.replaceAll(" ", "-"));
+    writeTree(root, {
+      "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: " + value + "\n" + FENCE + "\n\n# alpha\n",
+    });
+    checkCli(label, root, status, output);
+  }
+  const typedRoot = join(tmp, "typed-fields");
+  writeTree(typedRoot, {
+    "alpha/SKILL.md": FENCE + '\nname: "alpha"\ndescription: A quoted name is still a string.\ndisable-model-invocation: false\n' + FENCE + "\n\n# alpha\n",
+  });
+  checkCli("quoted name", typedRoot, 0, "ok: 1 skills");
+  writeTree(typedRoot, {
+    "alpha/SKILL.md": FENCE + '\nname: alpha\ndescription: A flag must be a boolean.\ndisable-model-invocation: "true"\n' + FENCE + "\n\n# alpha\n",
+  });
+  checkCli("quoted flag", typedRoot, 1, "disable-model-invocation must be true or false");
+  writeTree(typedRoot, {
+    "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: First value.\ndescription: Second value.\n" + FENCE + "\n\n# alpha\n",
+  });
+  checkCli("duplicate key", typedRoot, 1, "duplicate frontmatter key description");
+
+  const invocationCases = [
+    ["implicit human skill", "disable-model-invocation: true\n", "", 1, "allow_implicit_invocation must be false"],
+    ["disabled model skill", "", "policy:\n  allow_implicit_invocation: false\n", 1, "allow_implicit_invocation must be true"],
+    ["explicit human skill", "disable-model-invocation: true\n", "policy:\n  allow_implicit_invocation: false\n", 0, "ok: 1 skills"],
+    ["default model skill", "", "", 0, "ok: 1 skills"],
+    ["enabled model skill", "", "policy:\n  allow_implicit_invocation: true\n", 0, "ok: 1 skills"],
+    ["string policy flag", "", 'policy:\n  allow_implicit_invocation: "true"\n', 1, "allow_implicit_invocation must be a boolean"],
+  ];
+  for (const [label, flag, policy, status, output] of invocationCases) {
+    const root = join(tmp, label.replaceAll(" ", "-"));
+    writeTree(root, {
+      "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A skill with Codex metadata.\n" + flag + FENCE + "\n\n# alpha\n",
+      "alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n' + policy,
+    });
+    checkCli(label, root, status, output);
+  }
+
+  const resourceSkill = (name, body) => FENCE + "\nname: " + name + "\ndescription: A resource fixture.\n" + FENCE + "\n\n# " + name + "\n\n" + body + "\n";
+  const resourceCases = [
+    ["missing playbooks", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Choose a route under playbooks/."),
+    }, 1, "playbooks/"],
+    ["missing template", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Choose playbooks/investigation.md."),
+      "alpha/playbooks/investigation.md": "Copy ../templates/decision.tsv before the first attempt.\n",
+    }, 1, "../templates/decision.tsv"],
+    ["indirect helper", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
+      "alpha/references/guide.md": "Run scripts/missing.mjs.\n",
+    }, 1, "references/guide.md names scripts/missing.mjs"],
+    ["indirect sibling helper", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read ../beta/references/guide.md."),
+      "beta/SKILL.md": resourceSkill("beta", "No direct helper."),
+      "beta/references/guide.md": "Run scripts/missing.mjs.\n",
+    }, 1, "references/guide.md names scripts/missing.mjs"],
+    ["missing local link", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
+      "alpha/references/guide.md": "Read [the detail](detail.md).\n",
+    }, 1, "references/guide.md names detail.md"],
+    ["missing parent link", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
+      "alpha/references/guide.md": "Read [the detail](../detail.md).\n",
+    }, 1, "references/guide.md names ../detail.md"],
+    ["missing dotted resource", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read ./references/guide.md."),
+    }, 1, "./references/guide.md"],
+    ["resource cycle", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/a.md and choose playbooks/feature.md."),
+      "alpha/references/a.md": "Read [the detail](b.md).\n",
+      "alpha/references/b.md": "Read [the entry](a.md), then run scripts/check.mjs.\n",
+      "alpha/playbooks/feature.md": "Read ../references/a.md and copy ../templates/decision.tsv.\n",
+      "alpha/templates/decision.tsv": "id\tnote\n",
+      "alpha/scripts/check.mjs": "console.log(1);\n",
+    }, 0, "ok: 1 skills"],
+    ["resource escapes skill", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Run scripts/../../beta/scripts/check.mjs."),
+      "beta/SKILL.md": resourceSkill("beta", "No direct helper."),
+      "beta/scripts/check.mjs": "console.log(1);\n",
+    }, 1, "outside its installed skill"],
+    ["target and provenance paths", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Run <repo>/scripts/verify.mjs.\n\n## Provenance\n\nCopied from `skills/poteto-mode/playbooks/hillclimb.md` upstream; its DESIGN.md and references/upstream.md record the source."),
+    }, 0, "ok: 1 skills"],
+    ["installed skill command", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Run node <skill-dir>/scripts/check.mjs."),
+    }, 1, "scripts/check.mjs"],
+    ["quoted installed command", {
+      "alpha/SKILL.md": resourceSkill("alpha", 'Run node "<skill-dir>/scripts/check.mjs".'),
+    }, 1, "scripts/check.mjs"],
+  ];
+  for (const [label, files, status, output] of resourceCases) {
+    const root = join(tmp, label.replaceAll(" ", "-"));
+    writeTree(root, files);
+    checkCli(label, root, status, output);
+  }
 
   rmSync(tmp, { recursive: true, force: true });
 

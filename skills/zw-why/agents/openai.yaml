@@ -1,3 +1,5 @@
 interface:
   display_name: "Zw Why"
   short_description: "Explain why an existing thing is the way it is"
+policy:
+  allow_implicit_invocation: false

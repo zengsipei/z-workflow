@@ -2,4 +2,4 @@ interface:
   display_name: "Zw Code Review"
   short_description: "Review changes on standards and spec"
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

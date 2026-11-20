@@ -1,3 +1,5 @@
 interface:
   display_name: "Zw How"
   short_description: "Explain a subsystem before changing it"
+policy:
+  allow_implicit_invocation: false
