@@ -9,7 +9,7 @@
  * Exit 0 on pass. On failure every problem prints as "<skill>: <problem>"
  * and the exit code is non-zero.
  *
- * What it enforces, per skill directory:
+ * What it enforces, per skill directory, including symlinked directories:
  * - SKILL.md exists at the skill root and starts with a --- delimited
  *   frontmatter block.
  * - No other SKILL.md sits anywhere below that root. An installer that treats
@@ -36,9 +36,11 @@
  * a malformed SKILL.md inside this skill is exactly the defect it checks for.
  */
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ALLOWED_KEYS = new Set(["name", "description", "disable-model-invocation"]);
 const ROOT_ONLY = [
@@ -190,10 +192,18 @@ function runOnSkills(skillsRoot) {
   }
   let count = 0;
   for (const entry of readdirSync(skillsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+    if (entry.name.startsWith(".") || (!entry.isDirectory() && !entry.isSymbolicLink())) continue;
     const skillDir = join(skillsRoot, entry.name);
-    const skillMd = join(skillDir, "SKILL.md");
     const push = (msg) => errors.push(entry.name + ": " + msg);
+    if (entry.isSymbolicLink()) {
+      try {
+        if (!statSync(skillDir).isDirectory()) continue;
+      } catch (error) {
+        push("broken skill symlink (" + error.code + ")");
+        continue;
+      }
+    }
+    const skillMd = join(skillDir, "SKILL.md");
     if (!existsSync(skillMd)) {
       push("no SKILL.md, so an installer cannot see this skill");
       continue;
@@ -225,6 +235,14 @@ const FENCE = "---";
 function selfTest() {
   const tmp = mkdtempSync(join(tmpdir(), "verify-install-"));
   const failures = [];
+  const checkCli = (label, root, status, output) => {
+    const result = spawnSync(process.execPath, [fileURLToPath(import.meta.url), root], { encoding: "utf8" });
+    const actual = result.stdout + result.stderr;
+    if (result.status !== status || !actual.includes(output)) {
+      failures.push(label + ": expected exit " + status + " and " + JSON.stringify(output) +
+        ", got exit " + result.status + " and " + JSON.stringify(actual));
+    }
+  };
 
   const vendorSource = "export const tool = 1;\n";
   const vendorManifest = "# VENDOR sample\n\n| file | sha256 | state |\n| --- | --- | --- |\n| lib/tool.ts | " +
@@ -282,6 +300,22 @@ function selfTest() {
   for (const needle of needles) {
     if (!bad.errors.some((e) => e.includes(needle))) failures.push("bad fixture: expected an error containing " + JSON.stringify(needle));
   }
+
+  const linkedRoot = join(tmp, "linked");
+  mkdirSync(linkedRoot);
+  symlinkSync(join(goodRoot, "alpha"), join(linkedRoot, "alpha"), "dir");
+  symlinkSync(join(goodRoot, "beta"), join(linkedRoot, "beta"), "dir");
+  checkCli("linked skills", linkedRoot, 0, "ok: 2 skills");
+
+  const invalidLinkRoot = join(tmp, "invalid-link");
+  mkdirSync(invalidLinkRoot);
+  symlinkSync(join(badRoot, "beta-yaml"), join(invalidLinkRoot, "beta-yaml"), "dir");
+  checkCli("invalid linked skill", invalidLinkRoot, 1, "beta-yaml: description is an unquoted value");
+
+  const brokenLinkRoot = join(tmp, "broken-link");
+  mkdirSync(brokenLinkRoot);
+  symlinkSync(join(tmp, "absent"), join(brokenLinkRoot, "ghost"), "dir");
+  checkCli("broken skill symlink", brokenLinkRoot, 1, "ghost: broken skill symlink");
 
   const emptyRoot = join(tmp, "empty");
   mkdirSync(emptyRoot);
