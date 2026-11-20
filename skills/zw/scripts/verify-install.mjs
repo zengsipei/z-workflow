@@ -18,9 +18,9 @@
  * - Frontmatter keys stay inside the portable subset: name, description,
  *   disable-model-invocation.
  * - name equals the directory name.
- * - description is a plain one-line scalar a YAML parser reads back as that
- *   exact string. An unquoted value holding a colon-space or a space-hash is
- *   reported, because the skills CLI skips such a skill as invalid YAML.
+ * - name and description are non-empty single-line YAML strings, plain or
+ *   quoted. Quotes and escapes must be valid, implicit non-string scalars
+ *   must be quoted, and disable-model-invocation must be a boolean.
  * - Every references/ and scripts/ path named in the body exists inside the
  *   skill own directory, which is all an installer copies.
  * - A path named as a sibling, ../<skill>/references/..., ../<skill>/scripts/...,
@@ -52,6 +52,54 @@ const RELATIVE = /(?:^|[\s`(\[])((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]
 const SIBLING = /(?:^|[\s`(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
 const VENDOR_ROOT = "vendor";
 const VENDOR_MANIFEST = "VENDOR.md";
+const YAML_ESCAPES = {
+  "0": "\0", a: "\x07", b: "\b", t: "\t", "\t": "\t", n: "\n", v: "\x0b", f: "\f", r: "\r", e: "\x1b",
+  " ": " ", '"': '"', "/": "/", "\\": "\\", N: "\u0085", _: "\u00a0", L: "\u2028", P: "\u2029",
+};
+const NON_STRING_SCALAR = /^(?:null|true|false|yes|no|on|off|~|[-+]?(?:0x[\da-f_]+|0b[01_]+|0o[0-7_]+|\d[\d_]*(?::[0-5]?\d)+(?:\.\d*)?|\d[\d_]*(?:\.\d[\d_]*|\.)?(?:e[-+]?\d+)?|\.\d[\d_]*(?:e[-+]?\d+)?|\.(?:inf|nan))|\d{4}-\d{1,2}-\d{1,2}(?:[t ].*)?)$/i;
+
+function parseStringScalar(value, key) {
+  let decoded = value;
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    decoded = "";
+    let closed = false;
+    for (let i = 1; i < value.length; i++) {
+      const char = value[i];
+      if (char === quote) {
+        if (quote === "'" && value[i + 1] === "'") { decoded += "'"; i++; continue; }
+        if (i !== value.length - 1) throw new Error(key + " has text after the closing quote");
+        closed = true;
+        break;
+      }
+      if (quote === '"' && char === "\\") {
+        const escape = value[++i];
+        if (Object.hasOwn(YAML_ESCAPES, escape)) decoded += YAML_ESCAPES[escape];
+        else if (escape === "x" || escape === "u" || escape === "U") {
+          const width = { x: 2, u: 4, U: 8 }[escape];
+          const hex = value.slice(i + 1, i + 1 + width);
+          if (hex.length !== width || !/^[\da-f]+$/i.test(hex)) throw new Error(key + " has an invalid YAML escape");
+          const code = Number.parseInt(hex, 16);
+          if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) throw new Error(key + " has an invalid YAML Unicode escape");
+          decoded += String.fromCodePoint(code);
+          i += width;
+        } else throw new Error(key + " has an invalid YAML escape");
+      } else decoded += char;
+    }
+    if (!closed) throw new Error(key + " has an unterminated quoted scalar");
+  } else {
+    if (!value || /^(?:[-?:](?:\s|$)|[,\[\]{}#&*!|>%@`])/.test(value) || NON_STRING_SCALAR.test(value)) {
+      throw new Error(key + " must be a single-line string");
+    }
+    if (/:(?:\s|$)|\s#/.test(value)) {
+      throw new Error(key + " is an unquoted value holding a colon-space or a space-hash, which a YAML parser does not read back intact (nested mapping or comment); quote it");
+    }
+  }
+  if (!decoded.trim() || /[\r\n\u0085\u2028\u2029\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ufffe\uffff]/.test(decoded)) {
+    throw new Error(key + " must be a single-line string");
+  }
+  return decoded;
+}
 
 function parseFrontmatter(raw, push) {
   const lines = raw.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
@@ -65,6 +113,7 @@ function parseFrontmatter(raw, push) {
     return null;
   }
   const fields = {};
+  const seen = new Set();
   for (let i = 1; i < end; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
@@ -75,22 +124,19 @@ function parseFrontmatter(raw, push) {
     }
     const key = m[1];
     const value = (m[2] ?? "").trim();
-    if (!ALLOWED_KEYS.has(key)) push("frontmatter key " + key + " is outside the portable subset");
-    fields[key] = value;
+    if (!ALLOWED_KEYS.has(key)) { push("frontmatter key " + key + " is outside the portable subset"); continue; }
+    if (seen.has(key)) { push("duplicate frontmatter key " + key); continue; }
+    seen.add(key);
+    try {
+      if (key === "disable-model-invocation") {
+        if (value !== "true" && value !== "false") throw new Error(key + " must be true or false");
+        fields[key] = value === "true";
+      } else fields[key] = parseStringScalar(value, key);
+    } catch (error) {
+      push(error.message + " at frontmatter line " + (i + 1));
+    }
   }
   return { fields, body: lines.slice(end + 1).join("\n") };
-}
-
-function checkDescription(value, push) {
-  if (!value) {
-    push("frontmatter has no description");
-    return;
-  }
-  const quoted = (value.startsWith(String.fromCharCode(34)) && value.endsWith(String.fromCharCode(34))) ||
-    (value.startsWith(String.fromCharCode(39)) && value.endsWith(String.fromCharCode(39)));
-  if (!quoted && /:\s|\s#/.test(value)) {
-    push("description is an unquoted value holding a colon-space or a space-hash, which a YAML parser reads as a nested mapping; quote it");
-  }
 }
 
 function checkBody(body, skillDir, skillsRoot, push) {
@@ -212,7 +258,7 @@ function runOnSkills(skillsRoot) {
     const parsed = parseFrontmatter(readFileSync(skillMd, "utf8"), push);
     if (!parsed) continue;
     if (parsed.fields.name !== entry.name) push("frontmatter name " + JSON.stringify(parsed.fields.name || "") + " does not match the directory name");
-    checkDescription(parsed.fields.description, push);
+    if (typeof parsed.fields.description !== "string") push("frontmatter has no valid string description");
     checkBody(parsed.body, skillDir, skillsRoot, push);
     checkVendor(skillDir, push);
     for (const nested of findNestedSkillFiles(skillDir, skillDir, [])) {
@@ -321,6 +367,42 @@ function selfTest() {
   mkdirSync(emptyRoot);
   const empty = runOnSkills(emptyRoot);
   if (empty.errors.length !== 0 || empty.count !== 0) failures.push("empty fixture: expected 0 skills and 0 errors");
+
+  const scalarCases = [
+    ["unterminated quote", '"Use when the user asks for review', 1, "unterminated"],
+    ["invalid escape", '"Use when \\q appears"', 1, "invalid YAML escape"],
+    ["description sequence", "[Use when the user asks for review]", 1, "description must be a single-line string"],
+    ["description mapping", "{trigger: review}", 1, "description must be a single-line string"],
+    ["description boolean", "true", 1, "description must be a single-line string"],
+    ["description number", "123", 1, "description must be a single-line string"],
+    ["trailing colon", "Use when reviewing:", 1, "description is an unquoted value"],
+    ["invalid Unicode escape", '"Use when \\U00110000 appears."', 1, "invalid YAML Unicode escape"],
+    ["quoted suffix", '"Use when reviewing" extra', 1, "after the closing quote"],
+    ["quoted newline", '"Use when reviewing\\nchanges"', 1, "description must be a single-line string"],
+    ["single quote", "'Use when the user''s change needs review.'", 0, "ok: 1 skills"],
+    ["double quote escapes", '"Use when \\"review\\" or \\u0063heck appears."', 0, "ok: 1 skills"],
+    ["YAML escapes", '"Use when \\x63heck or \\U0001F600 appears."', 0, "ok: 1 skills"],
+  ];
+  for (const [label, value, status, output] of scalarCases) {
+    const root = join(tmp, "scalar-" + label.replaceAll(" ", "-"));
+    writeTree(root, {
+      "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: " + value + "\n" + FENCE + "\n\n# alpha\n",
+    });
+    checkCli(label, root, status, output);
+  }
+  const typedRoot = join(tmp, "typed-fields");
+  writeTree(typedRoot, {
+    "alpha/SKILL.md": FENCE + '\nname: "alpha"\ndescription: A quoted name is still a string.\ndisable-model-invocation: false\n' + FENCE + "\n\n# alpha\n",
+  });
+  checkCli("quoted name", typedRoot, 0, "ok: 1 skills");
+  writeTree(typedRoot, {
+    "alpha/SKILL.md": FENCE + '\nname: alpha\ndescription: A flag must be a boolean.\ndisable-model-invocation: "true"\n' + FENCE + "\n\n# alpha\n",
+  });
+  checkCli("quoted flag", typedRoot, 1, "disable-model-invocation must be true or false");
+  writeTree(typedRoot, {
+    "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: First value.\ndescription: Second value.\n" + FENCE + "\n\n# alpha\n",
+  });
+  checkCli("duplicate key", typedRoot, 1, "duplicate frontmatter key description");
 
   rmSync(tmp, { recursive: true, force: true });
 
