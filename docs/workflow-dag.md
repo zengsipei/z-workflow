@@ -41,7 +41,7 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 | `zw` | `zw-create-verification-skill` | The repo has no drivable route to its own behaviour | A generated `verify-<app>/` skill, or a precise report of what blocks one, which stops that route until the user decides |
 | `zw-wayfinder` | `zw-to-spec` | Destination named, open decisions sliced | `map.md`, decision tickets |
 | `zw-to-spec` | `zw-to-tickets` | Spec settled, test seam named | `spec.md` (seven sections) |
-| `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches |
+| `zw` | `zw-how` | A nontrivial change starts | Entry points, flow, gotchas, and what a change touches; an `implemented` note with a `## Scope` section when the same subsystem is explained twice |
 | `zw-how` | `zw-why` | The flow raises why the shape is this way | The cited rationale, in tiers, with the gaps named |
 | `zw` | `zw-technical-writing` | Text a person will read is written or reviewed | The text, tightened |
 | `zw-code-review` | `zw-blast-radius` | A diff's risk turns on something the diff does not show | The one safety fact, proven or marked unproven |
@@ -71,7 +71,7 @@ A drivable route exists before implementation is delegated, and the shipped rout
 | `zw-retro` -> deterministic check | The mistake is mechanical: a pattern a script can detect | A check in the repo's check command, wired in |
 | `zw-retro` -> written standard | The mistake needs judgement | A documented standard the review reads |
 | `zw-handoff` -> a fresh session | The session ends and another continues it | One document in the OS temporary directory |
-| `zw-how` -> any node that changes code | A nontrivial change starts in code nobody has read | One explanation, then the change |
+| `zw-how` -> any node that changes code | A nontrivial change starts in code nobody has read | One explanation, then the change; kept as a note only when it will be paid for twice |
 | `zw-technical-writing` -> any node that writes text | Text a person reads is being written or reviewed | The text, tightened |
 | `zw-unslop` -> `zw-technical-writing` | A draft exists and reads machine-written | The same meaning, the tells cut |
 | `zw-no-comments` -> any node that lands a diff | A diff carries comments to settle | Deleted comments, encoded constraints, and the ones that stay open with a reason |
@@ -106,6 +106,7 @@ The target-repo checkers are leaves on the spine, not hooks: they run in the clo
 | `verify-artifacts.mjs` | Ticket numbering and dependency order, spec to ticket links, the no-file-paths rule |
 | `playbooks.mjs` | Which routes are in effect for a repo, by layer. It validates nothing: a playbook is a recommendation |
 | `verify-install.mjs` | This repo only: frontmatter in the portable subset, name matching the directory, description a YAML parser reads intact, every named helper shipped inside its own skill |
+| `zw-how/scripts/coverage.mjs` | Not a gate: it prints unclaimed units and notes with no `## Scope`, and exits zero whatever it says. A tree also written by the upstream skill is heterogeneous by construction, so the report is the adoption curve rather than a verdict |
 
 The first two ship inside `skills/zw/scripts/`, so `npx skills add` carries them with the entry skill.
 

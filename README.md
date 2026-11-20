@@ -23,7 +23,7 @@ spine.
 | Skill | Job |
 |---|---|
 | `zw` | Entry: working style, the playbook routes, the spine, and the checkers |
-| `zw-how` | Explain a subsystem before changing it |
+| `zw-how` | Explain a subsystem before changing it, and keep the explanation as a scoped note when it will be paid for twice |
 | `zw-tdd` | Red to green at a confirmed seam, plus the bug regression path |
 | `zw-wayfinder` | Decision map with fog-of-war tickets for work too large for one session |
 | `zw-to-spec` | Conversation to spec, no re-interviewing |
