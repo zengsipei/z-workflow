@@ -18,8 +18,8 @@ A change is non-trivial: it changes behavior, architecture, a cross-file contrac
 3. Prefer updating the note that already owns this decision. Fix facts in place in the present tense. A flipped decision or reason opens a new note and cross-links.
 4. Write the note under its lifecycle and class path using the header block and section order in vendor/write-notes-like-deepseek/references/note-format.md. Record only alternatives actually weighed, each with its strongest case first and then why it lost.
 5. When a proposed note lands in the same change, move it to implemented, keep the date, rewrite the proposal as a present-tense Decision, and fold acceptance criteria and risks into Consequences.
-6. Run vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts and vendor/write-notes-like-deepseek/scripts/verify-agent-note-format.ts from the repo root. Fix every failure before finishing.
-7. When a note moves to archived, use vendor/write-notes-like-deepseek/scripts/archive-agent-note.ts for the move and seal the archive with vendor/write-notes-like-deepseek/scripts/verify-archived-agent-notes.ts.
+6. Run the vendored tree and format checkers from the target repo root, using the absolute skill paths in Harness. Fix every failure before finishing.
+7. When a note moves to archived, use the vendored archive command and seal the archive with the absolute skill paths in Harness.
 
 ## Artifacts
 
@@ -34,13 +34,24 @@ One note per decision at <repo>/.agents/notes/{proposed,implemented,rejected,arc
 
 ## Harness
 
-The vendored checkers run with `npx tsx` from the repo root. The commands are identical across harnesses; only the command-line entry differs.
+Run the vendored checkers with `npx tsx` from the target repo root. Replace `<skill-dir>` with the absolute directory containing this installed SKILL.md. Keep the target repo as the working directory: the checkers find its notes there, while their script paths point at the installed skill.
+
+```bash
+npx tsx "<skill-dir>/vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts"
+npx tsx "<skill-dir>/vendor/write-notes-like-deepseek/scripts/verify-agent-note-format.ts"
+npx tsx "<skill-dir>/vendor/write-notes-like-deepseek/scripts/verify-archived-agent-notes.ts"
+```
 
 - DSH: run them through the Bash tool.
 - Claude Code: run them through the Bash tool.
 - Codex: run them through the shell tool.
 
-Archiving commands: seal with `npx tsx vendor/write-notes-like-deepseek/scripts/verify-archived-agent-notes.ts --write`, and move a note with `npx tsx vendor/write-notes-like-deepseek/scripts/archive-agent-note.ts <note-path>`.
+Move a note and seal the archive from the same target repo root:
+
+```bash
+npx tsx "<skill-dir>/vendor/write-notes-like-deepseek/scripts/archive-agent-note.ts" <note-path>
+npx tsx "<skill-dir>/vendor/write-notes-like-deepseek/scripts/verify-archived-agent-notes.ts" --write
+```
 
 ## Provenance
 
