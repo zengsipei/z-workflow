@@ -21,6 +21,10 @@ When even batches cannot stay green alone, keep the sequence and let them share 
 
 Number tickets in dependency order, blockers first, so a ticket never depends on a higher number. Start at `01` in an empty directory; when decision tickets from zw-wayfinder already occupy numbers, continue after the highest existing number.
 
+Each local blocker names an existing ticket with a lower number. Use comma-separated `NN-<slug> (Title)` references in the Blocked by line.
+Bare ticket numbers remain valid for older drafts. An omitted Blocked by line also remains valid for those drafts.
+Self dependencies, forward dependencies, cycles, and unknown ticket tokens fail the artifact gate.
+
 ## Local ticket file
 
 One file per ticket. Avoid file paths and code snippets in the body; the prototype exception applies where a snippet encodes a decision better than prose.
@@ -30,7 +34,7 @@ One file per ticket. Avoid file paths and code snippets in the body; the prototy
 
 **What to build:** the end-to-end behaviour this ticket makes work, from the user's perspective.
 
-**Blocked by:** the numbers and titles of the tickets that gate this one, or "None (can start immediately)".
+**Blocked by:** comma-separated NN-<slug> (Title) references, or "None (can start immediately)".
 
 **Status:** ready-for-agent
 

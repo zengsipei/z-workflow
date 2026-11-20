@@ -17,7 +17,11 @@
  * - Spec-to-ticket links are checked only when a feature has both a spec.md
  *   and local ticket files; a spec may reference a ticket by its NN-<slug>
  *   token or by a relative Markdown link.
+ * - A local Blocked by line lists ticket numbers or NN-<slug> tokens, with
+ *   optional titles. Every blocker must exist and have a lower number.
+ *   Older drafts with no Blocked by line remain valid.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync, statSync, readdirSync, readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -157,6 +161,49 @@ function checkSpec(rel, absPath, tickets, errors) {
   }
 }
 
+function ticketBlockers(raw, ticket, errors) {
+  const src = maskSource(raw);
+  const blockers = [];
+  let fieldSeen = false;
+  for (let i = 0; i < src.lines.length; i++) {
+    if (!isProseLine(src, i)) continue;
+    const field = /^\s*Blocked by:\s*(.*)$/i.exec(src.lines[i].replaceAll("**", ""));
+    if (!field) continue;
+    const where = ticket.rel + ":" + (i + 1);
+    if (fieldSeen) { errors.push(where + ": duplicate Blocked by line"); continue; }
+    fieldSeen = true;
+    const value = field[1].trim();
+    if (/^None(?:\s*\([^)]*\))?[.]?$/i.test(value)) continue;
+    const entries = [];
+    let depth = 0;
+    let start = 0;
+    for (let j = 0; j < value.length; j++) {
+      if (value[j] === "(") depth++;
+      else if (value[j] === ")") depth--;
+      if (depth < 0) break;
+      if (depth !== 0) continue;
+      const separator = /^(?:[,;]|\s+and\s+(?=[`#]?\d))/i.exec(value.slice(j));
+      if (!separator) continue;
+      entries.push(value.slice(start, j));
+      j += separator[0].length - 1;
+      start = j + 1;
+    }
+    if (depth !== 0) { errors.push(where + ": invalid Blocked by entry: unbalanced title parentheses"); continue; }
+    entries.push(value.slice(start));
+    for (const entry of entries) {
+      const prefix = /^(?:`([^`]+)`|([^\s(]+))(?=$|\s|\()/.exec(entry.trim());
+      const token = (prefix?.[1] ?? prefix?.[2] ?? "").replace(/[:.]$/, "");
+      const ref = /^#?(\d+)(?:-(.+))?$/.exec(token);
+      if (!ref || !Number.isSafeInteger(Number(ref[1])) || Number(ref[1]) < 1) {
+        errors.push(where + ": invalid Blocked by entry " + JSON.stringify(entry.trim()) + "; expected a ticket number or NN-<slug>");
+        continue;
+      }
+      blockers.push({ num: Number(ref[1]), slug: ref[2], token, line: i + 1 });
+    }
+  }
+  return blockers;
+}
+
 function checkTickets(featureRel, ticketsDir, errors) {
   if (!existsSync(ticketsDir)) return;
   const tickets = [];
@@ -207,6 +254,17 @@ function checkTickets(featureRel, ticketsDir, errors) {
     }
     for (const v of pathViolations(raw)) {
       errors.push(t.rel + ":" + v.line + ": " + v.token + " looks like a " + v.kind);
+    }
+    for (const blocker of ticketBlockers(raw, t, errors)) {
+      const dependency = byNum.get(blocker.num);
+      const where = t.rel + ":" + blocker.line;
+      if (!dependency || (blocker.slug && blocker.slug !== dependency.slug)) {
+        errors.push(where + ": Blocked by references missing ticket " + blocker.token);
+      } else if (blocker.num === t.num) {
+        errors.push(where + ": a ticket cannot block itself (" + blocker.token + ")");
+      } else if (blocker.num > t.num) {
+        errors.push(where + ": blocker " + blocker.token + " must have a lower ticket number than " + t.prefix + "-" + t.slug);
+      }
     }
   }
   return tickets;
@@ -264,6 +322,16 @@ function selfTest() {
   ];
   for (const needle of needles) {
     if (!bad.errors.some((e) => e.includes(needle))) failures.push("bad fixture: expected an error containing " + JSON.stringify(needle));
+  }
+
+  const dependencyGood = spawnSync(process.execPath, [fileURLToPath(import.meta.url), join(fixturesRoot, "dependencies", "good")], { encoding: "utf8" });
+  if (dependencyGood.status !== 0 || dependencyGood.stdout !== "ok: 3 artifacts\n") {
+    failures.push("valid blockers: expected exit 0 and 3 artifacts, got " + dependencyGood.status + " " + dependencyGood.stdout + dependencyGood.stderr);
+  }
+  const dependencyBad = spawnSync(process.execPath, [fileURLToPath(import.meta.url), join(fixturesRoot, "dependencies", "bad")], { encoding: "utf8" });
+  if (dependencyBad.status !== 1) failures.push("invalid blockers: expected exit 1, got " + dependencyBad.status);
+  for (const needle of ["must have a lower ticket number", "cannot block itself", "missing ticket 02-provider", "missing ticket 01-ghost", "invalid Blocked by entry"]) {
+    if (!dependencyBad.stderr.includes(needle)) failures.push("invalid blockers: expected " + JSON.stringify(needle) + ", got " + JSON.stringify(dependencyBad.stderr));
   }
 
   const tmp = mkdtempSync(join(tmpdir(), "verify-artifacts-empty-"));
