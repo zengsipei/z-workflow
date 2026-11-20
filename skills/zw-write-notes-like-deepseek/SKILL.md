@@ -34,7 +34,8 @@ One note per decision at <repo>/.agents/notes/{proposed,implemented,rejected,arc
 
 ## Harness
 
-Run the vendored checkers with `npx tsx` from the target repo root. Replace `<skill-dir>` with the absolute directory containing this installed SKILL.md. Keep the target repo as the working directory: the checkers find its notes there, while their script paths point at the installed skill.
+Run the vendored checkers with `npx tsx` from the target repo root. Replace `<skill-dir>` with the absolute directory containing this installed SKILL.md.
+Keep the target repo as the working directory. The checkers inspect its notes. Their absolute script paths point at the installed skill.
 
 ```bash
 npx tsx "<skill-dir>/vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts"

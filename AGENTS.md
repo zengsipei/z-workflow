@@ -73,7 +73,8 @@ The checkers live under `skills/zw/scripts/` so `npx skills add` ships them with
 `node skills/zw/scripts/verify-install.mjs skills` checks that contract. Every skill must be discovered and every named resource must ship with it.
 
 Resource paths beginning with `references/`, `scripts/`, `vendor/`, `playbooks/`, or `templates/` start at the owning skill directory.
-The `<skill-dir>/` prefix names that same installed directory in a command. Paths beginning with `./` or `../references/` and other resource directories resolve from the referring document.
+The `<skill-dir>/` prefix names that same installed directory in a command.
+Prefix a resource directory with `./` or `../` to resolve its path from the referring document.
 A sibling resource or body, such as `../zw/references/harness/index.md` or `../zw-technical-writing/SKILL.md`, resolves inside the installed skills root.
 Other local filename links resolve from the referring Markdown file. First-party Markdown resources are followed recursively, with visited paths stopping reference cycles.
 The five built-in playbooks are named resources; checking that they ship adds no schema to their prose.
