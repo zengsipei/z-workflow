@@ -1,3 +1,5 @@
 interface:
   display_name: "Zw Maintain Formal Verification Skill"
   short_description: "Keep formal verification true to the code it describes"
+policy:
+  allow_implicit_invocation: false

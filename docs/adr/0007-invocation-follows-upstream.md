@@ -30,6 +30,12 @@ the sibling path (`../zw-how/SKILL.md`) and follows it. That is what pstack's ow
 skill cannot be called, and `verify-install.mjs` now resolves a sibling `SKILL.md` so a rename breaks
 the install check instead of a route.
 
+Codex metadata mirrors the portable invocation mode. A human-invoked skill sets
+`policy.allow_implicit_invocation: false` in `agents/openai.yaml`; a model-invoked skill leaves the
+default enabled or sets it to `true`. The [Codex skills contract](https://developers.openai.com/codex/skills/)
+defines that default and preserves explicit invocation. The install checker compares both flags when
+Codex metadata is present, so changing the mode also requires changing that metadata.
+
 ## Consequences
 
 - Three skills carry a description in context (`zw-write-notes-like-deepseek`, `zw-tdd`,

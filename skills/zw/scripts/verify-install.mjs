@@ -21,6 +21,7 @@
  * - name and description are non-empty single-line YAML strings, plain or
  *   quoted. Quotes and escapes must be valid, implicit non-string scalars
  *   must be quoted, and disable-model-invocation must be a boolean.
+ * - Optional Codex metadata has the same invocation policy as the frontmatter.
  * - Every references/ and scripts/ path named in the body exists inside the
  *   skill own directory, which is all an installer copies.
  * - A path named as a sibling, ../<skill>/references/..., ../<skill>/scripts/...,
@@ -153,6 +154,41 @@ function checkBody(body, skillDir, skillsRoot, push) {
   }
 }
 
+function checkCodexInvocation(skillDir, disabled, push) {
+  const metadata = join(skillDir, "agents", "openai.yaml");
+  if (!existsSync(metadata)) return;
+  const lines = readFileSync(metadata, "utf8").replace(/\r\n?/g, "\n").split("\n");
+  let inPolicy = false;
+  let policySeen = false;
+  let childIndent;
+  let flagSeen = false;
+  let implicit = true;
+  for (const line of lines) {
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+    if (/^\S/.test(line)) {
+      inPolicy = /^policy:/.test(line);
+      if (!inPolicy) continue;
+      if (policySeen) { push("agents/openai.yaml has a duplicate policy key"); return; }
+      policySeen = true;
+      if (!/^policy:\s*(?:#.*)?$/.test(line)) { push("agents/openai.yaml policy must be a block mapping"); return; }
+      continue;
+    }
+    if (!inPolicy) continue;
+    const field = /^( +)([A-Za-z][A-Za-z0-9_-]*):(?:\s(.*))?$/.exec(line);
+    if (!field) { push("agents/openai.yaml policy has an invalid field"); return; }
+    childIndent ??= field[1].length;
+    if (field[1].length !== childIndent || field[2] !== "allow_implicit_invocation") continue;
+    if (flagSeen) { push("agents/openai.yaml has a duplicate allow_implicit_invocation key"); return; }
+    flagSeen = true;
+    const value = (field[3] ?? "").replace(/\s+#.*$/, "").trim();
+    if (value !== "true" && value !== "false") { push("agents/openai.yaml allow_implicit_invocation must be a boolean"); return; }
+    implicit = value === "true";
+  }
+  if (implicit !== !disabled) {
+    push("agents/openai.yaml allow_implicit_invocation must be " + !disabled + " to match disable-model-invocation");
+  }
+}
+
 function findNestedSkillFiles(dir, root, out) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
@@ -259,6 +295,7 @@ function runOnSkills(skillsRoot) {
     if (!parsed) continue;
     if (parsed.fields.name !== entry.name) push("frontmatter name " + JSON.stringify(parsed.fields.name || "") + " does not match the directory name");
     if (typeof parsed.fields.description !== "string") push("frontmatter has no valid string description");
+    checkCodexInvocation(skillDir, parsed.fields["disable-model-invocation"] === true, push);
     checkBody(parsed.body, skillDir, skillsRoot, push);
     checkVendor(skillDir, push);
     for (const nested of findNestedSkillFiles(skillDir, skillDir, [])) {
@@ -403,6 +440,23 @@ function selfTest() {
     "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: First value.\ndescription: Second value.\n" + FENCE + "\n\n# alpha\n",
   });
   checkCli("duplicate key", typedRoot, 1, "duplicate frontmatter key description");
+
+  const invocationCases = [
+    ["implicit human skill", "disable-model-invocation: true\n", "", 1, "allow_implicit_invocation must be false"],
+    ["disabled model skill", "", "policy:\n  allow_implicit_invocation: false\n", 1, "allow_implicit_invocation must be true"],
+    ["explicit human skill", "disable-model-invocation: true\n", "policy:\n  allow_implicit_invocation: false\n", 0, "ok: 1 skills"],
+    ["default model skill", "", "", 0, "ok: 1 skills"],
+    ["enabled model skill", "", "policy:\n  allow_implicit_invocation: true\n", 0, "ok: 1 skills"],
+    ["string policy flag", "", 'policy:\n  allow_implicit_invocation: "true"\n', 1, "allow_implicit_invocation must be a boolean"],
+  ];
+  for (const [label, flag, policy, status, output] of invocationCases) {
+    const root = join(tmp, label.replaceAll(" ", "-"));
+    writeTree(root, {
+      "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A skill with Codex metadata.\n" + flag + FENCE + "\n\n# alpha\n",
+      "alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n' + policy,
+    });
+    checkCli(label, root, status, output);
+  }
 
   rmSync(tmp, { recursive: true, force: true });
 

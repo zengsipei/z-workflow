@@ -29,6 +29,7 @@ samples/                      proof runs
 1. Directory name is the skill name: lower case, kebab case, `zw-` prefix. The entry skill is the single exception and is named `zw`.
 2. Frontmatter carries `name` and `description` only, plus `disable-model-invocation: true` for human-invoked skills. No other keys: anything harness-specific belongs in the body.
    `name` and `description` are non-empty, printable, single-line YAML strings, plain or quoted. Quote values YAML resolves as numbers, booleans, nulls, or timestamps. The optional invocation flag is a lowercase boolean, not a quoted string. Block scalars, collections, tags, anchors, comments, and duplicate keys are outside this subset.
+   When `agents/openai.yaml` is present, its block `policy.allow_implicit_invocation` matches the portable invocation mode. Codex defaults this flag to `true`, so human-invoked skills set it to `false` explicitly.
 3. `description` has two shapes. Model-invoked: one sentence of rich trigger phrasing ("Use when the user ... mentions ... asks for ..."), because it sits in context permanently. Human-invoked: one plain line for a person browsing commands, no trigger lists, because it costs no context.
 4. Body sections, in this order, omitting any that would be empty:
    - `# <name>` then one sentence on the job.
