@@ -37,5 +37,5 @@ None. The reply is the artifact.
 
 ## Provenance
 
-- Upstream: pstack `bro`, as shipped in pstack-dsh 0.2.5.
+- Upstream: `cursor/plugins` at commit `71ed0d1`, path `pstack/skills/bro`. Read through pstack-dsh 0.2.5, a third-party DSH port of cursor pstack whose README pins its skill text to this commit.
 - Changed: renamed to zw-bro and written out as a skill with a fires-when, steps, done and provenance block, where upstream is one sentence. The meaning is unchanged: restate the last message plainly, with no jargon.

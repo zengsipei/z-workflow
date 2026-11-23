@@ -50,7 +50,9 @@ The user says implement, build, or land this, and a spec or ticket graph already
 
 ## Provenance
 
-- Upstream: mattpocock/skills `implement` and `implement-spec` at commit `5863806`; pstack `poteto-mode` playbook `feature.md` at commit `3dbd22f`.
+- Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/implement`.
+- Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/implement-spec`.
+- Upstream: `cursor/plugins` at commit `3dbd22f`, path `pstack/skills/poteto-mode/playbooks/feature.md`. This is cursor pstack's Feature playbook.
 - Changed: merged the single-ticket and spec-scale flows into one skill, kept the frontier semantics, replaced the worktree plus merger topology with direct-by-default and fan-out at three or more orthogonal subtasks, added the four throughput checkpoints, and moved harness specifics to Harness.
-- Phase-boundary fan-out and stop conditions added 2026-11-14 from pstack `poteto-mode/playbooks/feature.md:19` at commit `3dbd22f`: parent-level fan-out is for slices that produce independent artifacts, and a stage that can stop the line is what makes a loop trustworthy.
+- Phase-boundary fan-out and stop conditions added 2026-11-14 from line 19 of that playbook at the same commit: parent-level fan-out is for slices that produce independent artifacts, and a stage that can stop the line is what makes a loop trustworthy.
 - Scope ownership added 2026-11-18 from `GhabiX/SpineCodex` at commit `846cc3c`, `codex-rs/spine-core/config/spine.toml`: work does not belong to the scope that discovered it, only to the one that owns the obligation, and attaching it elsewhere is resolved before the work starts.

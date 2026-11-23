@@ -21,6 +21,7 @@ skills/zw/scripts/verify-install.mjs    install and vendor-integrity checker, sh
 skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/  the notes skill's checkers and references, verbatim
 scripts/link-skills.sh        install: symlink every skill into the harness roots
 scripts/gate.sh               this repo's gate: every self-test, then the checkers against this tree
+scripts/upstream-drift.mjs    report: which pinned upstream sources moved, read from the Upstream lines
 .github/workflows/gate.yml    CI: runs scripts/gate.sh on every push to main and every pull request
 docs/adr/                     architecture decisions
 samples/                      proof runs
@@ -40,7 +41,7 @@ samples/                      proof runs
    - `## Artifacts` exact paths from DESIGN.md section 5.
    - `## Done` checkable statements, not adjectives.
    - `## Harness` the three cases: DSH, Claude Code, Codex. Say what degrades and how.
-   - `## Provenance` source repo, commit, and what was changed when copying.
+   - `## Provenance` one line per source, then what was changed when copying. The line reads ``- Upstream: `owner/repo` at commit `sha`, path `dir/or/file`.`` and names the repo the text was taken from, never a port or a mirror of it. A skill written here with no source says `- Upstream: none`.
 5. No model names, no harness tool names, and no CLI flags in `## Steps`. Those live in `## Harness`.
 6. Keep the main file under 120 lines. Push detail into `references/` and name it by relative path in the step that uses it. A pointer that sits only under `## Provenance` protects nothing, because the install check does not scan that section.
 7. Artifacts never name file paths or line numbers in their text. Describe interfaces, types, and behaviour, so a ticket written today is still true after a refactor. A ticket refers to its sibling drafts by number (`NN-<slug>`), never by path; a spec names every sibling ticket by the same token, on its `Tickets:` line, or by a relative link.
@@ -55,10 +56,16 @@ Zero dependencies for a script written here: node ESM or POSIX shell, nothing to
 A capability that already exists upstream is vendored, never re-implemented. Three rules keep that honest:
 
 1. Files under `vendor/` are byte-identical to upstream. Never edit one: re-sync it or drop the vendor tree.
-2. `VENDOR.md` sits one level above the vendored directory and records the source repo, the commit, and a sha256 per file, including every upstream file deliberately left out and why. A vendor tree carries no `SKILL.md`, because an installer rewrites nested skill files; the upstream skill body is cited by URL in the driving skill's `## Provenance` instead.
+2. `VENDOR.md` sits one level above the vendored directory and records each source as an `- Upstream:` line in the Provenance form, with a sha256 per file, including every upstream file deliberately left out and why. A vendor tree carries no `SKILL.md`, because an installer rewrites nested skill files; the upstream skill body is cited by URL in the driving skill's `## Provenance` instead.
 3. `verify-install.mjs` compares the tree against `VENDOR.md` and fails on a mismatch, so an edited copy cannot pass as the original.
 
 The skill that drives a vendored capability names its files by relative path and says what the upstream tool is for, so a reader can switch to the upstream skill without translating anything.
+
+## Upstream drift
+
+`node scripts/upstream-drift.mjs` reads every `- Upstream:` line, in a skill's `## Provenance` and in a `VENDOR.md`, and prints which paths moved between the pinned commit and the upstream's head. It also proves the record: a commit the upstream does not have, or a path that commit does not hold, is reported as a problem. Run it before a re-sync and before a release. It reads the network, so the gate runs only its `--test`.
+
+A pin is the commit the local text descends from, not the newest commit that was at hand. Moving a pin forward says every upstream change up to that commit was read and either taken or declined.
 
 ## Gates
 

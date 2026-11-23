@@ -56,4 +56,4 @@ npx tsx "<skill-dir>/vendor/write-notes-like-deepseek/scripts/verify-archived-ag
 
 ## Provenance
 
-Vendored verbatim from write-notes-like-deepseek (https://github.com/czm15053/write-notes-like-deepseek) at commit 72573a5b179de7798bbb7c4aeacdc0df6bf62439. The rules, checkers, templates and board are the upstream skill itself; only this body is written here.
+- Upstream: `czm15053/write-notes-like-deepseek` at commit `72573a5b179de7798bbb7c4aeacdc0df6bf62439`, path `skills/write-notes-like-deepseek`. Vendored verbatim: the rules, checkers, templates and board are the upstream skill itself, and only this body is written here.

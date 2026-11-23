@@ -46,6 +46,6 @@ The user asks for a way to verify a repo, says "make a control skill for this re
 
 ## Provenance
 
-- Upstream: pstack `create-verification-skill` at commit `3dbd22f`.
+- Upstream: `cursor/plugins` at commit `3dbd22f`, path `pstack/skills/create-verification-skill`.
 - Changed: kept the six-section structure and the self-proof gate, moved the generated skill root from Cursor's `.cursor/skills` to `.agents/skills` (preferred) or `.dsh/skills`, and pointed the maintenance handoff at `zw-maintain-verification-skill`.
-- Control CLI requirement added 2026-11-14 from pstack `docs/guide/06-verify-and-ship.md` at commit `3dbd22f` and poteto, `The Complete Guide to pstack Pt. 1` (x.com/poteto/status/2094457600259842065): the tool the agent drives is infrastructure worth building once.
+- Control CLI requirement added 2026-11-14 from cursor pstack `pstack/docs/guide/06-verify-and-ship.md` at commit `3dbd22f` and poteto, `The Complete Guide to pstack Pt. 1` (x.com/poteto/status/2094457600259842065): the tool the agent drives is infrastructure worth building once.

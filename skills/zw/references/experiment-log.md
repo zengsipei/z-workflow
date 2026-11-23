@@ -37,4 +37,4 @@ One row per attempt either way: a reverted attempt still writes its row with ver
 
 ## Provenance
 
-Format taken from pstack's hillclimb playbook, `skills/poteto-mode/playbooks/hillclimb.md`, at commit `3dbd22f`, step 3, which defines these nine columns in this order. The template here is that header row, copied verbatim.
+Format taken from cursor pstack's hillclimb playbook, `pstack/skills/poteto-mode/playbooks/hillclimb.md` in `cursor/plugins` at commit `3dbd22f`, step 3, which defines these nine columns in this order. The template here is that header row, copied verbatim.

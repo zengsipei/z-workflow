@@ -30,6 +30,7 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 | D16 | A repo's build and test topology is recorded once in `docs/agents/build-and-test.md`, written by the setup step beside the three upstream files; it is the one file z-workflow writes that upstream does not expect, so D14 stays true of the other three | The minutes a full run costs, and the build a stale `dist` needs, are paid once per repo instead of once per run; the exception is written down rather than left to read like a mistake |
 | D17 | A skill that tracks one upstream keeps the upstream name behind the `zw-` prefix (`zw-how`, `zw-wayfinder`, `zw-create-verification-skill`); a skill merged from several upstreams keeps its merged name and records every source in `Provenance` | The name is what tells a reader which upstream file to diff against when upstream moves; inventing a single source for a merged skill would misreport what was taken |
 | D19 | An explanation worth paying for twice is kept as an `implemented` Agent Note carrying a `## Scope` section, and subsystem coverage is printed by `zw-how`'s `scripts/coverage.mjs` on demand, never stored as a file | Reusing the existing notes tree adds no document class, and D14 holds because upstream accepts a free section. A stored index is the one shared writable file two branches edit at once, so it is derived at print time instead. The report is a hint and exits zero: a note written with the upstream skill directly carries no `## Scope`, which is the adoption curve, not a failure |
+| D20 | A source is one line in a fixed form, `- Upstream:` with the repo, the commit and the path, in a skill's `## Provenance` or in a `VENDOR.md`. The repo is the one the text was taken from, never a port of it, and the pin is the commit the local text descends from. `scripts/upstream-drift.mjs` reads the lines and prints which paths moved | The record was prose nobody read: six skills named a port's version where the upstream commit belonged, one pin was newer than its text, and 11 of 29 recorded paths had moved with no command to say so. A line a script can read is a line a script can prove |
 
 ## 3. Repo layout
 
@@ -46,6 +47,7 @@ z-workflow/
   skills/<name>/agents/      harness metadata for one skill, never a second SKILL.md
   scripts/link-skills.sh     symlink skills into the harness roots
   scripts/gate.sh            this repo's own gate, one command; CI runs it
+  scripts/upstream-drift.mjs which pinned upstream sources moved, read from the Upstream lines
   skills/zw/scripts/verify-artifacts.mjs  spec/ticket contract checker (zero deps)
   skills/zw/scripts/verify-install.mjs    install and vendor-integrity checker (zero deps)
   skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/  the notes skill and its checkers, verbatim
@@ -127,8 +129,8 @@ Run the spine once on psst: `zw` -> `zw-wayfinder` -> `zw-to-spec` -> `zw-to-tic
 ## 9. Risks
 
 - Twenty-one self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
-- Self-contained copies drift from upstream; each skill records the upstream commit it was taken from.
+- Self-contained copies drift from upstream. Each skill records the upstream repo, commit and path it was taken from, and `scripts/upstream-drift.mjs` prints which of them moved. Nothing re-syncs a skill: reading the upstream diff and deciding stays manual.
 - Without host hooks the gates are honour-system wherever a human skips the closing step.
 - `docs/agents/build-and-test.md` is prose nobody checks: a build command that changes costs one wrong diagnosis before the file is fixed. That is still cheaper than the same diagnosis on every run.
 - The vendored checkers need `npx tsx` on first run, so a machine with no network and no cache runs the notes gate only after one install. That is the price of running the upstream script instead of a port.
-- A vendor tree drifts silently if nobody notices an upstream commit. `VENDOR.md` carries a sha256 per file and `verify-install.mjs` compares the tree against it, so an edited copy fails instead of passing as the original.
+- A vendor tree drifts if nobody runs the drift report. `VENDOR.md` carries a sha256 per file and `verify-install.mjs` compares the tree against it, so an edited copy fails instead of passing as the original, and the drift report says when the upstream file itself changed.

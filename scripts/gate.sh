@@ -17,6 +17,7 @@ step node skills/zw/scripts/verify-artifacts.mjs --test
 step node skills/zw/scripts/playbooks.mjs --test
 step node skills/zw/scripts/role-route.mjs --test
 step node skills/zw-how/scripts/coverage.mjs --test
+step node scripts/upstream-drift.mjs --test
 step node skills/zw/scripts/verify-install.mjs skills --all
 step node skills/zw/scripts/verify-artifacts.mjs .
 step npx --yes tsx "$NOTES/verify-agent-note-tree.ts"

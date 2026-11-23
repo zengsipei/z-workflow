@@ -58,7 +58,7 @@ None of its own. The real artifact is the edited comment set inside the caller's
 
 ## Provenance
 
-- Upstream: pstack `no-comments`, as shipped in pstack-dsh 0.2.5.
+- Upstream: `cursor/plugins` at commit `71ed0d1`, path `pstack/skills/no-comments`. Read through pstack-dsh 0.2.5, a third-party DSH port of cursor pstack whose README pins its skill text to this commit.
 - Split back out of the merged `zw-write` skill on 2026-11-15, as one of the three skills that replace it.
 - Kept: the scope rule, the report-only pass over a diff, the exception keep list, the delete list, restore only with proof, one rerun then open, the smallest root-cause fix, encode-over-comment with its interactive approval gate, and the closing report.
 - Reshaped: the child reports and never writes, so the edits land in this skill's own thread; the architect call became its outcome, a shape settled before the fix when a deletion needs one.

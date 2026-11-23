@@ -18,7 +18,7 @@ bash scripts/gate.sh
 
 The script runs these steps in order and stops at the first failure, naming the command that failed:
 
-1. The five self-tests: `verify-install.mjs`, `verify-artifacts.mjs`, `playbooks.mjs`, `role-route.mjs`, and `zw-how`'s `coverage.mjs`, each with `--test`.
+1. The six self-tests: `verify-install.mjs`, `verify-artifacts.mjs`, `playbooks.mjs`, `role-route.mjs`, `zw-how`'s `coverage.mjs`, and `scripts/upstream-drift.mjs`, each with `--test`.
 2. The install check on `skills/` with `--all`.
 3. The artifact check on this repo.
 4. The three vendored notes checkers, through `npx tsx`.
@@ -46,4 +46,5 @@ One row per mechanical rule this repo keeps, with what enforces it. A rule that 
 | A vendored file matches its `VENDOR.md` hash, and an omitted file is absent | `verify-install.mjs` | the gate |
 | A draft written from the spec and ticket templates passes the artifact check | `verify-artifacts.mjs --test` | the gate |
 | A ticket's blockers exist and carry lower numbers, and a spec names its sibling tickets | `verify-artifacts.mjs` | the target repo, in the closing step |
+| Every `- Upstream:` line names a commit the upstream has and a path that commit holds | `scripts/upstream-drift.mjs` | on demand, with the network |
 | Re-running the installer converges, and it never takes a link from a live checkout or removes another checkout's | `link-skills.sh --test` | the gate |

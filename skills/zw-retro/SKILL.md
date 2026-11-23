@@ -38,6 +38,8 @@ The user asks for a retrospective on a session, or asks what to change so a mist
 
 ## Provenance
 
-Copied from mattpocock skills (commit 5863806) and refactored for z-workflow: kept the seven categories and the implementation-vs-review split; made the mechanical-versus-judgement routing criterion explicit in references/routing.md.
-- Fix order and the rule-to-enforcer table added 2026-11-14 from pstack `correct` at commit `3dbd22f`. The rule behind them is poteto's, stated in `The Complete Guide to pstack Pt. 1` (x.com/poteto/status/2094457600259842065): a weed you pull becomes a rule so it cannot grow back.
+- Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/retro`.
+- Upstream: `cursor/plugins` at commit `3dbd22f`, path `pstack/skills/correct`. This is cursor pstack's `correct` skill.
+- Changed: kept matt's seven categories and the implementation-vs-review split; made the mechanical-versus-judgement routing criterion explicit in references/routing.md.
+- Fix order and the rule-to-enforcer table added 2026-11-14 from `correct`. The rule behind them is poteto's, stated in `The Complete Guide to pstack Pt. 1` (x.com/poteto/status/2094457600259842065): a weed you pull becomes a rule so it cannot grow back.
 - Lever calibration added 2026-11-18 from `unclebob/ub-mode` at commit `3da62bf`, section `Build the Lever`: one instance of the work by hand, accepted the way the check must accept it, then the check written to match that instance.

@@ -64,4 +64,5 @@ helpers reached through first-party Markdown references, and every shipped file 
 
 ## Working in this repo
 
-Read `AGENTS.md` before writing a skill. `docs/workflow-dag.md` is the graph.
+Read `AGENTS.md` before writing a skill. `docs/workflow-dag.md` is the graph. `bash scripts/gate.sh` runs every
+check, and `node scripts/upstream-drift.mjs` prints which pinned upstream sources have moved.

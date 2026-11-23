@@ -39,4 +39,5 @@ One handoff document in the OS temporary directory, outside the workspace.
 
 ## Provenance
 
-Copied from mattpocock skills (commit 5863806) and refactored for z-workflow: kept the temp-directory destination and redaction rules, narrowed suggested skills to the zw set, and added the settled/open/next-action structure.
+- Upstream: `mattpocock/skills` at commit `5863806`, path `skills/productivity/handoff`.
+- Changed: kept the temp-directory destination and redaction rules, narrowed suggested skills to the zw set, and added the settled/open/next-action structure.

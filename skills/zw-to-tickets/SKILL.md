@@ -43,4 +43,5 @@ The user has an approved spec and asks for tickets, or the zw playbook reaches t
 
 ## Provenance
 
-Copied from mattpocock/skills, `engineering/to-tickets`, commit `5863806`. Changed: local path rewritten from upstream's `.scratch/<feature-slug>/issues/` to this workflow's `.scratch/<feature>/tickets/`; tracker setup wording dropped; vertical-slice, expand-contract, and quiz-before-publish rules kept.
+- Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/to-tickets`.
+- Changed: local path rewritten from upstream's `.scratch/<feature-slug>/issues/` to this workflow's `.scratch/<feature>/tickets/`; tracker setup wording dropped; vertical-slice, expand-contract, and quiz-before-publish rules kept.

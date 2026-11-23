@@ -59,4 +59,5 @@ Use when the user names an existing map or ticket. The ticket types, the claim, 
 
 ## Provenance
 
-Copied from mattpocock/skills, `engineering/wayfinder`, commit `5863806`. Changed: tracker-specific paths rewritten to this workflow's `.scratch/<feature>/` and `docs/` paths; the upstream setup command and harness files dropped; decision-tree wording made explicit; map, fog-of-war, claim, and one-ticket-per-session rules kept.
+- Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/wayfinder`.
+- Changed: tracker-specific paths rewritten to this workflow's `.scratch/<feature>/` and `docs/` paths; the upstream setup command and harness files dropped; decision-tree wording made explicit; map, fog-of-war, claim, and one-ticket-per-session rules kept.
