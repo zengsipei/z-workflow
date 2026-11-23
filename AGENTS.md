@@ -48,7 +48,7 @@ samples/                      proof runs
 7. Artifacts never name file paths or line numbers in their text. Describe interfaces, types, and behaviour, so a ticket written today is still true after a refactor. A ticket refers to its sibling drafts by number (`NN-<slug>`), never by path; a spec names every sibling ticket by the same token, on its `Tickets:` line, or by a relative link.
 8. English throughout. No em dashes.
 
-The gate enforces every rule here that a script can read. `verify-install.mjs` checks rules 1 and 2 and that a named resource ships. `scripts/verify-authoring.mjs` checks rules 3 to 6 and 8: the description shape, the title, the required sections and their order, the three harness cases, a CLI flag in `## Steps`, the line limit, and the em dash. `scripts/upstream-drift.mjs --records` checks the Upstream line. Rule 7 is `verify-artifacts.mjs`'s, in the target repo. What stays with the reviewer is judgement: whether a step names its artifact and done test, and whether a model or tool name crept into `## Steps`.
+The gate enforces the rules here that a script can read, and `docs/agents/build-and-test.md` has the table of which check holds which rule. Judgement stays with the reviewer: whether a step names its artifact and done test, and whether a model or tool name crept into `## Steps`.
 
 ## Script rules
 

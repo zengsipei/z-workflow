@@ -14,16 +14,18 @@ The installer had the same gap: five behaviours, no test, and three that did not
 
 ## Decision
 
-`scripts/gate.sh` is the gate. It runs every self-test, then the checks against this tree, stops at the first failure, and names the command that failed.
+`scripts/gate.sh` is the gate, a POSIX shell script. It runs every self-test, then the checks against this tree, stops at the first failure, and names the command that failed.
 `.github/workflows/gate.yml` runs that script on every push to `main` and on every pull request. A local run and CI execute the same list, because there is one list.
 
-The mechanical authoring rules have their own checker, `scripts/verify-authoring.mjs`: the description shape per invocation mode, the title, the required sections and their order, the three harness cases, a CLI flag in Steps, the line limit, and the em dash.
+The mechanical authoring rules have their own checker, `scripts/verify-authoring.mjs`: the description shape per invocation mode, the title, the order of the sections a skill has, a Harness section with its three cases, a CLI flag in Steps, the line limit, and the em dash.
+It requires no other section, because rule 4 lets a skill omit one that would be empty.
 `verify-install.mjs` keeps rules 1 and 2 with the install contract. `scripts/upstream-drift.mjs --records` checks the Upstream line without a network, as [ADR 0009](../../../../docs/adr/0009-provenance-and-drift.md) describes.
 The authoring checker and the drift report live in `scripts/` and are not installed. They judge how this repo is written, and an installed copy has nobody who could act on what they say.
 
 `scripts/link-skills.sh` has a `--test` mode that drives it under temporary home directories, and the gate runs it.
 The installer keeps a link that already points at this checkout, prunes a link into this checkout whose skill is gone, and repoints a link whose target is gone.
 It leaves a link at a live copy elsewhere unless `--repoint` is given, and `--unlink` removes only links into this checkout.
+Paths are compared with symlinks resolved, and a dry run changes nothing and exits zero.
 
 [Build and test](../../../../docs/agents/build-and-test.md) lists the gate's steps and holds the rule-to-enforcer table: one row per mechanical rule, with what enforces it and where that runs.
 
@@ -44,10 +46,10 @@ Run from a worktree, that moves every harness onto a tree that is about to be de
 ## Consequences
 
 A broken checker fails CI before it judges another repo. Adding a check means adding one line to the script.
-A skill that breaks a mechanical authoring rule fails the gate with the rule's number in the message. Run against `cbf04d7`, the authoring checker reports the two violations the review found by reading.
+A skill that breaks a mechanical authoring rule fails the gate with the rule's number in the message. Run against `cbf04d7`, the authoring check and the record check report the two violations the review found by reading.
 
 The gate needs the network once, for `npx tsx` on an uncached machine, and nothing else in it reads a remote. Upstream drift stays a report for that reason.
-The gate grows with each check. Four runs here took between 15 and 33 seconds, and the install checker's self-test is the largest single step at about four.
+The gate grows with each check. A run here takes well under a minute, and `time sh scripts/gate.sh` says how long.
 
 Two more scripts and one workflow file are upkeep this repo did not have. Each script carries a `--test` that the gate runs, so a broken one fails loudly.
 Judgement stays with the reviewer: whether a step names its artifact and done test, and whether a model or tool name crept into Steps. No script here reads those.
@@ -57,4 +59,4 @@ Run from a worktree, the installer's dry run reports every installed link as bel
 ## Verification
 
 `sh scripts/gate.sh` exits zero on this tree and non-zero with a resource removed, naming `verify-install.mjs skills --all` as the failing command.
-`node scripts/verify-authoring.mjs <skills at cbf04d7>` prints the `--list` flag in `zw` and the missing Provenance in `zw-blast-radius`, and nothing else.
+`node scripts/verify-authoring.mjs <skills at cbf04d7>` prints the `--list` flag in `zw` and nothing else, and `node scripts/upstream-drift.mjs --records --skills <skills at cbf04d7>` names `zw-blast-radius` among the skills with no Upstream line.

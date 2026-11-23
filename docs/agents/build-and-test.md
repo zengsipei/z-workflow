@@ -12,7 +12,7 @@ Those CLIs are the verification route for checker changes.
 
 ## Full gate
 
-```bash
+```sh
 sh scripts/gate.sh
 ```
 
@@ -28,7 +28,7 @@ CI runs the same script on every push to `main` and on every pull request, from 
 The script is the list. Add a check there, and both a local run and CI pick it up.
 
 The notes checkers retain upstream's TypeScript runtime. `npx tsx` needs network access on an uncached first run.
-A run on this machine takes 15 to 35 seconds with tsx cached, depending on what else it is doing.
+A run on this machine takes well under a minute with tsx cached.
 The installer dry run reports destinations without replacing links. Run from a worktree, it reports every installed link as pointing at another checkout and changes nothing, which is the intended answer: the installed links belong to the main checkout.
 
 Also verify a temporary installation made of skill symlinks when changing skill discovery or resource resolution.
@@ -43,11 +43,13 @@ One row per mechanical rule this repo keeps, with what enforces it. A rule that 
 | A skill directory is named `zw` or `zw-<kebab-case>`, and its frontmatter name matches | `verify-install.mjs` | the gate |
 | Frontmatter stays in the portable subset, and Codex policy matches the invocation mode | `verify-install.mjs` | the gate |
 | Every named resource ships, and every shipped file is named by an installed document | `verify-install.mjs` | the gate |
-| A skill body has its title, its required sections in order and three harness cases, stays under 120 lines, keeps CLI flags out of `## Steps`, and has no em dash | `scripts/verify-authoring.mjs` | the gate |
+| A skill body has its title, its sections in order and a Harness section with three cases, stays under 120 lines, keeps CLI flags out of `## Steps`, and has no em dash | `scripts/verify-authoring.mjs` | the gate |
 | A model-invoked description starts "Use when", and a human-invoked one does not | `scripts/verify-authoring.mjs` | the gate |
 | Every skill records its source as an `- Upstream:` line in the fixed form, or says none | `scripts/upstream-drift.mjs --records` | the gate |
 | A vendored file matches its `VENDOR.md` hash, and an omitted file is absent | `verify-install.mjs` | the gate |
 | A draft written from the spec and ticket templates passes the artifact check | `verify-artifacts.mjs --test` | the gate |
 | A ticket's blockers exist and carry lower numbers, and a spec names its sibling tickets | `verify-artifacts.mjs` | the target repo, in the closing step |
+| A spec or a ticket names no file path and no line number | `verify-artifacts.mjs` | the target repo, in the closing step |
+| A fixture the artifact checker ships is one its self-test depends on | `verify-artifacts.mjs --test` | the gate |
 | Every `- Upstream:` line names a commit the upstream has and a path that commit holds | `scripts/upstream-drift.mjs` | on demand, with the network |
-| Re-running the installer converges, and it never takes a link from a live checkout or removes another checkout's | `link-skills.sh --test` | the gate |
+| Re-running the installer converges, a dry run changes nothing, and it never takes a link from a live checkout or removes another checkout's | `link-skills.sh --test` | the gate |

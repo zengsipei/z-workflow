@@ -15,6 +15,9 @@ The review at `cbf04d7` exposes the same class from the other side. Nine shipped
 The documented install check fails on any root shared with another skill set. A draft written from the shipped templates fails the artifact gate.
 A route asked for from a subdirectory resolves against the wrong repo root and reports success.
 
+A review of those fixes exposes their edges. A file added beside named ones in a named directory ships unnoticed.
+A blocker in a numbered item is skipped, a route whose method sits in the table cell before it is refused, and a symlinked path to a repo resolves somewhere else.
+
 ## Decision
 
 The install checker validates the installed skill set. The notes and artifact checkers validate the target repo.
@@ -38,13 +41,16 @@ Target-repo paths and provenance citations are not installation dependencies. Ve
 The rule holds in both directions. Every named resource ships, and every shipped file is reached from some installed body.
 `SKILL.md`, `agents/` metadata, `vendor/`, `scripts/fixtures/` and dot-entries need no name: a manifest covers a vendor tree and a script's `--test` covers its fixtures.
 A pointer that sits only under `## Provenance` names nothing, because that section is not scanned.
+Naming a directory names no file in it. The files under it are read and followed, and each needs its own name.
 
 Notes commands use absolute paths from the installed notes skill while keeping the target repo as the working directory.
 The three upstream TypeScript checkers remain the gate. No local notes implementation replaces them.
 
 The artifact input is a set of numbered local tickets. A Blocked by line supplies numbers or numbered slug tokens, with optional titles.
-The line may be a list item, and its label may be bold or in backticks.
+The line may be a list item, bulleted, numbered or a task box, and its label may be bold or in backticks.
+A `## Blocked by` section, the tracker issue's shape, is not read: a local ticket states its blockers on one line.
 Every token resolves to an existing ticket, and every blocker has a lower number than its consumer.
+A token whose number exists under another slug is reported with the ticket that holds the number.
 Strictly decreasing numbers exclude cycles without a separate graph traversal. Titles and quoted examples do not introduce dependencies.
 Older drafts with no Blocked by line retain their previous meaning: no declared blockers.
 Ticket numbers are unique and need not be contiguous. A deleted decision ticket leaves a gap, and a number is never reused.
@@ -52,13 +58,17 @@ Ticket numbers are unique and need not be contiguous. A deleted decision ticket 
 A spec beside local tickets names every one of them, by its `NN-<slug>` token on a `Tickets:` line or by a relative link.
 The spec template prints the seven sections at the heading level the checker reads, and the checker's self-test writes the spec and ticket templates out unchanged and requires them to pass.
 
-The no-file-paths rule reads interfaces as interfaces. An HTTP route passes when its method comes first, a vendor media type is not a path, and sentence punctuation is trimmed from a token before it is judged.
-A comment is blanked in place, so a reported line number is the file's own.
+The no-file-paths rule reads interfaces as interfaces. An HTTP route passes when its method comes first, in the same code span, the one before it, or the table cell before it.
+A vendor media type is not a path, a URL is removed before paths are looked for, and the full stop that ends a sentence is trimmed from a token.
+A comment is blanked in place, so a reported line number is the file's own. Features and tickets are read in name order, so the output is the same on every filesystem.
+
+The artifact self-test compares the exact output of each fixture tree. A fixture that is deleted, or that no expected line depends on, fails it.
 
 The target repo root is the nearest directory with a `.git` at or above the directory a command names, or above the working directory when it names none.
+A symlink is followed first, so the walk goes up from where the directory really is.
 `playbooks.mjs` resolves the project layer there and prints the root it used.
 
-The source for this explanation is the checker and skill contract at `7d4d9da`.
+The source for this explanation is the checker and skill contract at `3d8c71b`.
 The commands in [build and test](../../../../docs/agents/build-and-test.md) confirm the current behavior before reuse.
 
 ## Scope
@@ -95,6 +105,12 @@ The map skill deletes a decision ticket whose question stopped applying, as its 
 Exempt decision tickets from the spec's Tickets line. That spares a spec a list of questions it already answers in prose.
 It needs the checker to tell two ticket kinds apart by their content, which is a schema where one line of tokens does the job.
 
+Let a named directory name the files in it. One mention then covers a directory of interchangeable files, the playbooks for one.
+A file added there was served as a built-in route with the gate green. Each file takes one more mention, and the five playbooks already had theirs.
+
+Read a `## Blocked by` section as well as the line. The tracker issue template uses that shape, so a local copy of an issue would be checked too.
+An issue cites tracker numbers, which would read as missing local tickets. The local template states blockers on one line, and the checker's header says the section is not read.
+
 Find the repo root by the nearest `.agents/zw-playbooks` directory. That finds the layer directly and needs no git.
 A repo without a project layer then has no root at all, and a nested checkout would borrow its parent's routes. The `.git` entry marks the root in a checkout and in a worktree alike.
 
@@ -102,7 +118,8 @@ A repo without a project layer then has no root at all, and a nested checkout wo
 
 Copied and symlinked installations pass the same CLI boundary. Missing playbooks, templates, indirect helpers, or contradictory invocation flags fail before a task uses them.
 Invalid YAML and non-string descriptions fail the gate. Each checker keeps real filesystem fixtures and a self-test mode.
-Deleting any of the 34 first-party resources fails the install gate, and a new resource fails it until a step names it.
+Deleting a first-party resource fails the install gate, and a new resource fails it until a step names it.
+Codex metadata is the exception: it is optional, so a deleted `agents/openai.yaml` passes, and a human-invoked skill without one is implicitly invocable in Codex. Revisit when a skill ships without it.
 
 Authors must use the documented resource-path conventions and frontmatter subset. The check does not infer dependencies from script imports or validate playbook prose.
 An installation gate complements a real workflow run. The real run proves behavior the resource checker cannot inspect.
