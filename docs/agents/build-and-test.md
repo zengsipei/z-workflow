@@ -28,7 +28,7 @@ CI runs the same script on every push to `main` and on every pull request, from 
 The script is the list. Add a check there, and both a local run and CI pick it up.
 
 The notes checkers retain upstream's TypeScript runtime. `npx tsx` needs network access on an uncached first run.
-A run on this machine takes about 25 seconds with tsx cached.
+A run on this machine takes 15 to 35 seconds with tsx cached, depending on what else it is doing.
 The installer dry run reports destinations without replacing links. Run from a worktree, it reports every installed link as pointing at another checkout and changes nothing, which is the intended answer: the installed links belong to the main checkout.
 
 Also verify a temporary installation made of skill symlinks when changing skill discovery or resource resolution.
