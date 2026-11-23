@@ -48,8 +48,8 @@ spine.
 
 Five routes ship by default, each a procedure written in prose. A repo replaces or adds one in
 `.agents/zw-playbooks/`, and `~/.agents/zw-playbooks/` does the same for every repo: the nearest layer
-wins, and whatever the file says is the route. `node <skills-root>/zw/scripts/playbooks.mjs --list`
-prints what is in effect.
+wins, and whatever the file says is the route. `node <skills-root>/zw/scripts/playbooks.mjs --list --repo <repo>`
+prints what is in effect for the repo that holds `<repo>`.
 
 ## Verify the install
 

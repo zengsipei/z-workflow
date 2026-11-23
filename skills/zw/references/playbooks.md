@@ -22,12 +22,17 @@ playbooks do where a skill cannot be called.
 ## Reading them
 
 ```text
-node scripts/playbooks.mjs --list
-node scripts/playbooks.mjs <name>
+node scripts/playbooks.mjs --list --repo <repo>
+node scripts/playbooks.mjs <name> --repo <repo>
 ```
 
 `--list` prints every route in effect with the layer it came from and the layers it covers, and
 `<name>` prints the file that wins, content and all. Both take `--repo` and `--user`.
+
+`<repo>` is any directory inside the target repo. The script walks up from it to the nearest `.git`
+and reads the project layer there, so a subdirectory finds the same routes as the root. Without
+`--repo` it starts from the working directory, which is the wrong repo whenever the session started
+somewhere else, a directory of several checkouts for example. The root in use prints on stderr.
 
 ## Writing one
 

@@ -16,6 +16,11 @@
  *   ~/.agents/zw-playbooks/<name>.md
  *   <zw-skill>/playbooks/<name>.md    the routes z-workflow recommends
  *
+ * <repo> is the root of the repo that holds --repo, or the working directory
+ * when --repo is absent: the nearest directory at or above it with a .git. The
+ * root in use prints on stderr, so a route resolved against the wrong repo is
+ * visible; stdout stays JSON.
+ *
  * Exit 0 on success, 2 when no route matches the name, 1 when a directory cannot
  * be read.
  */
@@ -23,11 +28,27 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BUILTIN_DIR = join(HERE, "..", "playbooks");
 const PROJECT_DIR = join(".agents", "zw-playbooks");
 const USER_DIR = join(homedir(), ".agents", "zw-playbooks");
+
+/**
+ * The repo root is the nearest directory at or above `start` that holds .git,
+ * which is a directory in a checkout and a file in a worktree. With none
+ * above, `start` is the root: a project that is not a git repo still has one.
+ */
+function findRepoRoot(start) {
+  let dir = resolve(start);
+  for (;;) {
+    if (existsSync(join(dir, ".git"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return resolve(start);
+    dir = parent;
+  }
+}
 
 function readLayer(dir, source) {
   const found = new Map();
@@ -130,6 +151,24 @@ function selfTest() {
   for (const entry of routes.list) check("every route resolves to a file: " + entry.name, existsSync(entry.file));
   check("the order is nearest first", JSON.stringify(routes.order.map((layer) => layer.source)) === JSON.stringify(["project", "user", "builtin"]));
 
+  const run = (args, cwd) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { cwd, encoding: "utf8" });
+  const nested = join(repo, "packages", "web");
+  mkdirSync(nested, { recursive: true });
+  mkdirSync(join(repo, ".git"));
+  const fromInside = run(["feature", "--user", user], nested);
+  check("a route asked for inside the repo resolves at the repo root", fromInside.status === 0 && JSON.parse(fromInside.stdout).source === "project");
+  check("the repo root in use is reported", fromInside.stderr.includes("playbooks: repo root " + repo));
+  const named = run(["feature", "--repo", nested, "--user", user], tmp);
+  check("--repo may name any directory inside the repo", named.status === 0 && JSON.parse(named.stdout).source === "project");
+  const listed = run(["--list", "--user", user], nested);
+  check("--list resolves the same root", listed.status === 0 && JSON.parse(listed.stdout).some((entry) => entry.name === "spike" && entry.source === "project"));
+  const outside = join(tmp, "plain");
+  mkdirSync(outside);
+  if (findRepoRoot(tmp) === tmp) {
+    const plain = run(["feature", "--user", user], outside);
+    check("a directory with no repo above it is its own root", plain.status === 0 && plain.stderr.includes("playbooks: repo root " + outside) && JSON.parse(plain.stdout).source === "user");
+  }
+
   rmSync(tmp, { recursive: true, force: true });
   console.log("playbooks --test: builtin=" + builtin.list.length + " fixtures=" + (failures.length === 0 ? "ok" : "FAIL"));
   if (failures.length) {
@@ -148,9 +187,11 @@ function main() {
   }
   if (options.mode === "test") process.exit(selfTest() ? 0 : 1);
 
+  const repoRoot = findRepoRoot(options.repo);
+  console.error("playbooks: repo root " + repoRoot);
   let routes;
   try {
-    routes = resolveRoutes(resolve(options.repo), resolve(options.user));
+    routes = resolveRoutes(repoRoot, resolve(options.user));
   } catch (error) {
     console.error("playbooks: " + error.message);
     process.exit(1);
