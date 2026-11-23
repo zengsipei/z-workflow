@@ -40,7 +40,7 @@ samples/                      proof runs
    - `## Harness` the three cases: DSH, Claude Code, Codex. Say what degrades and how.
    - `## Provenance` source repo, commit, and what was changed when copying.
 5. No model names, no harness tool names, and no CLI flags in `## Steps`. Those live in `## Harness`.
-6. Keep the main file under 120 lines. Push detail into `references/` and link it by relative path.
+6. Keep the main file under 120 lines. Push detail into `references/` and name it by relative path in the step that uses it. A pointer that sits only under `## Provenance` protects nothing, because the install check does not scan that section.
 7. Artifacts never name file paths or line numbers in their text. Describe interfaces, types, and behaviour, so a ticket written today is still true after a refactor. A ticket refers to its sibling drafts by number (`NN-<slug>`), never by path; a spec may refer to a ticket by the same token or by a relative link.
 8. English throughout. No em dashes.
 
@@ -65,7 +65,7 @@ The checkers live under `skills/zw/scripts/` so `npx skills add` ships them with
 - The notes gate is the vendored write-notes-like-deepseek tree, not a port: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx`. z-workflow adds no note rule of its own.
 - `verify-artifacts.mjs` runs against the target repo, in the closing step of `zw` and the last step of `zw-implement`, beside the notes gate. A repo that skips either one is unverified, not clean.
 - `playbooks.mjs` resolves the routes in effect for a repo: the project layer first, then the user's, then the built-ins. It checks nothing: a playbook binds by its wording, so a bad one gets edited rather than rejected.
-- `verify-install.mjs` runs against `skills/` and is this repo's own gate. It checks the portable frontmatter, directory names, Codex invocation policy, resource completeness, and vendor hashes. Skill directories may be symlinks; a broken skill link fails the check. An empty skills root remains valid.
+- `verify-install.mjs` runs against `skills/` and is this repo's own gate. It checks the portable frontmatter, directory names, Codex invocation policy, resource completeness in both directions, and vendor hashes. Skill directories may be symlinks; a broken skill link fails the check. An empty skills root remains valid.
 
 ## Install contract
 
@@ -82,6 +82,9 @@ The five built-in playbooks are named resources; checking that they ship adds no
 Target-repo paths, including `<repo>/` paths, and citations under `## Provenance` are not install dependencies.
 Vendored resources are checked against `VENDOR.md`, including intentional omissions, rather than interpreting upstream examples as local dependencies.
 An operational skill body that depends on another file outside `skills/` breaks the install contract.
+
+The converse holds: every file a skill ships is named by an installed document, so deleting it fails the check.
+`SKILL.md`, `agents/` metadata, `vendor/`, `scripts/fixtures/` and dot-entries need no name. A manifest covers a vendor tree, and a script's `--test` covers its fixtures.
 
 ## Frozen list
 

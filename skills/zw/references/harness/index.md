@@ -45,7 +45,7 @@ Degradation.
 
 Stop at the first step that applies.
 
-1. The key's line in `roles.md`, for this harness, when the session authorizes the route. A line
+1. The key's line in [the key table](roles.md), for this harness, when the session authorizes the route. A line
    holds one route or a panel of them, and `--route-index` picks from a panel, which is how the two
    reviews of one diff can run on different model families.
 2. A model or effort field the harness accepts per child, when the brief names one and the session

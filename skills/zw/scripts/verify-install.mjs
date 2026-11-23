@@ -30,6 +30,12 @@
  *   ../<skill>/vendor/... or ../<skill>/SKILL.md, resolves inside the skills root, so
  *   the shared harness adapter and a skill body read by path are checked rather than skipped.
  * - The body names no file that only exists at the repository root.
+ * - Every file a skill ships is named by an installed document: the converse
+ *   of the rule above, so a reference whose only pointer sits under
+ *   ## Provenance, or a helper no step mentions, fails instead of shipping
+ *   unprotected. SKILL.md, agents/ metadata, vendor/ (its manifest is the
+ *   authority), scripts/fixtures/ (proven by the script's --test) and
+ *   dot-entries need no name.
  * - A vendor/ tree carries a VENDOR.md whose table lists every file with a
  *   sha256 and a state. A vendored file must hash to its listed value, a file
  *   marked omitted must be absent, and an unlisted file is reported. A copy
@@ -211,6 +217,12 @@ function checkBody(body, skillDir, skillsRoot, push) {
   }
 
   scan(body, join(skillDir, "SKILL.md"), skillDir);
+  return checked;
+}
+
+function needsNoName(rel) {
+  return rel === "SKILL.md" || rel.startsWith("agents/") || rel.startsWith(VENDOR_ROOT + "/") ||
+    rel.startsWith("scripts/fixtures/") || rel.split("/").some((part) => part.startsWith("."));
 }
 
 function checkCodexInvocation(skillDir, disabled, push) {
@@ -332,6 +344,8 @@ function runOnSkills(skillsRoot) {
     return { errors: [skillsRoot + ": not a directory"], count: 0 };
   }
   let count = 0;
+  const named = new Set();
+  const shipped = [];
   for (const entry of readdirSync(skillsRoot, { withFileTypes: true })) {
     if (entry.name.startsWith(".") || (!entry.isDirectory() && !entry.isSymbolicLink())) continue;
     const skillDir = join(skillsRoot, entry.name);
@@ -355,10 +369,17 @@ function runOnSkills(skillsRoot) {
     if (parsed.fields.name !== entry.name) push("frontmatter name " + JSON.stringify(parsed.fields.name || "") + " does not match the directory name");
     if (typeof parsed.fields.description !== "string") push("frontmatter has no valid string description");
     checkCodexInvocation(skillDir, parsed.fields["disable-model-invocation"] === true, push);
-    checkBody(parsed.body, skillDir, skillsRoot, push);
+    for (const target of checkBody(parsed.body, skillDir, skillsRoot, push)) named.add(target);
+    shipped.push({ skillDir, push });
     checkVendor(skillDir, push);
     for (const nested of findNestedSkillFiles(skillDir, skillDir, [])) {
       push("ships a nested SKILL.md at " + nested.slice(skillDir.length + 1) + ", which an installer rewrites as a packaged skill");
+    }
+  }
+  for (const { skillDir, push } of shipped) {
+    for (const rel of listFiles(skillDir)) {
+      if (needsNoName(rel) || named.has(join(skillDir, rel))) continue;
+      push("ships " + rel + ", which no installed document names; name it in the step that uses it, or delete it");
     }
   }
   return { errors, count };
@@ -568,6 +589,37 @@ function selfTest() {
     ["quoted installed command", {
       "alpha/SKILL.md": resourceSkill("alpha", 'Run node "<skill-dir>/scripts/check.mjs".'),
     }, 1, "scripts/check.mjs"],
+    ["unnamed resource", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
+      "alpha/references/guide.md": "The guide.\n",
+      "alpha/references/stray.md": "Nothing points here.\n",
+    }, 1, "alpha: ships references/stray.md, which no installed document names"],
+    ["resource named only under Provenance", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Write the draft.\n\n## Provenance\n\nTemplate: `references/template.md`."),
+      "alpha/references/template.md": "The template.\n",
+    }, 1, "alpha: ships references/template.md, which no installed document names"],
+    ["unnamed file at the skill root", {
+      "alpha/SKILL.md": resourceSkill("alpha", "No resources."),
+      "alpha/NOTES.md": "Left behind.\n",
+    }, 1, "alpha: ships NOTES.md, which no installed document names"],
+    ["resource named by a sibling", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Read ../beta/references/shared.md."),
+      "beta/SKILL.md": resourceSkill("beta", "No direct resource."),
+      "beta/references/shared.md": "Shared.\n",
+    }, 0, "ok: 2 skills"],
+    ["resources named by their directory", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Choose a route under playbooks/."),
+      "alpha/playbooks/feature.md": "One.\n",
+      "alpha/playbooks/ship.md": "Two.\n",
+    }, 0, "ok: 1 skills"],
+    ["fixtures, metadata and dotfiles need no name", {
+      "alpha/SKILL.md": resourceSkill("alpha", "Run scripts/check.mjs."),
+      "alpha/scripts/check.mjs": "console.log(1);\n",
+      "alpha/scripts/fixtures/good/.scratch/case/spec.md": "A fixture.\n",
+      "alpha/scripts/fixtures/bad/case.md": "Another fixture.\n",
+      "alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n',
+      "alpha/.DS_Store": "x",
+    }, 0, "ok: 1 skills"],
   ];
   for (const [label, files, status, output] of resourceCases) {
     const root = join(tmp, label.replaceAll(" ", "-"));

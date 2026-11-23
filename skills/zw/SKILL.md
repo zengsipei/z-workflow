@@ -20,7 +20,7 @@ The user starts a task that will change code, docs, or a running system, and no 
 4. Settle the drivable route before the spine reaches anything that delegates implementation: a project-local verification skill, or an equivalent script that launches the app and drives one user path. Feature and Refactor run `zw-create-verification-skill` first when the repo has none, and finish it before implementation starts. A Bug fix whose reproduction on the real surface fails stops there instead of building one. Name the route you found.
 5. Run the spine for the matched playbook, in order, handing off to the named skill at each step. A model-invoked skill is loaded; a human-invoked one is read, by opening its `SKILL.md` at its sibling path such as `../zw-how/SKILL.md` and following it. A step whose artifact already exists is verified, not redone.
 6. Before any delegation, write the four throughput checkpoints as todos: blocking prerequisite, independent work stream, shared mutable state, smallest safe decomposition. Then delegate.
-7. At the end, run the notes gate and the artifact checker against the target repo, and state both results in the reply.
+7. At the end, run both gates against the target repo's root and state both results in the reply: the notes gate, whose three commands are in the Harness block of `../zw-write-notes-like-deepseek/SKILL.md`, and the artifact checker, `scripts/verify-artifacts.mjs`.
 
 ## Playbooks
 
@@ -67,7 +67,7 @@ Rigor scales with the risk rather than with the effort: a one-way door or a wide
 
 ## Harness
 
-- Every harness: a `zw-` step names only a `zw-` skill, so the spine runs with no other skill set installed; an installed skill is reference material, never a step. Delegation goes through the adapter for the harness you are running, `references/harness/index.md`, which holds the two roles, the route resolution order, and what degrades.
+- Every harness: a `zw-` step names only a `zw-` skill, so the spine runs with no other skill set installed; an installed skill is reference material, never a step. Delegation goes through the adapter for the harness you are running, `references/harness/index.md`, which holds the two roles, the route resolution order, and what degrades. A sibling path that does not resolve is an install defect, not a reason to improvise: `scripts/verify-install.mjs`, run against the skills root, names what is missing.
 - DSH: the adapter is `references/harness/dsh.md`, the key table is resolved by `scripts/role-route.mjs`; questions go through the native question tool.
 - Claude Code: no adapter is written yet, so delegate with Task and ask with AskUserQuestion; the same playbooks apply.
 - Codex: no subagents, so run playbooks sequentially and say so; no question tool, so put questions inline in the reply.

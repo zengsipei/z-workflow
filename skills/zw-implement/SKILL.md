@@ -25,7 +25,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 4. When fanning out, hand each worker a brief: goal, scope as behaviour and interfaces, the data shape decided before code, success criteria, and pointers to the spec, tickets and notes. Spec, ticket, and note bodies never carry file paths or line numbers. Each worker starts fresh and reports through the frontier, not through chat. Ownership follows the obligation rather than the discovery: work a worker finds while working its ticket is recorded on the frontier as its own ticket, never done inside the ticket that found it. Every brief carries its stop conditions: the outcomes that end the work without a fix. Not a defect, cannot reproduce, and risk too large are terminal results, reported as such, never overridden by an improvised fix.
 5. Implement in frontier order. Use `zw-tdd` at the pre-agreed seams. Run the typecheck often and one test file often. The full suite runs once, after the last edit: it is the freeze, so freeze scope first, start it in the background, and spend the wait on review rather than on more edits. A change made after it re-arms it.
 6. Review the finished work against the spec, then run `zw-code-review` on the whole diff. Fix raised issues in one fresh pass.
-7. Run the notes gate and the artifact checker, and confirm both exit zero. A repo that skips them is unverified, not clean.
+7. Run the notes gate, whose three commands are in the Harness block of `../zw-write-notes-like-deepseek/SKILL.md`, and the artifact checker, `../zw/scripts/verify-artifacts.mjs`, against the target repo's root, and confirm both exit zero. A repo that skips them is unverified, not clean.
 
 ## Artifacts
 

@@ -59,7 +59,7 @@ node <skills-root>/zw/scripts/verify-install.mjs <skills-root>
 
 It checks directories and symlinked skills, frontmatter syntax and types, directory names, and Codex
 invocation policy. Named resources must ship with the skill, including playbooks, templates, and
-helpers reached through first-party Markdown references. Vendor files must match their hash manifests.
+helpers reached through first-party Markdown references, and every shipped file must be named by a step. Vendor files must match their hash manifests.
 
 ## Working in this repo
 
