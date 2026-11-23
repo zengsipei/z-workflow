@@ -72,3 +72,8 @@ sub-workload keys a fan-out leg names (`how-explorer`, `why-synthesizer`, `revie
 `independent-verifier` and the rest), and the two vendored agent types. A line may hold a panel, and
 a `budget:` line supplies the effort a route leaves out, which restores the cheap-explorer and
 strong-judge split the last alternative above was worried about losing.
+
+The order above, the table and then a route the brief names, was reversed the same evening, in the
+change that added panels and the budget line: a model or effort the brief names for one leg wins over
+the key's line, and the line supplies the rest. The adapter's numbered list kept the old order until
+2026-11-23, when it was brought in line with the three sentences beside it that already said so.

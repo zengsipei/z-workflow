@@ -1,8 +1,9 @@
 # DSH adapter
 
 DSH delegates with its own `subagent` tool, which takes an optional provider, model and reasoning
-effort per child. That is step 2 of the resolution order in `index.md`. Step 1, the key table, is
-where the route comes from when the user configured one. No plugin is involved: anything installed
+effort per child. Those fields carry the route, whichever step of the resolution order in `index.md`
+supplied it: a field the brief names, or the key's line when the user configured one. No plugin is
+involved: anything installed
 beside the workflow can be gone before the next session, so nothing here depends on it.
 
 ## Call
