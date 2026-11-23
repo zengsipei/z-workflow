@@ -16,14 +16,17 @@
  *   allowed; a bare word with a slash and a file extension counts as a path.
  * - Spec-to-ticket links are checked only when a feature has both a spec.md
  *   and local ticket files; a spec may reference a ticket by its NN-<slug>
- *   token or by a relative Markdown link.
+ *   token or by a relative Markdown link. Every sibling ticket counts,
+ *   decision tickets included.
+ * - Ticket numbers are unique, not contiguous. A deleted ticket leaves a
+ *   gap, and dependency order is what the Blocked by check proves.
  * - A local Blocked by line lists ticket numbers or NN-<slug> tokens, with
  *   optional titles. Every blocker must exist and have a lower number. The
  *   line may be a list item and its label may be bold or in backticks.
  *   Older drafts with no Blocked by line remain valid.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, statSync, readdirSync, readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, statSync, readdirSync, readFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -157,7 +160,7 @@ function checkSpec(rel, absPath, tickets, errors) {
   }
   for (const t of tickets) {
     if (!referencesTicket(raw, absPath, t)) {
-      errors.push(rel + ": does not reference ticket " + t.prefix + "-" + t.slug + " (expected NN-<slug> mention or a relative link)");
+      errors.push(rel + ": does not reference ticket " + t.prefix + "-" + t.slug + " (name it on the spec's Tickets line by its NN-<slug> token, or link it)");
     }
   }
 }
@@ -236,14 +239,6 @@ function checkTickets(featureRel, ticketsDir, errors) {
   }
   const byNum = new Map();
   for (const t of tickets) byNum.set(t.num, t);
-  const nums = [...seen].sort((a, b) => a - b);
-  let expected = 1;
-  for (const n of nums) {
-    if (n !== expected) {
-      errors.push(byNum.get(n).rel + ": missing ticket number " + expected + " before " + n + " (dependency order broken)");
-    }
-    expected = n + 1;
-  }
 
   for (const t of tickets) {
     let raw;
@@ -302,6 +297,49 @@ function runOnRepo(repoRoot) {
   return { errors, count };
 }
 
+function templateBlock(file, heading) {
+  const lines = readFileSync(file, "utf8").replace(/\r\n?/g, "\n").split("\n");
+  const at = lines.findIndex((line) => line.trim() === heading);
+  if (at === -1) return null;
+  const open = lines.findIndex((line, i) => i > at && /^\x60\x60\x60markdown\s*$/.test(line));
+  const close = lines.findIndex((line, i) => i > open && /^\x60\x60\x60\s*$/.test(line));
+  if (open === -1 || close === -1) return null;
+  return lines.slice(open + 1, close).join("\n") + "\n";
+}
+
+/**
+ * The spec and ticket templates are sibling resources this checker judges.
+ * Written out unchanged, they must pass: a template the gate rejects teaches
+ * every run to fail.
+ */
+function checkShippedTemplates(here) {
+  const skills = join(here, "..", "..");
+  const specFile = join(skills, "zw-to-spec", "references", "spec-template.md");
+  const ticketFile = join(skills, "zw-to-tickets", "references", "ticket-template.md");
+  for (const file of [specFile, ticketFile]) {
+    if (!existsSync(file)) return [file + " is not installed beside this skill"];
+  }
+  const spec = templateBlock(specFile, "## The spec body");
+  const ticket = templateBlock(ticketFile, "## Local ticket file");
+  if (spec === null) return ["spec-template.md has no markdown block under ## The spec body"];
+  if (ticket === null) return ["ticket-template.md has no markdown block under ## Local ticket file"];
+  const token = /^Tickets:.*?\b(\d+-[a-z0-9][a-z0-9-]*)/m.exec(spec);
+  if (!token) return ["the spec template has no Tickets: line naming a ticket by its NN-<slug> token"];
+  const tmp = mkdtempSync(join(tmpdir(), "verify-artifacts-templates-"));
+  try {
+    const feature = join(tmp, ".scratch", "template");
+    mkdirSync(join(feature, "tickets"), { recursive: true });
+    writeFileSync(join(feature, "spec.md"), spec, "utf8");
+    writeFileSync(join(feature, "tickets", token[1] + ".md"), ticket, "utf8");
+    const result = runOnRepo(tmp);
+    const problems = result.errors.map((error) => "a draft written from the templates fails: " + error);
+    if (result.count !== 2) problems.push("expected the template spec and ticket to count as 2 artifacts, got " + result.count);
+    return problems;
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 function selfTest() {
   const here = dirname(fileURLToPath(import.meta.url));
   const fixturesRoot = join(here, "fixtures", "artifacts");
@@ -317,7 +355,6 @@ function selfTest() {
     "missing required section ## Further Notes",
     "src/x.ts",
     ":42",
-    "missing ticket number 2",
     "duplicate ticket number 1",
     "does not reference ticket 03-adapter",
   ];
@@ -341,6 +378,13 @@ function selfTest() {
   ]) {
     if (!dependencyBad.stderr.includes(needle)) failures.push("invalid blockers: expected " + JSON.stringify(needle) + ", got " + JSON.stringify(dependencyBad.stderr));
   }
+
+  const gap = runOnRepo(join(fixturesRoot, "numbering", "good"));
+  if (gap.errors.length !== 0) failures.push("numbering gap: a deleted ticket leaves a legal gap, got " + gap.errors.join(" | "));
+  if (gap.count !== 2) failures.push("numbering gap: expected 2 artifacts, got " + gap.count);
+
+  const templates = checkShippedTemplates(here);
+  for (const problem of templates) failures.push("shipped templates: " + problem);
 
   const tmp = mkdtempSync(join(tmpdir(), "verify-artifacts-empty-"));
   const empty = runOnRepo(tmp);

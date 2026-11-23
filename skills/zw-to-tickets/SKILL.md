@@ -20,7 +20,7 @@ The user has an approved spec and asks for tickets, or the zw playbook reaches t
 4. Handle wide refactors as expand-contract, not vertical slices: one ticket adds the new form beside the old, migration tickets move call sites in batches sized by blast radius, and a final ticket deletes the old form, blocked by every migration. Done when no wide refactor is forced into a slice.
 5. Assign blockers and numbers. Every ticket lists the tickets that gate it; a ticket with no blockers can start immediately. Number in dependency order so blockers always have lower numbers, one file per ticket. Done when the graph reads from the numbers alone.
 6. Quiz the user before publishing: show each ticket's title, its blockers, and what it delivers end to end. Ask whether the granularity is right, whether every blocking edge is genuine, and whether any tickets should merge or split. Done when the user approves the breakdown.
-7. Read `docs/agents/issue-tracker.md` for the tracker and `docs/agents/triage-labels.md` for the ready-for-agent label before publishing; where a file is missing, `../zw/references/repo-setup.md` says how it gets written. Then publish in dependency order. Local drafts go to `.scratch/<feature>/tickets/NN-<slug>.md`, written from the local ticket file in that template; a real tracker gets one issue per ticket with native blocking where it has it, ready-for-agent applied, in the same order. Done when every approved ticket exists.
+7. Read `docs/agents/issue-tracker.md` for the tracker and `docs/agents/triage-labels.md` for the ready-for-agent label before publishing; where a file is missing, `../zw/references/repo-setup.md` says how it gets written. Then publish in dependency order. Local drafts go to `.scratch/<feature>/tickets/NN-<slug>.md`, written from the local ticket file in that template; a real tracker gets one issue per ticket with native blocking where it has it, ready-for-agent applied, in the same order. When a spec draft sits beside local tickets, add each new ticket's `NN-<slug>` token to its `Tickets:` line. Done when every approved ticket exists and the spec draft names each one.
 
 ## Artifacts
 
@@ -33,7 +33,7 @@ The user has an approved spec and asks for tickets, or the zw playbook reaches t
 - Every ticket is a vertical slice, demoable on its own; wide refactors are expand-contract instead.
 - Blocking edges are confirmed by the user and match what each ticket genuinely waits on.
 - No ticket body names a file path or a line number.
-- The published set matches the approved breakdown exactly.
+- The published set matches the approved breakdown exactly, and a spec draft beside local tickets names every one of them.
 
 ## Harness
 

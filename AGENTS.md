@@ -41,7 +41,7 @@ samples/                      proof runs
    - `## Provenance` source repo, commit, and what was changed when copying.
 5. No model names, no harness tool names, and no CLI flags in `## Steps`. Those live in `## Harness`.
 6. Keep the main file under 120 lines. Push detail into `references/` and name it by relative path in the step that uses it. A pointer that sits only under `## Provenance` protects nothing, because the install check does not scan that section.
-7. Artifacts never name file paths or line numbers in their text. Describe interfaces, types, and behaviour, so a ticket written today is still true after a refactor. A ticket refers to its sibling drafts by number (`NN-<slug>`), never by path; a spec may refer to a ticket by the same token or by a relative link.
+7. Artifacts never name file paths or line numbers in their text. Describe interfaces, types, and behaviour, so a ticket written today is still true after a refactor. A ticket refers to its sibling drafts by number (`NN-<slug>`), never by path; a spec names every sibling ticket by the same token, on its `Tickets:` line, or by a relative link.
 8. English throughout. No em dashes.
 
 ## Script rules

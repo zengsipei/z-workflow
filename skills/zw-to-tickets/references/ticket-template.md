@@ -19,11 +19,13 @@ When even batches cannot stay green alone, keep the sequence and let them share 
 
 ## Numbering
 
-Number tickets in dependency order, blockers first, so a ticket never depends on a higher number. Start at `01` in an empty directory; when decision tickets from zw-wayfinder already occupy numbers, continue after the highest existing number.
+Number tickets in dependency order, blockers first, so a ticket never depends on a higher number. Start at `01` in an empty directory; when decision tickets from zw-wayfinder already occupy numbers, continue after the highest existing number. A number is never reused: a deleted ticket leaves a gap, and the gap is legal.
 
 Each local blocker names an existing ticket with a lower number. Use comma-separated `NN-<slug> (Title)` references in the Blocked by line.
 Bare ticket numbers remain valid for older drafts. An omitted Blocked by line also remains valid for those drafts.
 Self dependencies, forward dependencies, cycles, and unknown ticket tokens fail the artifact gate.
+
+A spec draft beside the tickets names each of them on its `Tickets:` line, by the same `NN-<slug>` token. The artifact gate fails a spec that leaves one out.
 
 ## Local ticket file
 
@@ -34,13 +36,15 @@ One file per ticket. Avoid file paths and code snippets in the body; the prototy
 
 **What to build:** the end-to-end behaviour this ticket makes work, from the user's perspective.
 
-**Blocked by:** comma-separated NN-<slug> (Title) references, or "None (can start immediately)".
+**Blocked by:** None (can start immediately)
 
 **Status:** ready-for-agent
 
 - [ ] Acceptance criterion 1
 - [ ] Acceptance criterion 2
 ```
+
+A ticket with blockers lists them on that line instead, comma-separated: `**Blocked by:** 01-first-slice (First slice), 02-second-slice (Second slice)`.
 
 ## Tracker issue
 
