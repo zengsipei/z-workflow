@@ -1,6 +1,6 @@
 # Build and test
 
-z-workflow ships Markdown, Node ESM helpers, and one shell installer. Tests run directly from source.
+z-workflow ships Markdown, Node ESM helpers, and two shell scripts. Tests run directly from source.
 There are no workspace packages, generated bundles, build prerequisites, or dependency installation for the self-authored scripts.
 
 ## Focused checks
@@ -12,26 +12,37 @@ Those CLIs are the verification route for checker changes.
 
 ## Full gate
 
-Run these commands from the repo root, sequentially:
-
 ```bash
-node skills/zw/scripts/verify-install.mjs --test
-node skills/zw/scripts/verify-artifacts.mjs --test
-node skills/zw/scripts/playbooks.mjs --test
-node skills/zw/scripts/role-route.mjs --test
-node skills/zw-how/scripts/coverage.mjs --test
-node skills/zw/scripts/verify-install.mjs skills --all
-node skills/zw/scripts/verify-artifacts.mjs .
-npx --yes tsx skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts
-npx --yes tsx skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/scripts/verify-agent-note-format.ts
-npx --yes tsx skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/scripts/verify-archived-agent-notes.ts
-bash -n scripts/link-skills.sh
-bash scripts/link-skills.sh --dry-run
+bash scripts/gate.sh
 ```
 
+The script runs these steps in order and stops at the first failure, naming the command that failed:
+
+1. The five self-tests: `verify-install.mjs`, `verify-artifacts.mjs`, `playbooks.mjs`, `role-route.mjs`, and `zw-how`'s `coverage.mjs`, each with `--test`.
+2. The install check on `skills/` with `--all`.
+3. The artifact check on this repo.
+4. The three vendored notes checkers, through `npx tsx`.
+5. The installer's syntax check and its dry run.
+
+CI runs the same script on every push to `main` and on every pull request, from `.github/workflows/gate.yml`.
+The script is the list. Add a check there, and both a local run and CI pick it up.
+
 The notes checkers retain upstream's TypeScript runtime. `npx tsx` needs network access on an uncached first run.
-A baseline run on this machine takes less than one minute with tsx cached.
+A run on this machine takes about 25 seconds with tsx cached.
 The installer dry run reports destinations without replacing links.
 
 Also verify a temporary installation made of skill symlinks when changing skill discovery or resource resolution.
 An install check proves packaging and integrity. It does not prove a complete DSH or Claude Code task run.
+
+## Rule to enforcer
+
+One row per mechanical rule this repo keeps, with what enforces it. A rule that is missing here has no enforcer yet.
+
+| Rule | Enforcer | Runs in |
+|---|---|---|
+| A skill directory is named `zw` or `zw-<kebab-case>`, and its frontmatter name matches | `verify-install.mjs` | the gate |
+| Frontmatter stays in the portable subset, and Codex policy matches the invocation mode | `verify-install.mjs` | the gate |
+| Every named resource ships, and every shipped file is named by an installed document | `verify-install.mjs` | the gate |
+| A vendored file matches its `VENDOR.md` hash, and an omitted file is absent | `verify-install.mjs` | the gate |
+| A draft written from the spec and ticket templates passes the artifact check | `verify-artifacts.mjs --test` | the gate |
+| A ticket's blockers exist and carry lower numbers, and a spec names its sibling tickets | `verify-artifacts.mjs` | the target repo, in the closing step |
