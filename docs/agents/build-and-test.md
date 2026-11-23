@@ -22,14 +22,14 @@ The script runs these steps in order and stops at the first failure, naming the 
 2. The install check on `skills/` with `--all`.
 3. The artifact check on this repo.
 4. The three vendored notes checkers, through `npx tsx`.
-5. The installer's syntax check and its dry run.
+5. The installer's syntax check, its self-test under temporary home directories, and its dry run.
 
 CI runs the same script on every push to `main` and on every pull request, from `.github/workflows/gate.yml`.
 The script is the list. Add a check there, and both a local run and CI pick it up.
 
 The notes checkers retain upstream's TypeScript runtime. `npx tsx` needs network access on an uncached first run.
 A run on this machine takes about 25 seconds with tsx cached.
-The installer dry run reports destinations without replacing links.
+The installer dry run reports destinations without replacing links. Run from a worktree, it reports every installed link as pointing at another checkout and changes nothing, which is the intended answer: the installed links belong to the main checkout.
 
 Also verify a temporary installation made of skill symlinks when changing skill discovery or resource resolution.
 An install check proves packaging and integrity. It does not prove a complete DSH or Claude Code task run.
@@ -46,3 +46,4 @@ One row per mechanical rule this repo keeps, with what enforces it. A rule that 
 | A vendored file matches its `VENDOR.md` hash, and an omitted file is absent | `verify-install.mjs` | the gate |
 | A draft written from the spec and ticket templates passes the artifact check | `verify-artifacts.mjs --test` | the gate |
 | A ticket's blockers exist and carry lower numbers, and a spec names its sibling tickets | `verify-artifacts.mjs` | the target repo, in the closing step |
+| Re-running the installer converges, and it never takes a link from a live checkout or removes another checkout's | `link-skills.sh --test` | the gate |

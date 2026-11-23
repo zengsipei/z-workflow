@@ -4,7 +4,7 @@ Status: design, awaiting owner sign-off. Date 2026-11-14.
 
 ## 1. What this is
 
-A portable personal agent workflow, shipped as skills in the `.agents/skills` convention and harness-neutral by construction. This repo is the only source of truth; `scripts/link-skills.sh` symlinks every skill into `~/.agents/skills` (and `~/.claude/skills` when it exists), so `git pull` updates every harness at once.
+A portable personal agent workflow, shipped as skills in the `.agents/skills` convention and harness-neutral by construction. This repo is the only source of truth; `scripts/link-skills.sh` symlinks every skill into `~/.agents/skills` (and `~/.claude/skills` when it exists), so `git pull` updates every harness at once. Running it again converges: it prunes a link whose skill was renamed or deleted, and it leaves a link that points at a live copy elsewhere, a worktree for example, unless told to take it over.
 
 Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `domain-modeling` and `codebase-design` as reference), no team or multi-agent product, no event-driven automations.
 

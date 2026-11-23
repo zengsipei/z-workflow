@@ -23,6 +23,7 @@ step npx --yes tsx "$NOTES/verify-agent-note-tree.ts"
 step npx --yes tsx "$NOTES/verify-agent-note-format.ts"
 step npx --yes tsx "$NOTES/verify-archived-agent-notes.ts"
 step bash -n scripts/link-skills.sh
+step bash scripts/link-skills.sh --test
 step bash scripts/link-skills.sh --dry-run
 
 printf '\ngate: all checks passed\n'
