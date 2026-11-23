@@ -31,7 +31,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ORDERED = ["Fires when", "Steps", "Artifacts", "Done", "Harness", "Provenance"];
 const HARNESSES = ["DSH", "Claude Code", "Codex"];
 const MAX_LINES = 120;
-const EM_DASH = "—";
+const EM_DASH = "\u2014";
 const CLI_FLAG = /(?:^|[\s\x60"'(\[])(--[a-z][a-z0-9-]*)/;
 
 function markdownFiles(dir, prefix = "") {
