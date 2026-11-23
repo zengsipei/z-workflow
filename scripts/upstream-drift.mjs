@@ -257,11 +257,17 @@ function selfTest() {
     put(skills, "zw-one/SKILL.md", skill("zw-one", line("skills/still")));
     for (const name of ["zw-alpha", "zw-beta", "zw-gone", "zw-vendor", "zw-still", "zw-self"]) rmSync(join(skills, name), { recursive: true });
     check("one source in one skill is singular", offline(skills).stdout === "ok: 1 recorded source in 1 skill\n");
-    const run = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
-    const refused = [[["--skills"], "--skills needs a value"], [["--cache", "--verbose"], "--cache needs a value"], [["--nope"], "unknown argument --nope"], [["--skills", join(tmp, "absent")], join(tmp, "absent") + " is not a directory"]];
+    const local = ["--skills", skills, "--remote", options.remote];
+    const run = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { cwd: tmp, encoding: "utf8" });
+    const refused = [
+      [[...local.slice(2), "--skills"], "--skills needs a value"],
+      [[...local, "--cache", "--verbose"], "--cache needs a value"],
+      [[...local, "--nope"], "unknown argument --nope"],
+      [[...local.slice(2), "--skills", join(tmp, "absent")], join(tmp, "absent") + " is not a directory"],
+    ];
     for (const [args, reason] of refused) {
       const result = run(...args);
-      check("exit 2 with a reason for: " + args[0] + (args[1] ? " " + args[1].replace(tmp, "<tmp>") : ""), result.status === 2 && result.stderr.includes("upstream-drift: " + reason) && result.stdout === "");
+      check("exit 2 with a reason: " + reason.replace(tmp, "<tmp>"), result.status === 2 && result.stderr.includes("upstream-drift: " + reason) && result.stdout === "");
     }
     check("--verbose lists the files", passing.stdout.includes("A skills/alpha/extra.md"));
     check("a row names its skill and its pin", passing.stdout.includes("  moved  " + pinned.slice(0, 7) + "  agents/helper.md  [zw-vendor vendor]  1 changed"));
