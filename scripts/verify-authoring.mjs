@@ -8,14 +8,15 @@
  *
  * AGENTS.md numbers the rules; this checks the mechanical ones, per skill:
  * - Rule 3: a model-invoked description starts "Use when", and a human-invoked one does not.
- * - Rule 4: the body opens with "# <name>"; Fires when, Steps, Done, Harness and Provenance are
- *   present; those and Artifacts keep that order; Harness names DSH, Claude Code and Codex.
+ * - Rule 4: the body opens with "# <name>"; the sections it has keep the order Fires when, Steps,
+ *   Artifacts, Done, Harness, Provenance; Harness is present and names DSH, Claude Code and Codex.
+ *   The rule lets a skill omit a section that would be empty, so no other section is required.
  * - Rule 5: Steps holds no CLI flag.
  * - Rule 6: SKILL.md stays under 120 lines.
  * - Rule 8: no em dash in SKILL.md or in a Markdown resource the skill wrote itself.
  *
  * verify-install.mjs owns the install contract and rules 1 and 2; scripts/upstream-drift.mjs owns
- * the Upstream lines under Provenance. A vendor tree and a script's fixtures are not this repo's
+ * the Upstream lines, and so reports a skill with no Provenance. A vendor tree and a script's fixtures are not this repo's
  * prose and are skipped.
  *
  * Exit 0 on pass. On failure every problem prints as "<skill>: <problem>" and the exit code is 1.
@@ -28,7 +29,6 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ORDERED = ["Fires when", "Steps", "Artifacts", "Done", "Harness", "Provenance"];
-const REQUIRED = ["Fires when", "Steps", "Done", "Harness", "Provenance"];
 const HARNESSES = ["DSH", "Claude Code", "Codex"];
 const MAX_LINES = 120;
 const EM_DASH = "—";
@@ -46,7 +46,7 @@ function markdownFiles(dir, prefix = "") {
 }
 
 function checkSkill(skillDir, name, push) {
-  const lines = readFileSync(join(skillDir, "SKILL.md"), "utf8").replace(/\r\n?/g, "\n").replace(/\n$/, "").split("\n");
+  const lines = readFileSync(join(skillDir, "SKILL.md"), "utf8").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").replace(/\n$/, "").split("\n");
   if (lines.length >= MAX_LINES) push("SKILL.md has " + lines.length + " lines; rule 6 keeps it under " + MAX_LINES + ", so move detail into references/");
 
   const close = lines[0] === "---" ? lines.indexOf("---", 1) : -1;
@@ -67,7 +67,7 @@ function checkSkill(skillDir, name, push) {
     if (/^\s{0,3}\x60\x60\x60/.test(line)) fenced = !fenced;
     else if (!fenced && line.startsWith("## ")) headings.push({ title: line.slice(3).trim(), index });
   });
-  for (const title of REQUIRED) if (!headings.some((h) => h.title === title)) push("no \"## " + title + "\" section (rule 4)");
+  if (!headings.some((h) => h.title === "Harness")) push("no \"## Harness\" section; every skill names the three harness cases (rule 4, DESIGN section 7)");
   const present = headings.filter((h) => ORDERED.includes(h.title));
   for (let i = 1; i < present.length; i++) {
     if (ORDERED.indexOf(present[i].title) < ORDERED.indexOf(present[i - 1].title)) {
@@ -117,7 +117,7 @@ function selfTest() {
     intro: "One sentence on the job.",
     sections: [
       ["Fires when", "The user asks."],
-      ["Steps", "1. Run scripts/check.mjs against the target repo.\n2. Compare a value like -1 or a range 3--4 written badly, which is not a flag."],
+      ["Steps", "1. Run scripts/check.mjs against the target repo.\n2. Compare a value like -1, a range 3--4 or a name like pre--release, none of which is a flag."],
       ["Artifacts", "None."],
       ["Done", "- It ran."],
       ["Harness", "- DSH: pass --verbose here.\n- Claude Code: the same.\n- Codex: sequential."],
@@ -130,7 +130,9 @@ function selfTest() {
   const withText = (title, text) => parts().sections.map(([t, body]) => (t === title ? [t, text] : [t, body]));
   const swapped = () => { const s = parts().sections; return [s[0], s[1], s[3], s[2], s[4], s[5]]; };
   const cases = [
-    ["a well formed skill", { "zw-alpha/SKILL.md": render(parts()) }, 0, "ok: 1 skills"],
+    ["a well formed skill", { "zw-alpha/SKILL.md": render(parts()), "notes/readme.md": "A directory with no SKILL.md is not a skill.\n" }, 0, "ok: 1 skills"],
+    ["only the sections that have something to say", { "zw-alpha/SKILL.md": render(parts({ sections: parts().sections.filter(([title]) => title === "Steps" || title === "Harness") })) }, 0, "ok: 1 skills"],
+    ["a byte order mark before the frontmatter", { "zw-alpha/SKILL.md": "\uFEFF" + render(parts()) }, 0, "ok: 1 skills"],
     ["a model-invoked skill", { "zw-alpha/SKILL.md": render(parts({ front: "name: zw-alpha\ndescription: Use when the user asks for one thing." })) }, 0, "ok: 1 skills"],
     ["extra sections and an omitted Artifacts", { "zw-alpha/SKILL.md": render(parts({ sections: [...without("Artifacts").slice(0, 2), ["Posture", "Stay calm."], ...without("Artifacts").slice(2)] })) }, 0, "ok: 1 skills"],
     ["a fenced heading is not a section", { "zw-alpha/SKILL.md": render(parts({ sections: withText("Steps", "1. Write this block:\n\n\x60\x60\x60markdown\n## Done\n\x60\x60\x60") })) }, 0, "ok: 1 skills"],
@@ -138,12 +140,14 @@ function selfTest() {
       "zw-alpha/SKILL.md": render(parts()),
       "zw-alpha/vendor/upstream/notes.md": "Upstream wrote this " + EM_DASH + " verbatim.\n",
       "zw-alpha/scripts/fixtures/bad/case.md": "A fixture " + EM_DASH + " on purpose.\n",
+      "zw-alpha/.drafts/old.md": "A dot directory " + EM_DASH + " not shipped prose.\n",
     }, 0, "ok: 1 skills"],
     ["human-invoked with trigger phrasing", { "zw-alpha/SKILL.md": render(parts({ front: "name: zw-alpha\ndescription: Use when the user asks.\ndisable-model-invocation: true" })) }, 1, "zw-alpha: a human-invoked description is one plain line"],
     ["model-invoked without trigger phrasing", { "zw-alpha/SKILL.md": render(parts({ front: "name: zw-alpha\ndescription: Explain one thing plainly." })) }, 1, "zw-alpha: a model-invoked description starts \"Use when\""],
     ["quoted trigger phrasing still counts", { "zw-alpha/SKILL.md": render(parts({ front: "name: zw-alpha\ndescription: \"Use when: the user asks.\"\ndisable-model-invocation: true" })) }, 1, "zw-alpha: a human-invoked description is one plain line"],
     ["wrong title", { "zw-alpha/SKILL.md": render(parts({ title: "# Alpha" })) }, 1, "zw-alpha: the body opens with \"# zw-alpha\", found \"# Alpha\""],
-    ...REQUIRED.map((title) => ["missing " + title, { "zw-alpha/SKILL.md": render(parts({ sections: without(title) })) }, 1, "zw-alpha: no \"## " + title + "\" section"]),
+    ["missing Harness", { "zw-alpha/SKILL.md": render(parts({ sections: without("Harness") })) }, 1, "zw-alpha: no \"## Harness\" section"],
+    ["a host named outside Harness does not count", { "zw-alpha/SKILL.md": render(parts({ sections: parts().sections.map(([title, text]) => (title === "Steps" ? [title, "1. In Codex, do it in order."] : title === "Harness" ? [title, "- DSH: fine.\n- Claude Code: fine."] : [title, text])) })) }, 1, "zw-alpha: \"## Harness\" does not say what happens in Codex"],
     ["sections out of order", { "zw-alpha/SKILL.md": render(parts({ sections: swapped() })) }, 1, "zw-alpha: \"## Artifacts\" comes after \"## Done\""],
     ...HARNESSES.map((host) => ["Harness without " + host, { "zw-alpha/SKILL.md": render(parts({ sections: withText("Harness", HARNESSES.filter((h) => h !== host).map((h) => "- " + h + ": fine.").join("\n")) })) }, 1, "zw-alpha: \"## Harness\" does not say what happens in " + host]),
     ["a flag in Steps", { "zw-alpha/SKILL.md": render(parts({ sections: withText("Steps", "1. Run \x60scripts/check.mjs --list\x60 first.") })) }, 1, "zw-alpha: \"## Steps\" names the CLI flag --list"],
@@ -164,6 +168,12 @@ function selfTest() {
       failures.push(label + ": expected exit " + status + " and " + JSON.stringify(output) + ", got exit " + result.status + " and " + JSON.stringify(actual));
     }
   }
+  const run = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
+  for (const [args, reason] of [[[tmp, tmp], "Usage: "], [["--nope"], "Usage: "], [[join(tmp, "absent")], "absent: not a directory"]]) {
+    const result = run(...args);
+    if (result.status !== 2 || !result.stderr.includes(reason) || result.stdout !== "") failures.push("usage error for " + JSON.stringify(args.map((arg) => arg.replace(tmp, "<tmp>"))) + ": expected exit 2 and " + JSON.stringify(reason) + ", got " + result.status + " " + JSON.stringify(result.stderr));
+  }
+
   const lineCount = (text) => text.replace(/\n$/, "").split("\n").length;
   const sized = (total) => {
     const padding = total - lineCount(render(parts({ intro: "x" }))) + 1;
