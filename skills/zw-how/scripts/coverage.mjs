@@ -15,9 +15,10 @@
  * level. Only directories that exist today count as units.
  */
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DEFAULT_UNITS = ["packages/*", "apps/*", "services/*"];
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", "target", "vendor"]);
@@ -259,6 +260,17 @@ function selfTest() {
     const override = buildReport(root, ["services/*"]);
     check(override.units.length === 1 && override.units[0] === "services/api", "--units should replace the defaults, got " + override.units.join(","));
     check(override.unclaimed.length === 1 && override.unclaimed[0] === "services/api", "services/api should be unclaimed under the override");
+
+    const run = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
+    const spaced = run(root, "--units", "services/*");
+    check(spaced.status === 0 && spaced.stdout.includes(" from services/*\n") && spaced.stdout.includes("\nUnclaimed (1)\n  services/api\n"), "--units <glob> should replace the default patterns on the command line");
+    const joined = run(root, "--units=services/*", "--units", "packages/*");
+    check(joined.status === 0 && joined.stdout.includes(" from services/*, packages/*\n"), "--units=<glob> and a repeated --units should both be read");
+    const refused = [[[], "Usage: "], [[root, "--nope"], "unknown flag: --nope"], [[root, root], "unexpected argument: "], [[join(root, "absent")], "absent: not a directory"]];
+    for (const [args, reason] of refused) {
+      const result = run(...args);
+      check(result.status === 2 && result.stderr.includes(reason) && result.stdout === "", "exit 2 with a reason for: " + JSON.stringify(args.map((arg) => arg.replace(root, "<root>"))));
+    }
 
     const empty = mkdtempSync(join(tmpdir(), "zw-how-coverage-empty-"));
     try {
