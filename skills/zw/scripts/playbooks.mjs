@@ -24,7 +24,7 @@
  * Exit 0 on success, 2 when no route matches the name, 1 when a directory cannot
  * be read.
  */
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,15 +37,18 @@ const USER_DIR = join(homedir(), ".agents", "zw-playbooks");
 
 /**
  * The repo root is the nearest directory at or above `start` that holds .git,
- * which is a directory in a checkout and a file in a worktree. With none
- * above, `start` is the root: a project that is not a git repo still has one.
+ * which is a directory in a checkout and a file in a worktree. A symlink is
+ * followed first, so the walk goes up from where `start` really is. With no
+ * .git above, `start` is the root: a project that is not a git repo still
+ * has one.
  */
 function findRepoRoot(start) {
-  let dir = resolve(start);
+  const origin = existsSync(start) ? realpathSync(start) : resolve(start);
+  let dir = origin;
   for (;;) {
     if (existsSync(join(dir, ".git"))) return dir;
     const parent = dirname(dir);
-    if (parent === dir) return resolve(start);
+    if (parent === dir) return origin;
     dir = parent;
   }
 }
@@ -124,7 +127,7 @@ function selfTest() {
   check("the shipped routes are the five shapes", ["bug-fix", "feature", "investigation", "refactor", "ship"].every((name) => builtin.list.some((entry) => entry.name === name)));
   check("a route that matches nothing is not invented", builtin.list.every((entry) => entry.source === "builtin"));
 
-  const tmp = mkdtempSync(join(tmpdir(), "playbooks-"));
+  const tmp = realpathSync(mkdtempSync(join(tmpdir(), "playbooks-")));
   const repo = join(tmp, "repo");
   const user = join(tmp, "user");
   const put = (dir, name, body) => {
@@ -164,10 +167,38 @@ function selfTest() {
   check("--list resolves the same root", listed.status === 0 && JSON.parse(listed.stdout).some((entry) => entry.name === "spike" && entry.source === "project"));
   const outside = join(tmp, "plain");
   mkdirSync(outside);
-  if (findRepoRoot(tmp) === tmp) {
-    const plain = run(["feature", "--user", user], outside);
-    check("a directory with no repo above it is its own root", plain.status === 0 && plain.stderr.includes("playbooks: repo root " + outside) && JSON.parse(plain.stdout).source === "user");
+  const plain = run(["feature", "--user", user], outside);
+  check("a directory with no repo above it is its own root (the self-test needs a temp directory outside any git repo)", plain.status === 0 && plain.stderr.includes("playbooks: repo root " + outside + "\n") && JSON.parse(plain.stdout).source === "user");
+
+  const linked = join(tmp, "weblink");
+  symlinkSync(nested, linked, "dir");
+  const throughLink = run(["feature", "--repo", linked, "--user", user], tmp);
+  check("--repo through a symlink resolves the repo it points into", throughLink.status === 0 && JSON.parse(throughLink.stdout).source === "project");
+
+  const worktree = join(tmp, "worktree");
+  put(join(worktree, PROJECT_DIR), "spike.md", "# Spike, in a worktree\n");
+  writeFileSync(join(worktree, ".git"), "gitdir: /somewhere/else\n", "utf8");
+  mkdirSync(join(worktree, "src"));
+  const inWorktree = run(["--list", "--user", user], join(worktree, "src"));
+  check("a .git file marks a root as a .git directory does", inWorktree.status === 0 && inWorktree.stderr.includes("playbooks: repo root " + worktree + "\n"));
+
+  const refused = [
+    [["--repo"], "--repo needs a path"],
+    [["--user"], "--user needs a path"],
+    [["--repo", "--list"], "--repo needs a path"],
+    [["--nope"], "unknown flag --nope"],
+    [["feature", "ship"], "unexpected argument ship"],
+    [["nosuch", "--repo", repo, "--user", user], "no route named nosuch; in effect: bug-fix, feature, "],
+  ];
+  for (const [args, reason] of refused) {
+    const result = run(args, tmp);
+    check("exit 2 with a reason for: " + args.join(" "), result.status === 2 && result.stderr.includes("playbooks: " + reason) && result.stdout === "");
   }
+  const unreadable = join(tmp, "unreadable");
+  mkdirSync(join(unreadable, ".agents"), { recursive: true });
+  writeFileSync(join(unreadable, PROJECT_DIR), "A file where the project layer belongs.\n", "utf8");
+  const broken = run(["--list", "--repo", unreadable, "--user", user], tmp);
+  check("a layer that cannot be read exits 1", broken.status === 1 && broken.stderr.includes("playbooks: cannot read " + join(unreadable, PROJECT_DIR)));
 
   rmSync(tmp, { recursive: true, force: true });
   console.log("playbooks --test: builtin=" + builtin.list.length + " fixtures=" + (failures.length === 0 ? "ok" : "FAIL"));
