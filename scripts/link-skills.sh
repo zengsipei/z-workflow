@@ -10,12 +10,24 @@
 # them unnoticed. --unlink removes only links that point into this checkout. --dry-run
 # prints what would change and creates nothing.
 #
-# Exit 0 when every skill is linked, or would be. Exit 1 when a target was skipped, 2 on a
-# usage error.
+# Paths are compared with symlinks resolved, so this checkout reached through a symlinked path is
+# still this checkout.
+#
+# Exit 0 when every skill is linked. Exit 1 when a target was skipped, 2 on a usage error. A dry
+# run exits 0 whatever it would skip: it reports, and changes nothing.
 set -euo pipefail
 
 SELF="${BASH_SOURCE[0]}"
-SRC="$(cd -- "$(dirname -- "$SELF")/.." && pwd)/skills"
+SRC="$(cd -- "$(dirname -- "$SELF")/.." && pwd -P)/skills"
+
+# Where a link target really is: its directory with symlinks resolved, then its own name. A target
+# whose directory is gone comes back as written.
+physical() {
+  local dest="${1%/}" parent
+  parent="$(dirname -- "$dest")"
+  if [ -d "$parent" ]; then parent="$(cd -- "$parent" && pwd -P)"; fi
+  printf '%s/%s\n' "$parent" "$(basename -- "$dest")"
+}
 
 self_test() {
   local tmp home out fails=0 count code
@@ -41,14 +53,25 @@ self_test() {
 
   ln -s "$SRC/zw-gone" "$home/.agents/skills/zw-gone"
   ln -sfn "$tmp/nowhere/zw-tdd" "$home/.agents/skills/zw-tdd"
+  out="$(link --dry-run)" || true
+  check "--dry-run prunes nothing" '[ -L "$home/.agents/skills/zw-gone" ]'
+  check "--dry-run repoints nothing" '[ "$(readlink "$home/.agents/skills/zw-tdd")" = "$tmp/nowhere/zw-tdd" ]'
+  check "--dry-run says what it would prune" 'grep -q "would: rm -- $home/.agents/skills/zw-gone" <<<"$out"'
+  check "--dry-run says what it would repoint" 'grep -q "would: ln -sfn -- $SRC/zw-tdd $home/.agents/skills/zw-tdd" <<<"$out"'
+  out="$(link --unlink --dry-run)" || true
+  check "--unlink --dry-run removes nothing" '[ "$(find "$home/.agents/skills" -maxdepth 1 -type l | wc -l)" -eq "$((count + 1))" ]'
   out="$(link)" || true
   check "a link whose skill is gone is pruned" '[ ! -L "$home/.agents/skills/zw-gone" ]'
+  check "the prune is reported" 'grep -q "prune $home/.agents/skills/zw-gone: $SRC/zw-gone is gone" <<<"$out"'
   check "a link whose target is gone is repointed" '[ "$(readlink "$home/.agents/skills/zw-tdd")" = "$SRC/zw-tdd" ]'
   check "the repoint is reported" 'grep -q "repoint $home/.agents/skills/zw-tdd" <<<"$out"'
 
   mkdir -p "$tmp/other/zw-how" "$home/.claude/skills"
   ln -sfn "$tmp/other/zw-how" "$home/.agents/skills/zw-how"
   rm "$home/.agents/skills/zw-bro"; mkdir "$home/.agents/skills/zw-bro"
+  code=0
+  out="$(link --dry-run)" || code=$?
+  check "a dry run that would skip still exits 0" '[ "$code" -eq 0 ] && grep -q "skipped 2" <<<"$out"'
   code=0
   out="$(link)" || code=$?
   check "a skipped target fails the run with exit 1" '[ "$code" -eq 1 ]'
@@ -67,6 +90,17 @@ self_test() {
   code=0
   link --nope >/dev/null || code=$?
   check "an unknown flag is a usage error" '[ "$code" -eq 2 ]'
+
+  ln -s "$(dirname "$SRC")" "$tmp/alias"
+  home="$tmp/aliased"; mkdir "$home"
+  out="$(link)" || true
+  out="$(HOME="$home" bash "$tmp/alias/scripts/link-skills.sh" 2>&1)" || true
+  check "the same checkout through a symlinked path keeps its links" 'grep -q "linked 0, kept $count, repointed 0, pruned 0, skipped 0" <<<"$out"'
+  ln -sfn "$tmp/alias/skills/zw" "$home/.agents/skills/zw"
+  out="$(link)" || true
+  check "a link written through a symlinked path is still this checkout's" 'grep -q "linked 0, kept $count, repointed 0, pruned 0, skipped 0" <<<"$out"'
+  out="$(HOME="$home" bash "$tmp/alias/scripts/link-skills.sh" --unlink 2>&1)" || true
+  check "--unlink through a symlinked path removes them" 'grep -q "unlinked $count" <<<"$out" && [ -z "$(ls -A "$home/.agents/skills")" ]'
 
   rm -rf "$tmp"
   if [ "$fails" -gt 0 ]; then return 1; fi
@@ -97,7 +131,7 @@ for root in "${ROOTS[@]}"; do
   if [ -d "$root" ]; then
     for link in "$root"/*; do
       [ -L "$link" ] || continue
-      dest="$(readlink -- "$link")"
+      dest="$(physical "$(readlink -- "$link")")"
       case "$dest" in "$SRC"/*) ;; *) continue ;; esac
       if [ "$mode" = unlink ]; then
         run rm -- "$link"; removed=$((removed + 1))
@@ -116,7 +150,7 @@ for root in "${ROOTS[@]}"; do
     target="$root/$(basename "$want")"
     if [ -L "$target" ]; then
       have="$(readlink -- "$target")"
-      if [ "${have%/}" = "$want" ]; then
+      if [ "$(physical "$have")" = "$want" ]; then
         kept=$((kept + 1))
       elif [ -e "$target" ] && [ "$repoint" = 0 ]; then
         echo "skip $target: points at another checkout, $have; pass --repoint to take it over" >&2
