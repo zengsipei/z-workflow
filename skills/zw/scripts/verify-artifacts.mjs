@@ -18,7 +18,8 @@
  *   and local ticket files; a spec may reference a ticket by its NN-<slug>
  *   token or by a relative Markdown link.
  * - A local Blocked by line lists ticket numbers or NN-<slug> tokens, with
- *   optional titles. Every blocker must exist and have a lower number.
+ *   optional titles. Every blocker must exist and have a lower number. The
+ *   line may be a list item and its label may be bold or in backticks.
  *   Older drafts with no Blocked by line remain valid.
  */
 import { spawnSync } from "node:child_process";
@@ -167,7 +168,7 @@ function ticketBlockers(raw, ticket, errors) {
   let fieldSeen = false;
   for (let i = 0; i < src.lines.length; i++) {
     if (!isProseLine(src, i)) continue;
-    const field = /^\s*Blocked by:\s*(.*)$/i.exec(src.lines[i].replaceAll("**", ""));
+    const field = /^\s*(?:[-*+]\s+)?`?Blocked by:`?\s*(.*)$/i.exec(src.lines[i].replaceAll("**", ""));
     if (!field) continue;
     const where = ticket.rel + ":" + (i + 1);
     if (fieldSeen) { errors.push(where + ": duplicate Blocked by line"); continue; }
@@ -325,12 +326,19 @@ function selfTest() {
   }
 
   const dependencyGood = spawnSync(process.execPath, [fileURLToPath(import.meta.url), join(fixturesRoot, "dependencies", "good")], { encoding: "utf8" });
-  if (dependencyGood.status !== 0 || dependencyGood.stdout !== "ok: 3 artifacts\n") {
-    failures.push("valid blockers: expected exit 0 and 3 artifacts, got " + dependencyGood.status + " " + dependencyGood.stdout + dependencyGood.stderr);
+  if (dependencyGood.status !== 0 || dependencyGood.stdout !== "ok: 4 artifacts\n") {
+    failures.push("valid blockers: expected exit 0 and 4 artifacts, got " + dependencyGood.status + " " + dependencyGood.stdout + dependencyGood.stderr);
   }
   const dependencyBad = spawnSync(process.execPath, [fileURLToPath(import.meta.url), join(fixturesRoot, "dependencies", "bad")], { encoding: "utf8" });
   if (dependencyBad.status !== 1) failures.push("invalid blockers: expected exit 1, got " + dependencyBad.status);
-  for (const needle of ["must have a lower ticket number", "cannot block itself", "missing ticket 02-provider", "missing ticket 01-ghost", "invalid Blocked by entry"]) {
+  for (const needle of [
+    "must have a lower ticket number",
+    "cannot block itself",
+    "missing ticket 02-provider",
+    "missing ticket 01-ghost",
+    "invalid Blocked by entry",
+    ".scratch/bullet/tickets/01-first.md:5: blocker 02-second must have a lower ticket number",
+  ]) {
     if (!dependencyBad.stderr.includes(needle)) failures.push("invalid blockers: expected " + JSON.stringify(needle) + ", got " + JSON.stringify(dependencyBad.stderr));
   }
 
