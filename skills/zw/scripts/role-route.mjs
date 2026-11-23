@@ -29,6 +29,8 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const KEYS = [
   "feature",
@@ -53,26 +55,29 @@ const HARNESSES = ["dsh", "claude-code", "codex"];
 const DEFAULT_HARNESS = "dsh";
 const DEFAULT_FILE = join(homedir(), ".agents", "zw-roles.md");
 const INHERIT_WORDS = new Set(["inherit", "inherit-parent", "auto"]);
+const SKIPPED = Symbol("a section whose header was rejected");
 
-const TEMPLATE = [
-  "# z-workflow routes",
-  "",
-  "# One line per key, per harness: <key>: <route>[, <route>...] where a route is",
-  "# <provider> <model> [effort], or inherit. A comma makes a panel; --route-index",
-  "# picks one. A line starting with # is a comment, and a key with no line",
-  "# inherits. The optional budget line supplies the effort a route leaves out.",
-  "#",
-  "# The keys are defined in ../references/harness/index.md. Resolve one with",
-  "#   node scripts/role-route.mjs <key> --harness <name>",
-  "# and validate this file with --check.",
-  "",
-  "budget: high",
-  "",
-  "## dsh",
-  "",
-  ...KEYS.map((key) => key + ": inherit"),
-  "",
-].join("\n");
+function template(harness) {
+  return [
+    "# z-workflow routes",
+    "",
+    "# One line per key, per harness: <key>: <route>[, <route>...] where a route is",
+    "# <provider> <model> [effort], or inherit. A comma makes a panel; --route-index",
+    "# picks one. A line starting with # is a comment, and a key with no line",
+    "# inherits. The optional budget line supplies the effort a route leaves out.",
+    "#",
+    "# The keys are defined in the zw skill, in references/harness/index.md. Resolve one with",
+    "#   node <zw-skill>/scripts/role-route.mjs <key> --harness <name>",
+    "# and validate this file with --check.",
+    "",
+    "budget: high",
+    "",
+    "## " + harness,
+    "",
+    ...KEYS.map((key) => key + ": inherit"),
+    "",
+  ].join("\n");
+}
 
 function splitRoutes(value) {
   return value.split(",").map((part) => part.trim()).filter(Boolean);
@@ -106,12 +111,17 @@ function parseRoles(text) {
       const name = header[1];
       if (!HARNESSES.includes(name)) {
         errors.push({ line: at, message: 'unknown harness section "' + name + '"' });
-        current = null;
+        current = SKIPPED;
         return;
       }
       if (sections.has(name)) errors.push({ line: at, message: 'harness section "' + name + '" is declared twice' });
       if (!sections.has(name)) sections.set(name, new Map());
       current = name;
+      return;
+    }
+    if (line.startsWith("##")) {
+      errors.push({ line: at, message: 'is not a section header; write "## <harness>" with nothing after the name' });
+      current = SKIPPED;
       return;
     }
     if (line.startsWith("#")) return;
@@ -135,6 +145,7 @@ function parseRoles(text) {
       errors.push({ line: at, message: 'unknown key "' + key + '"' });
       return;
     }
+    if (current === SKIPPED) return;
     if (current === null) {
       errors.push({ line: at, message: "key line before any harness section" });
       return;
@@ -228,8 +239,10 @@ function readRoles(file) {
 
 function parseArgs(argv) {
   const options = { key: null, mode: "route", harness: DEFAULT_HARNESS, routeIndex: 0, shift: 0, efforts: null, file: process.env.ZW_ROLES ?? DEFAULT_FILE };
+  const VALUE_FLAGS = new Set(["--harness", "--file", "--efforts", "--shift", "--route-index"]);
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
+    if (VALUE_FLAGS.has(arg) && (argv[i + 1] === undefined || argv[i + 1].startsWith("--"))) return { error: arg + " needs a value" };
     if (arg === "--test") options.mode = "test";
     else if (arg === "--check") options.mode = "check";
     else if (arg === "--init") options.mode = "init";
@@ -260,7 +273,7 @@ function parseArgs(argv) {
     options.effortLadder = options.efforts.split(",").map((part) => part.trim()).filter(Boolean);
     if (options.effortLadder.length < 2) return { error: "--efforts needs at least two effort ids, lowest first" };
   }
-  if (options.harness !== undefined && !HARNESSES.includes(options.harness)) {
+  if (!HARNESSES.includes(options.harness)) {
     return { error: 'unknown harness "' + options.harness + '"; expected one of ' + HARNESSES.join(", ") };
   }
   options.file = resolve(options.file);
@@ -302,8 +315,9 @@ function selfTest() {
   check("an auto line inherits", parseRoles("## dsh\nship: auto\n").sections.get("dsh").get("ship").routes[0].inherit === true);
 
   const bad = [
-    "## nonsense",
     "prose: a b c",
+    "## nonsense",
+    "ship: skipped with its section",
     "## dsh",
     "feature: magpie",
     "bug-fix: one two three four",
@@ -314,6 +328,7 @@ function selfTest() {
   const broken = parseRoles(bad);
   const messages = broken.errors.map((e) => e.message).join(" | ");
   check("unknown section is reported", /unknown harness section/.test(messages));
+  check("a key under an unknown section adds no second error", broken.errors.filter((e) => e.line === 3).length === 0);
   check("key before a section is reported", /before any harness section/.test(messages));
   check("unknown key is reported", /unknown key/.test(messages));
   check("a one token route is reported", /route must be inherit/.test(messages));
@@ -342,9 +357,32 @@ function selfTest() {
   const inherited = shiftRoute(resolveRoute(parsed.sections, "comment-sicko", "dsh", "fixture"), 1, ladder);
   check("shifting an inherited route says so", inherited.inherit === true && /inherits/.test(inherited.note));
 
-  const fromTemplate = parseRoles(TEMPLATE);
-  check("the template parses clean", fromTemplate.errors.length === 0);
-  check("the template covers every key", KEYS.every((key) => fromTemplate.sections.get("dsh").has(key)));
+  for (const harness of HARNESSES) {
+    const fromTemplate = parseRoles(template(harness));
+    check("the " + harness + " template parses clean", fromTemplate.errors.length === 0);
+    check("the " + harness + " template covers every key in its own section", fromTemplate.sections.size === 1 && KEYS.every((key) => fromTemplate.sections.get(harness).has(key)));
+  }
+
+  const merged = parseRoles("## dsh\nfeature: p1 m1\n\n## claude-code (wip)\nship: p2 m2\n\n## codex\nship: p3 m3\n");
+  check("a malformed section header is reported once", merged.errors.length === 1 && /is not a section header/.test(merged.errors[0].message) && merged.errors[0].line === 4);
+  check("keys under a malformed header join no section", !merged.sections.get("dsh").has("ship"));
+  check("the next valid header resumes", merged.sections.get("codex").get("ship").routes[0].provider === "p3");
+
+  const tmp = mkdtempSync(join(tmpdir(), "role-route-"));
+  const run = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
+  const made = join(tmp, "made.md");
+  check("--init writes the file", run("--init", "--harness", "claude-code", "--file", made).status === 0);
+  check("--init writes the section it was asked for", /^## claude-code$/m.test(readFileSync(made, "utf8")) && !/^## dsh$/m.test(readFileSync(made, "utf8")));
+  check("the file --init wrote passes --check", run("--check", "--file", made).status === 0);
+  writeFileSync(join(tmp, "merged.md"), "## dsh\nfeature: p1 m1\n\n## claude-code (wip)\nship: p2 m2\n", "utf8");
+  const checked = run("--check", "--file", join(tmp, "merged.md"));
+  check("--check fails a malformed header with its line", checked.status === 1 && checked.stderr.includes("merged.md:4: is not a section header"));
+  for (const flag of ["--harness", "--file", "--efforts", "--shift", "--route-index"]) {
+    const bare = run("feature", "--file", made, flag);
+    check(flag + " with no value is a usage error", bare.status === 2 && bare.stderr.includes(flag + " needs a value") && !bare.stderr.includes("node:"));
+  }
+  check("a flag is not taken as another flag's value", run("feature", "--file", "--harness", "dsh").status === 2);
+  rmSync(tmp, { recursive: true, force: true });
 
   console.log("role-route --test: fixtures=" + (failures.length === 0 ? "ok" : "FAIL"));
   if (failures.length) {
@@ -376,7 +414,7 @@ function main() {
       return;
     }
     mkdirSync(dirname(options.file), { recursive: true });
-    writeFileSync(options.file, TEMPLATE, "utf8");
+    writeFileSync(options.file, template(options.harness), "utf8");
     console.log("wrote " + options.file);
     return;
   }
