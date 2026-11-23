@@ -14,7 +14,11 @@
  *   are checked; other .scratch entries are ignored.
  * - Path detection is line based. URLs are removed first, and common
  *   tracker routes are allowed; a bare word with a slash and a file
- *   extension counts as a path.
+ *   extension counts as a path. An HTTP route passes when its method comes
+ *   first, as in GET /items, and a vendor media type such as
+ *   application/vnd.api+json is not a path.
+ * - A bare :3000 reads as a line number. Write the host with it, as in
+ *   localhost:3000, or the word port.
  * - Spec-to-ticket links are checked only when a feature has both a spec.md
  *   and local ticket files; a spec may reference a ticket by its NN-<slug>
  *   token or by a relative Markdown link. Every sibling ticket counts,
@@ -74,18 +78,27 @@ function headingBase(heading) {
   return heading.replace(/[（(].*$/, "").trimEnd();
 }
 
-function stripHtmlComments(text) {
-  return text.replace(/<!--[\s\S]*?-->/g, " ");
+const SENTENCE_END = /[.,;:!?]+$/;
+const HTTP_METHOD_BEFORE = /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+[\x60"']?$/;
+const VENDOR_MEDIA_TYPE = /^(?:application|audio|font|image|message|model|multipart|text|video)\/(?:vnd|prs)\./;
+
+/** Blank a comment and keep its line breaks, so a line number after it is still the file's. */
+function blankHtmlComments(text) {
+  return text.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, " "));
 }
 
 function isTrackerPath(token) {
-  return /^\/[\w.-]+\/[\w.-]+\/(?:issues|pulls|milestones|projects|merge_requests)\/\d+$/i.test(token);
+  return /^\/[\w.-]+\/[\w.-]+\/(?:issues|pull|pulls|milestones|projects|merge_requests)\/\d+$/i.test(token);
+}
+
+function describeViolation(v) {
+  const hint = v.kind === "path" && v.token.startsWith("/") ? " (an HTTP route is written with its method, as in GET /items)" : "";
+  return v.token + " looks like a " + v.kind + hint;
 }
 
 function pathViolations(text, allowedTargets, baseDir) {
   const out = [];
-  const body = stripHtmlComments(text);
-  const lines = body.split(/\r\n?|\n/);
+  const lines = blankHtmlComments(text).split(/\r\n?|\n/);
   const seen = new Set();
   const push = (line, token, kind) => {
     const key = line + "|" + token + "|" + kind;
@@ -106,13 +119,16 @@ function pathViolations(text, allowedTargets, baseDir) {
       });
     }
     for (const m of cleaned.matchAll(/(?:^|[\s"'(\[\x60])(\/[A-Za-z0-9_.@-]+(?:\/[A-Za-z0-9_.@-]+)+)/g)) {
-      if (!isTrackerPath(m[1])) push(lineNo, m[1], "path");
+      const token = m[1].replace(SENTENCE_END, "");
+      const before = cleaned.slice(0, m.index + m[0].length - m[1].length);
+      if (isTrackerPath(token) || HTTP_METHOD_BEFORE.test(before)) continue;
+      push(lineNo, token, "path");
     }
     for (const m of cleaned.matchAll(/(?:^|[\s"'(\[\x60])([A-Za-z0-9_.@-]+(?:\/[A-Za-z0-9_.@-]+)+\.\w{1,8})/g)) {
-      push(lineNo, m[1], "path");
+      if (!VENDOR_MEDIA_TYPE.test(m[1])) push(lineNo, m[1], "path");
     }
     for (const m of cleaned.matchAll(/(?:^|[\s"'(\[\x60])(\.{1,2}\/[A-Za-z0-9_.@-]+(?:\/[A-Za-z0-9_.@-]+)*)/g)) {
-      push(lineNo, m[1], "path");
+      push(lineNo, m[1].replace(SENTENCE_END, ""), "path");
     }
     for (const m of cleaned.matchAll(/(?:^|[\s"'(\[\x60]):\d+\b/g)) {
       push(lineNo, m[0].trim(), "line number");
@@ -156,7 +172,7 @@ function checkSpec(rel, absPath, tickets, errors) {
   }
   const allowed = new Set(tickets.map((t) => t.path));
   for (const v of pathViolations(raw, allowed, dirname(absPath))) {
-    errors.push(rel + ":" + v.line + ": " + v.token + " looks like a " + v.kind);
+    errors.push(rel + ":" + v.line + ": " + describeViolation(v));
   }
   for (const t of tickets) {
     if (!referencesTicket(raw, absPath, t)) {
@@ -209,7 +225,6 @@ function ticketBlockers(raw, ticket, errors) {
 }
 
 function checkTickets(featureRel, ticketsDir, errors) {
-  if (!existsSync(ticketsDir)) return;
   const tickets = [];
   for (const entry of readdirSync(ticketsDir, { withFileTypes: true })) {
     if (entry.name.startsWith(".")) continue;
@@ -249,7 +264,7 @@ function checkTickets(featureRel, ticketsDir, errors) {
       continue;
     }
     for (const v of pathViolations(raw)) {
-      errors.push(t.rel + ":" + v.line + ": " + v.token + " looks like a " + v.kind);
+      errors.push(t.rel + ":" + v.line + ": " + describeViolation(v));
     }
     for (const blocker of ticketBlockers(raw, t, errors)) {
       const dependency = byNum.get(blocker.num);
@@ -282,7 +297,9 @@ function runOnRepo(repoRoot) {
     const featureRel = ".scratch/" + entry.name;
     const ticketsDir = join(featureDir, "tickets");
     let tickets = [];
-    if (existsSync(ticketsDir)) {
+    if (existsSync(ticketsDir) && !statSync(ticketsDir).isDirectory()) {
+      errors.push(featureRel + "/tickets: not a directory");
+    } else if (existsSync(ticketsDir)) {
       for (const e of readdirSync(ticketsDir, { withFileTypes: true })) {
         if (e.isFile() && e.name.endsWith(".md") && !e.name.startsWith(".")) count += 1;
       }
@@ -381,11 +398,12 @@ function selfTest() {
 
   const cli = (root) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), root], { encoding: "utf8" });
   const shapesGood = cli(join(fixturesRoot, "shapes", "good"));
-  if (shapesGood.status !== 0 || shapesGood.stdout !== "ok: 1 artifacts\n") {
-    failures.push("allowed shapes: a tracker route, a URL and a commented path must pass, got " + shapesGood.status + " " + shapesGood.stdout + shapesGood.stderr);
+  if (shapesGood.status !== 0 || shapesGood.stdout !== "ok: 2 artifacts\n") {
+    failures.push("allowed shapes: tracker routes, URLs, a commented path, method routes and a vendor media type must pass, got " + shapesGood.status + " " + shapesGood.stdout + shapesGood.stderr);
   }
   const shapesBad = cli(join(fixturesRoot, "shapes", "bad"));
   if (shapesBad.status !== 1) failures.push("refused shapes: expected exit 1, got " + shapesBad.status);
+  if (/\n\s+at /.test(shapesBad.stderr)) failures.push("refused shapes: a bad tree must print problems, not a stack trace");
   for (const needle of [
     ".scratch/duplicate/tickets/01-twice.md:7: duplicate Blocked by line",
     ".scratch/parens/tickets/02-consumer.md:5: invalid Blocked by entry: unbalanced title parentheses",
@@ -394,6 +412,10 @@ function selfTest() {
     ".scratch/paths/tickets/01-paths.md:3: ./scripts/setup looks like a path",
     ".scratch/paths/tickets/01-paths.md:3: ../shared/config looks like a path",
     ".scratch/paths/tickets/01-paths.md:3: /usr/local/bin looks like a path",
+    ".scratch/lines/tickets/01-lines.md:9: src/feed/load.ts looks like a path",
+    ".scratch/lines/tickets/01-lines.md:9: /usr/local/bin looks like a path",
+    ".scratch/lines/tickets/01-lines.md:11: model/user.ts looks like a path",
+    ".scratch/notdir/tickets: not a directory",
   ]) {
     if (!shapesBad.stderr.includes(needle)) failures.push("refused shapes: expected " + JSON.stringify(needle) + ", got " + JSON.stringify(shapesBad.stderr));
   }
