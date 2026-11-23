@@ -237,29 +237,33 @@ function readRoles(file) {
   return { text, ...parsed };
 }
 
+const MODE_FLAGS = { "--test": "test", "--check": "check", "--init": "init", "--list": "list" };
+const VALUE_FLAGS = {
+  "--harness": (options, value) => { options.harness = value; },
+  "--file": (options, value) => { options.file = value; },
+  "--efforts": (options, value) => { options.efforts = value; },
+  "--shift": (options, value) => {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < -3 || parsed > 3) return "--shift takes a whole number from -3 to 3";
+    options.shift = parsed;
+  },
+  "--route-index": (options, value) => {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 0) return "--route-index takes a whole number";
+    options.routeIndex = parsed;
+  },
+};
+
 function parseArgs(argv) {
   const options = { key: null, mode: "route", harness: DEFAULT_HARNESS, routeIndex: 0, shift: 0, efforts: null, file: process.env.ZW_ROLES ?? DEFAULT_FILE };
-  const VALUE_FLAGS = new Set(["--harness", "--file", "--efforts", "--shift", "--route-index"]);
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (VALUE_FLAGS.has(arg) && (argv[i + 1] === undefined || argv[i + 1].startsWith("--"))) return { error: arg + " needs a value" };
-    if (arg === "--test") options.mode = "test";
-    else if (arg === "--check") options.mode = "check";
-    else if (arg === "--init") options.mode = "init";
-    else if (arg === "--list") options.mode = "list";
-    else if (arg === "--harness") options.harness = argv[++i];
-    else if (arg === "--file") options.file = argv[++i];
-    else if (arg === "--efforts") options.efforts = argv[++i];
-    else if (arg === "--shift") {
-      const raw = argv[++i];
-      const parsed = Number(raw);
-      if (!Number.isInteger(parsed) || parsed < -3 || parsed > 3) return { error: "--shift takes a whole number from -3 to 3" };
-      options.shift = parsed;
-    } else if (arg === "--route-index") {
-      const raw = argv[++i];
-      const parsed = Number(raw);
-      if (!Number.isInteger(parsed) || parsed < 0) return { error: "--route-index takes a whole number" };
-      options.routeIndex = parsed;
+    if (Object.hasOwn(MODE_FLAGS, arg)) options.mode = MODE_FLAGS[arg];
+    else if (Object.hasOwn(VALUE_FLAGS, arg)) {
+      const value = argv[++i];
+      if (value === undefined || value.startsWith("--")) return { error: arg + " needs a value" };
+      const error = VALUE_FLAGS[arg](options, value);
+      if (error) return { error };
     } else if (arg.startsWith("-")) return { error: "unknown flag " + arg };
     else if (options.key === null) options.key = arg;
     else return { error: "unexpected argument " + arg };
@@ -381,7 +385,33 @@ function selfTest() {
     const bare = run("feature", "--file", made, flag);
     check(flag + " with no value is a usage error", bare.status === 2 && bare.stderr.includes(flag + " needs a value") && !bare.stderr.includes("node:"));
   }
-  check("a flag is not taken as another flag's value", run("feature", "--file", "--harness", "dsh").status === 2);
+  const refused = [
+    [["feature", "--shift", "9", "--efforts", "low,high"], "--shift takes a whole number from -3 to 3"],
+    [["feature", "--route-index", "-1"], "--route-index takes a whole number"],
+    [["feature", "--nope"], "unknown flag --nope"],
+    [["feature", "ship"], "unexpected argument ship"],
+    [[], "a key is required"],
+    [["wibble"], 'unknown key "wibble"; expected one of feature, bug-fix, '],
+    [["feature", "--shift", "1"], "--shift needs --efforts"],
+    [["feature", "--shift", "1", "--efforts", "high"], "--efforts needs at least two effort ids"],
+    [["feature", "--harness", "nonsense"], 'unknown harness "nonsense"; expected one of dsh, claude-code, codex'],
+    [["feature", "--file", "--check"], "--file needs a value"],
+  ];
+  for (const [args, reason] of refused) {
+    const result = run(...args, ...(args.includes("--file") ? [] : ["--file", made]));
+    check("exit 2 with a reason for: " + args.join(" "), result.status === 2 && result.stderr.includes("role-route: " + reason) && result.stdout === "");
+  }
+  check("a line that is neither a key nor a section is reported", parseRoles("## dsh\n???\n").errors.some((e) => /is not a key line/.test(e.message) && e.line === 2));
+  for (const mode of [["feature"], ["--list"]]) {
+    const malformed = run(...mode, "--file", join(tmp, "merged.md"));
+    check("a malformed table stops " + mode[0] + " with exit 1 and the line", malformed.status === 1 && malformed.stderr.includes("merged.md:4: is not a section header") && malformed.stdout === "");
+  }
+  const routed = join(tmp, "routed.md");
+  writeFileSync(routed, "budget: high\n\n## dsh\nfeature: p1 m1\n", "utf8");
+  const up = run("feature", "--file", routed, "--efforts", "low,high,xhigh", "--shift", "1");
+  check("a shift along the ladder prints the moved effort", up.status === 0 && JSON.parse(up.stdout).reasoningEffort === "xhigh");
+  const off = run("feature", "--file", routed, "--efforts", "low,medium", "--shift", "1");
+  check("an effort off the ladder exits 2 with the ladder", off.status === 2 && off.stderr.includes('role-route: effort "high" is not on the ladder low,medium') && off.stdout === "");
   rmSync(tmp, { recursive: true, force: true });
 
   console.log("role-route --test: fixtures=" + (failures.length === 0 ? "ok" : "FAIL"));
@@ -436,10 +466,6 @@ function main() {
     return;
   }
   const resolved = resolveRoute(sections, options.key, options.harness, options.file, options.routeIndex, budget);
-  if (resolved.error !== undefined) {
-    console.error("role-route: " + resolved.error);
-    process.exit(2);
-  }
   const shifted = shiftRoute(resolved, options.shift, options.effortLadder);
   if (shifted.error !== undefined) {
     console.error("role-route: " + shifted.error);
