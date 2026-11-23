@@ -13,7 +13,7 @@ Those CLIs are the verification route for checker changes.
 ## Full gate
 
 ```bash
-bash scripts/gate.sh
+sh scripts/gate.sh
 ```
 
 The script runs these steps in order and stops at the first failure, naming the command that failed:

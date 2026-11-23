@@ -73,7 +73,7 @@ A pin is the commit the local text descends from, not the newest commit that was
 ## Gates
 
 The checkers live under `skills/zw/scripts/` so `npx skills add` ships them with the entry skill.
-`bash scripts/gate.sh` runs this repo's whole gate, and CI runs that script. `docs/agents/build-and-test.md` lists its steps and the rule each check enforces.
+`sh scripts/gate.sh` runs this repo's whole gate, and CI runs that script. `docs/agents/build-and-test.md` lists its steps and the rule each check enforces.
 
 - The notes gate is the vendored write-notes-like-deepseek tree, not a port: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx`. z-workflow adds no note rule of its own.
 - `verify-artifacts.mjs` runs against the target repo, in the closing step of `zw` and the last step of `zw-implement`, beside the notes gate. A repo that skips either one is unverified, not clean.

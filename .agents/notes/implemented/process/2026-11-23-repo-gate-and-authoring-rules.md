@@ -56,5 +56,5 @@ Run from a worktree, the installer's dry run reports every installed link as bel
 
 ## Verification
 
-`bash scripts/gate.sh` exits zero on this tree and non-zero with a resource removed, naming `verify-install.mjs skills --all` as the failing command.
+`sh scripts/gate.sh` exits zero on this tree and non-zero with a resource removed, naming `verify-install.mjs skills --all` as the failing command.
 `node scripts/verify-authoring.mjs <skills at cbf04d7>` prints the `--list` flag in `zw` and the missing Provenance in `zw-blast-radius`, and nothing else.

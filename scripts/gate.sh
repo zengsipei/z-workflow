@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # This repo's own gate: every checker's self-test, then the checkers against this tree.
 # Usage: scripts/gate.sh
 # Exits non-zero at the first failing step and names it.
-set -euo pipefail
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+set -eu
+cd -- "$(dirname -- "$0")/.."
 
 NOTES=skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/scripts
 
