@@ -19,7 +19,7 @@ route hangs on.
 | Sub-workload | `how-explorer`, `how-explainer`, `why-investigator`, `why-synthesizer`, `review-standards`, `review-spec`, `verify-driver`, `research`, `prose` | the route one fan-out leg gets |
 | Agent type | `poteto-agent`, `comment-sicko`, `independent-verifier` | which definition the child runs under, and the fallback route for a leg with no key of its own |
 
-Two of those agent types are files pstack wrote and this repo vendors verbatim:
+Two of those agent types are files cursor pstack wrote and this repo vendors verbatim:
 `vendor/pstack/agents/poteto-agent.md` is the general delegate, which is one ticket of code, one
 angle read and reported, a design call or a prose pass, and `vendor/pstack/agents/comment-sicko.md`
 finds comments to delete and flags the exact symbol `MUST KILL` instead of rewriting it.
@@ -35,8 +35,8 @@ The parent hands over the absolute path to `zw/SKILL.md` in the brief, and that 
 the mode skill the upstream text asks for, so the search fallback never runs.
 
 A key is not a model tier. The playbook keys and the sub-workload keys exist so the same workflow can
-send a cheap read to a cheap route and a contested judgement to a strong one, which is what pstack's
-own key list does. A key with no line inherits, so an empty table still runs the work.
+send a cheap read to a cheap route and a contested judgement to a strong one, which is what cursor
+pstack's own role lines do. A key with no line inherits, so an empty table still runs the work.
 
 A key is a request, not a guarantee. A harness that cannot route still runs the work: see
 Degradation.
@@ -56,8 +56,8 @@ that names one.
 
 ## Tiers within a key
 
-A key's line is a starting point, not a verdict on difficulty. pstack gives each spawn one more
-decision, and so does this: before the call, move the effort along the ladder the harness printed for
+A key's line is a starting point, not a verdict on difficulty. cursor pstack gives each spawn one
+more decision, and so does this: before the call, move the effort along the ladder the harness printed for
 that model, keeping the family.
 
 - Raise it one step for the hardest or subtlest work.

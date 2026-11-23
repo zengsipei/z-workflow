@@ -4,7 +4,7 @@ Status: derived from `DESIGN.md` section 4 and `skills/*/SKILL.md`. Regenerate b
 
 The workflow is a directed graph with one back edge. The spine runs once per task, top to bottom. Three side lanes hang off it, plus the support skills any node may call and the leaves the user runs directly. Every node is a skill; every edge carries one artifact or one approval.
 
-No step names a skill from outside this repo. A capability the spine needs is a `zw-` skill; an installed skill is reference material, never a step.
+No step names a skill from outside this repo. A capability the spine needs is a `zw-` skill; an installed skill is reference material, never a step. One node is not a `zw-` skill: `verify-<app>`, the project-local verification skill this workflow generates into the target repo and then drives for evidence.
 
 ## Spine
 
@@ -24,7 +24,7 @@ No step names a skill from outside this repo. A capability the spine needs is a 
                         zw-implement <-----------------+
                            |                            |
                            v                            |
-                        zw-create-verification-skill
+                        verify-<app>, driven            |
                            |                            |
                            v                            |
                         zw-write-notes-like-deepseek
@@ -47,8 +47,9 @@ No step names a skill from outside this repo. A capability the spine needs is a 
 | `zw-code-review` | `zw-blast-radius` | A diff's risk turns on something the diff does not show | The one safety fact, proven or marked unproven |
 | `zw-implement` | `zw-tdd` | A cycle reaches a confirmed seam | Failing test, then green |
 | `zw-to-tickets` | `zw-implement` | Ticket graph approved and published | `tickets/NN-<slug>.md` |
-| `zw-implement` | `zw-create-verification-skill` | Frontier closed, integration branch builds | Code on the integration branch |
-| `zw-create-verification-skill` | `zw-write-notes-like-deepseek` | Evidence captured, generated skill proved once | `verify-<app>/` skill |
+| `zw-create-verification-skill` | `verify-<app>` | The generated skill proved itself once | `verify-<app>/` in the target repo |
+| `zw-implement` | `verify-<app>` | Frontier closed, integration branch builds | Code on the integration branch |
+| `verify-<app>` | `zw-write-notes-like-deepseek` | The new behaviour was driven on the matching surface | Evidence at the location the verify skill names |
 | `zw-write-notes-like-deepseek` | `zw-code-review` | Non-trivial decisions recorded | Note under `.agents/notes/` |
 | `zw-implement` | `zw-code-review` | Finished work reviewed against the spec | The whole diff |
 | `zw-code-review` | `zw-implement` | Findings raised | One fresh fix pass, then re-verify |
@@ -61,7 +62,7 @@ zw --(no drivable route)--> zw-create-verification-skill --(a route found)--> ba
                                                                  and the route waits for the user
 ```
 
-A drivable route exists before implementation is delegated, and the shipped routes that carry it are Feature and Refactor. Bug fix needs nothing separate, because reproducing on the real surface is itself a drivable route. Ship implements nothing. The rule binds by wording rather than by a checker: a repo with no route gets a named blocker, not a silent skip.
+A drivable route exists before implementation is delegated, and the shipped routes that carry it are Feature and Refactor. Bug fix needs nothing separate, because reproducing on the real surface is itself a drivable route. Ship implements nothing. `zw-create-verification-skill` builds the route once per repo; every later step that wants evidence drives the `verify-<app>` skill it left behind and does not generate it again. The rule binds by wording rather than by a checker: a repo with no route gets a named blocker, not a silent skip.
 
 ## Side lanes and support skills
 
@@ -90,11 +91,11 @@ Five routes cross the same nodes, one file each under `skills/zw/playbooks/`, an
 
 | Shape | Route |
 |---|---|
-| Feature | `zw-create-verification-skill` when the repo has no drivable route; `zw-wayfinder` when needed, else `zw-to-spec`; `zw-to-tickets`; `zw-implement` per ticket; `zw-create-verification-skill`; `zw-write-notes-like-deepseek`; `zw-code-review` |
-| Bug fix | Reproduce on the real surface, bisect to the root cause, `zw-implement`, re-run the same surface, `zw-write-notes-like-deepseek` when the cause was not obvious |
-| Investigation | Answer from evidence, `zw-write-notes-like-deepseek` the finding, build nothing unless the answer needs a sketch |
-| Refactor | `zw-create-verification-skill` when the repo has no drivable route, `zw-wayfinder` for the target shape, `zw-to-spec` with the seam decided, `zw-to-tickets` as expand-contract slices, `zw-implement`, `zw-create-verification-skill` |
-| Ship | `zw-code-review` on the whole diff, `zw-create-verification-skill` for evidence, then land by repo convention |
+| Feature | `zw-create-verification-skill` when the repo has no drivable route; `zw-wayfinder` when one session cannot hold the decisions; `zw-to-spec`; `zw-to-tickets`; `zw-implement` per ticket; drive `verify-<app>` on the new behaviour; `zw-write-notes-like-deepseek` when the change was non-trivial; `zw-code-review` |
+| Bug fix | Reproduce on the real surface; bisect to the root cause; stop patching when a second fix on the same premise fails the same gate; fix directly, with `zw-implement` only when the fix spans tickets or needs fan-out; re-run the same surface, the full suite last; `zw-write-notes-like-deepseek` when the cause was not obvious |
+| Investigation | Answer from evidence, `zw-write-notes-like-deepseek` the finding, build nothing unless the answer needs a sketch. Its Hillclimb branch states a metric and a stop predicate, freezes a harness, loops one hypothesis per attempt with a row per attempt in the experiment log, and hands an accepted change to Feature |
+| Refactor | `zw-create-verification-skill` when the repo has no drivable route, then one drive and the metric gate's three numbers before any change; `zw-wayfinder` for the target shape; `zw-to-spec` with the seam decided; `zw-to-tickets` as expand-contract slices; `zw-implement`; drive `verify-<app>` again on the same surface; `zw-code-review` with the metric gate named |
+| Ship | `zw-code-review` on the whole diff with the metric gate named; drive `verify-<app>` for evidence, after `zw-create-verification-skill` when the repo has no route; then land by repo convention |
 
 ## Gates
 
@@ -103,14 +104,16 @@ The target-repo checkers are leaves on the spine, not hooks: they run in the clo
 | Checker | Checks |
 |---|---|
 | `zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/scripts/*.ts` | The whole notes contract, run through `npx tsx`: tree and lifecycle shape, note format, relative links, and the sha256 seals of archived notes. Vendored verbatim, so the upstream skill judges a tree the same way |
-| `verify-artifacts.mjs` | Ticket numbering and dependency order, spec to ticket links, the no-file-paths rule |
-| `playbooks.mjs` | Which routes are in effect for a repo, by layer. It validates nothing: a playbook is a recommendation |
-| `verify-install.mjs` | This repo only: frontmatter in the portable subset, name matching the directory, description a YAML parser reads intact, every named helper shipped inside its own skill |
+| `verify-artifacts.mjs` | Ticket numbers and dependency order, the seven spec sections, a spec naming every sibling ticket, the no-file-paths rule |
+| `playbooks.mjs` | Which routes are in effect for a repo, by layer, resolved from the repo root. It validates nothing: a playbook binds by its wording, so a bad one is edited, not rejected |
+| `verify-install.mjs` | The installed skill set: the `zw` namespace and name shape, frontmatter in the portable subset, Codex policy matching the invocation mode, every named resource shipped and every shipped file named, vendor hashes. In a shared root it judges only `zw` and `zw-*`; this repo's gate adds `--all` |
 | `zw-how/scripts/coverage.mjs` | Not a gate: it prints unclaimed units and notes with no `## Scope`, and exits zero whatever it says. A tree also written by the upstream skill is heterogeneous by construction, so the report is the adoption curve rather than a verdict |
 
-The first two ship inside `skills/zw/scripts/`, so `npx skills add` carries them with the entry skill.
+`verify-artifacts.mjs`, `playbooks.mjs` and `verify-install.mjs` ship inside `skills/zw/scripts/`, the notes checkers inside the notes skill's vendor tree, and `coverage.mjs` inside `zw-how`, so `npx skills add` carries each one with the skill that names it.
 
-A repo that skips them is unverified, not clean.
+A target repo that skips the first two rows is unverified, not clean.
+
+This repo checks itself with `scripts/gate.sh`, which CI runs: the self-test of every script above, the install check with `--all`, `scripts/verify-authoring.mjs` for the authoring rules, and the offline record check of `scripts/upstream-drift.mjs`. Those two scripts are not installed, because they judge how this repo is written and not what a target repo holds.
 
 ## Context cost
 

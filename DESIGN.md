@@ -1,4 +1,4 @@
-# DESIGN — z-workflow v1
+# DESIGN: z-workflow v1
 
 Status: design, awaiting owner sign-off. Date 2026-11-14.
 
@@ -14,14 +14,14 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 |---|---|---|
 | D1 | Host-neutral, lives under `.agents/skills` | Owner's call: not a DSH-only workflow |
 | D2 | Self-contained: a needed capability is vendored byte-identical, and only the skill body that drives it is written here | Refactoring a copy forks behaviour silently; a verbatim copy can be re-synced and proved |
-| D3 | Every self-authored skill carries the `zw-` prefix; the entry skill is `zw` | Never collides with the 27 installed matt skills or pstack's 46 |
+| D3 | Every self-authored skill carries the `zw-` prefix; the entry skill is `zw` | Never collides with the 27 installed matt skills or the 46 that pstack-dsh, a third party's DSH port of cursor pstack, installed |
 | D4 | Skills plus zero-dependency check scripts | Discipline needs mechanical teeth, not more prose |
 | D5 | Decision notes live in `<repo>/.agents/notes` with a unified format and a checker | Notes travel with the code and show up in review |
 | D6 | Local artifacts by default; a repo with a tracker uses the tracker | psst (Gitea) keeps its single ledger; empty repos still work |
 | D7 | Scope: the spine plus verification plus notes, 10-21 skills | Each skill must be one the owner actually reaches for |
 | D9 | No step names an external skill. A capability the spine needs is copied in as a `zw-` skill; installed skills are reference only | The workflow must run with no host-specific skill set present |
 | D8 | v1 is done when the spine runs once on a real repo, artifacts kept as samples | Otherwise this becomes a documentation project |
-| D10 | Delegation is one adapter per harness under `skills/zw/references/harness/`, pointed at by sibling path; the two agent definitions are pstack's own files, vendored verbatim, and every route keyed by playbook, sub-workload or agent type comes from z-workflow's own key table at `~/.agents/zw-roles.md` | The harness-specific part gets one home, and nothing in the workflow depends on an installed plugin |
+| D10 | Delegation is one adapter per harness under `skills/zw/references/harness/`, pointed at by sibling path; the two agent definitions are cursor pstack's own files, vendored verbatim, and every route keyed by playbook, sub-workload or agent type comes from z-workflow's own key table at `~/.agents/zw-roles.md` | The harness-specific part gets one home, and nothing in the workflow depends on an installed plugin |
 | D11 | A playbook is a markdown file under `skills/zw/playbooks/`, and `.agents/zw-playbooks/` layers a repo's own and then the user's over it, the same name replacing; a route binds by its wording, and nothing checks it | Adapting the workflow is writing a file, and the route keeps the weight of a procedure rather than a hint |
 | D12 | Third-party assets are vendored byte-identical under `skills/<skill>/vendor/<source>/`, and a `VENDOR.md` records the source repo, the commit, and a sha256 per file, including every file deliberately left out | A copy that cannot be proved identical is a fork nobody notices |
 | D13 | The upstream checker is the gate, never a re-implementation: the notes gate runs write-notes-like-deepseek's own three TypeScript checkers through `npx tsx`, and `verify-notes.mjs` is deleted | Two implementations of one rule diverge, and the divergence surfaces only when a repo moves between tools |
@@ -29,6 +29,7 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 | D15 | A vendored script keeps its own runtime; the zero-dependency rule covers z-workflow's own scripts only | Vendoring a TypeScript checker means running it as TypeScript, or the copy stops being verbatim |
 | D16 | A repo's build and test topology is recorded once in `docs/agents/build-and-test.md`, written by the setup step beside the three upstream files; it is the one file z-workflow writes that upstream does not expect, so D14 stays true of the other three | The minutes a full run costs, and the build a stale `dist` needs, are paid once per repo instead of once per run; the exception is written down rather than left to read like a mistake |
 | D17 | A skill that tracks one upstream keeps the upstream name behind the `zw-` prefix (`zw-how`, `zw-wayfinder`, `zw-create-verification-skill`); a skill merged from several upstreams keeps its merged name and records every source in `Provenance` | The name is what tells a reader which upstream file to diff against when upstream moves; inventing a single source for a merged skill would misreport what was taken |
+| D18 | Invocation follows the upstream skill: one shipped human-invoked stays human-invoked here, one shipped model-invoked stays model-invoked. A merged skill takes the mode of the source the workflow routes to, and says so in `Provenance`. A step that needs a human-invoked skill reads its body by sibling path (`../zw-how/SKILL.md`) and follows it | A description in context is the price of a model-invoked skill, and upstream already decided which skills earn it; the read is one file open, paid only when a step needs it, where a wrong guess about the mode is silent |
 | D19 | An explanation worth paying for twice is kept as an `implemented` Agent Note carrying a `## Scope` section, and subsystem coverage is printed by `zw-how`'s `scripts/coverage.mjs` on demand, never stored as a file | Reusing the existing notes tree adds no document class, and D14 holds because upstream accepts a free section. A stored index is the one shared writable file two branches edit at once, so it is derived at print time instead. The report is a hint and exits zero: a note written with the upstream skill directly carries no `## Scope`, which is the adoption curve, not a failure |
 | D20 | A source is one line in a fixed form, `- Upstream:` with the repo, the commit and the path, in a skill's `## Provenance` or in a `VENDOR.md`. The repo is the one the text was taken from, never a port of it, and the pin is the commit the local text descends from. `scripts/upstream-drift.mjs` reads the lines and prints which paths moved | The record was prose nobody read: six skills named a port's version where the upstream commit belonged, one pin was newer than its text, and 11 of 29 recorded paths had moved with no command to say so. A line a script can read is a line a script can prove |
 
@@ -91,15 +92,15 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | Decision map | `.scratch/<feature>/map.md` | tracker map ticket, or `docs/maps/` |
 | Spec | `.scratch/<feature>/spec.md` | `docs/specs/<slug>.md` or tracker |
 | Tickets | `.scratch/<feature>/tickets/NN-<slug>.md` | tracker issues (psst: Gitea, commit carries `Closes #n`) |
-| Decision note | — | `<repo>/.agents/notes/{proposed,implemented,rejected,archived}/<class>/yyyy-mm-dd-topic.md`, sealed by its own `archived/manifest.json` |
-| Repo config | — | `<repo>/docs/agents/issue-tracker.md`, `<repo>/docs/agents/triage-labels.md`, `<repo>/docs/agents/domain.md`, and z-workflow's own `<repo>/docs/agents/build-and-test.md` |
-| Glossary | — | `<repo>/GLOSSARY.md` |
+| Decision note | none | `<repo>/.agents/notes/{proposed,implemented,rejected,archived}/<class>/yyyy-mm-dd-topic.md`, sealed by its own `archived/manifest.json` |
+| Repo config | none | `<repo>/docs/agents/issue-tracker.md`, `<repo>/docs/agents/triage-labels.md`, `<repo>/docs/agents/domain.md`, and z-workflow's own `<repo>/docs/agents/build-and-test.md` |
+| Glossary | none | `<repo>/GLOSSARY.md` |
 | Experiment log | `<repo>/.scratch/<feature>/decision.tsv` | never settles; it is a running log and stays gitignored |
 | Run log | `<repo>/.scratch/<feature>/decisions.tsv`, or `<repo>/.audit/<task-slug>.tsv` when several runs share a repo | never settles; written with the vendored `log.sh`, gitignored like the rest of `.scratch/` |
-| Verification skill | — | `<repo>/.agents/skills/verify-<app>/`, or `<repo>/.dsh/skills/verify-<app>/` when the repo is DSH-only and has no `.agents` convention |
-| Formal verification skill | — | `<repo>/.agents/skills/verify-<app>-formal/`, or `<repo>/.dsh/skills/verify-<app>-formal/` under the same DSH-only criterion |
-| Playbook | — | `<repo>/.agents/zw-playbooks/<name>.md` for one repo, `~/.agents/zw-playbooks/<name>.md` for the user |
-| Architecture decision | — | `docs/adr/NNNN-<slug>.md` |
+| Verification skill | none | `<repo>/.agents/skills/verify-<app>/`, or `<repo>/.dsh/skills/verify-<app>/` when the repo is DSH-only and has no `.agents` convention |
+| Formal verification skill | none | `<repo>/.agents/skills/verify-<app>-formal/`, or `<repo>/.dsh/skills/verify-<app>-formal/` under the same DSH-only criterion |
+| Playbook | none | `<repo>/.agents/zw-playbooks/<name>.md` for one repo, `~/.agents/zw-playbooks/<name>.md` for the user |
+| Architecture decision | none | `docs/adr/NNNN-<slug>.md` |
 
 Drafts are gitignored; only settled artifacts are committed. Tickets and specs describe interfaces and behaviour, never file paths or line numbers.
 
