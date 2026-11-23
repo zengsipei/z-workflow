@@ -2,7 +2,7 @@
 
 ## The spec body
 
-Write the seven sections in this order, as `##` headings: the artifact checker reads that level and reports any section it cannot find. The body describes interfaces, types, and behaviour; it never names file paths or line numbers.
+Write the seven sections in this order, as `##` headings: the artifact checker reads that level and reports any section it cannot find. The body describes interfaces, types, and behaviour; it never names file paths or line numbers. An HTTP route is an interface: write it with its method, as in `GET /items`.
 
 ```markdown
 ## Problem Statement

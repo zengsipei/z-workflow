@@ -21,7 +21,7 @@ When even batches cannot stay green alone, keep the sequence and let them share 
 
 Number tickets in dependency order, blockers first, so a ticket never depends on a higher number. Start at `01` in an empty directory; when decision tickets from zw-wayfinder already occupy numbers, continue after the highest existing number. A number is never reused: a deleted ticket leaves a gap, and the gap is legal.
 
-Each local blocker names an existing ticket with a lower number. Use comma-separated `NN-<slug> (Title)` references in the Blocked by line.
+Each local blocker names an existing ticket with a lower number. Use comma-separated `NN-<slug> (Title)` references in the Blocked by line. The gate reads that one line, plain or as a list item; it does not read a `## Blocked by` section, which is the tracker issue's shape.
 Bare ticket numbers remain valid for older drafts. An omitted Blocked by line also remains valid for those drafts.
 Self dependencies, forward dependencies, cycles, and unknown ticket tokens fail the artifact gate.
 
@@ -29,7 +29,7 @@ A spec draft beside the tickets names each of them on its `Tickets:` line, by th
 
 ## Local ticket file
 
-One file per ticket. Avoid file paths and code snippets in the body; the prototype exception applies where a snippet encodes a decision better than prose.
+One file per ticket. Avoid file paths and code snippets in the body; the prototype exception applies where a snippet encodes a decision better than prose. An HTTP route is an interface, not a path: write it with its method, as in `GET /items`, and the artifact gate reads it as one.
 
 ```markdown
 # <NN>: <Ticket title>

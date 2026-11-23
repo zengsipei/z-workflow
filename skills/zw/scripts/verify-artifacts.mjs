@@ -15,7 +15,8 @@
  * - Path detection is line based. URLs are removed first, and common
  *   tracker routes are allowed; a bare word with a slash and a file
  *   extension counts as a path. An HTTP route passes when its method comes
- *   first, as in GET /items, and a vendor media type such as
+ *   first, as in GET /items, in the same code span, the one before it, or the
+ *   table cell before it. A vendor media type such as
  *   application/vnd.api+json is not a path.
  * - A bare :3000 reads as a line number. Write the host with it, as in
  *   localhost:3000, or the word port.
@@ -27,8 +28,12 @@
  *   gap, and dependency order is what the Blocked by check proves.
  * - A local Blocked by line lists ticket numbers or NN-<slug> tokens, with
  *   optional titles. Every blocker must exist and have a lower number. The
- *   line may be a list item and its label may be bold or in backticks.
+ *   line may be a list item, bulleted, numbered or a task box, and its label
+ *   may be bold or in backticks. A "## Blocked by" section, the tracker issue
+ *   shape, is not read: a local ticket states its blockers on one line.
  *   Older drafts with no Blocked by line remain valid.
+ * - Features and tickets are read in name order, so the output is the same
+ *   on every filesystem.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync, readdirSync, readFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -78,12 +83,11 @@ function headingBase(heading) {
   return heading.replace(/[（(].*$/, "").trimEnd();
 }
 
-const SENTENCE_END = /[.,;:!?]+$/;
-const HTTP_METHOD_BEFORE = /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+[\x60"']?$/;
-const VENDOR_MEDIA_TYPE = /^(?:application|audio|font|image|message|model|multipart|text|video)\/(?:vnd|prs)\./;
+const TRAILING_DOTS = /\.+$/;
+const HTTP_METHOD_BEFORE = /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)[\x60"']?(?:\s+|\s*\|\s*)[\x60"']?$/;
+const VENDOR_MEDIA_TYPE = /^(?:application|audio|font|image|message|model|multipart|text|video)\/vnd\./;
 
-/** Blank a comment and keep its line breaks, so a line number after it is still the file's. */
-function blankHtmlComments(text) {
+function blankHtmlCommentsInPlace(text) {
   return text.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, " "));
 }
 
@@ -98,7 +102,7 @@ function describeViolation(v) {
 
 function pathViolations(text, allowedTargets, baseDir) {
   const out = [];
-  const lines = blankHtmlComments(text).split(/\r\n?|\n/);
+  const lines = blankHtmlCommentsInPlace(text).split(/\r\n?|\n/);
   const seen = new Set();
   const push = (line, token, kind) => {
     const key = line + "|" + token + "|" + kind;
@@ -119,7 +123,7 @@ function pathViolations(text, allowedTargets, baseDir) {
       });
     }
     for (const m of cleaned.matchAll(/(?:^|[\s"'(\[\x60])(\/[A-Za-z0-9_.@-]+(?:\/[A-Za-z0-9_.@-]+)+)/g)) {
-      const token = m[1].replace(SENTENCE_END, "");
+      const token = m[1].replace(TRAILING_DOTS, "");
       const before = cleaned.slice(0, m.index + m[0].length - m[1].length);
       if (isTrackerPath(token) || HTTP_METHOD_BEFORE.test(before)) continue;
       push(lineNo, token, "path");
@@ -128,7 +132,7 @@ function pathViolations(text, allowedTargets, baseDir) {
       if (!VENDOR_MEDIA_TYPE.test(m[1])) push(lineNo, m[1], "path");
     }
     for (const m of cleaned.matchAll(/(?:^|[\s"'(\[\x60])(\.{1,2}\/[A-Za-z0-9_.@-]+(?:\/[A-Za-z0-9_.@-]+)*)/g)) {
-      push(lineNo, m[1].replace(SENTENCE_END, ""), "path");
+      push(lineNo, m[1].replace(TRAILING_DOTS, ""), "path");
     }
     for (const m of cleaned.matchAll(/(?:^|[\s"'(\[\x60]):\d+\b/g)) {
       push(lineNo, m[0].trim(), "line number");
@@ -187,7 +191,7 @@ function ticketBlockers(raw, ticket, errors) {
   let fieldSeen = false;
   for (let i = 0; i < src.lines.length; i++) {
     if (!isProseLine(src, i)) continue;
-    const field = /^\s*(?:[-*+]\s+)?`?Blocked by:`?\s*(.*)$/i.exec(src.lines[i].replaceAll("**", ""));
+    const field = /^\s*(?:(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)?`?Blocked by:`?\s*(.*)$/i.exec(src.lines[i].replaceAll("**", ""));
     if (!field) continue;
     const where = ticket.rel + ":" + (i + 1);
     if (fieldSeen) { errors.push(where + ": duplicate Blocked by line"); continue; }
@@ -224,9 +228,13 @@ function ticketBlockers(raw, ticket, errors) {
   return blockers;
 }
 
+function sortedEntries(dir) {
+  return readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+}
+
 function checkTickets(featureRel, ticketsDir, errors) {
   const tickets = [];
-  for (const entry of readdirSync(ticketsDir, { withFileTypes: true })) {
+  for (const entry of sortedEntries(ticketsDir)) {
     if (entry.name.startsWith(".")) continue;
     const rel = featureRel + "/tickets/" + entry.name;
     if (entry.isDirectory()) {
@@ -269,8 +277,10 @@ function checkTickets(featureRel, ticketsDir, errors) {
     for (const blocker of ticketBlockers(raw, t, errors)) {
       const dependency = byNum.get(blocker.num);
       const where = t.rel + ":" + blocker.line;
-      if (!dependency || (blocker.slug && blocker.slug !== dependency.slug)) {
+      if (!dependency) {
         errors.push(where + ": Blocked by references missing ticket " + blocker.token);
+      } else if (blocker.slug && blocker.slug !== dependency.slug) {
+        errors.push(where + ": Blocked by names " + blocker.token + ", but ticket " + dependency.prefix + " is " + dependency.prefix + "-" + dependency.slug);
       } else if (blocker.num === t.num) {
         errors.push(where + ": a ticket cannot block itself (" + blocker.token + ")");
       } else if (blocker.num > t.num) {
@@ -291,7 +301,7 @@ function runOnRepo(repoRoot) {
     errors.push(".scratch: not a directory");
     return { errors, count };
   }
-  for (const entry of readdirSync(scratchRoot, { withFileTypes: true })) {
+  for (const entry of sortedEntries(scratchRoot)) {
     if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
     const featureDir = join(scratchRoot, entry.name);
     const featureRel = ".scratch/" + entry.name;
@@ -324,11 +334,6 @@ function templateBlock(file, heading) {
   return lines.slice(open + 1, close).join("\n") + "\n";
 }
 
-/**
- * The spec and ticket templates are sibling resources this checker judges.
- * Written out unchanged, they must pass: a template the gate rejects teaches
- * every run to fail.
- */
 function checkShippedTemplates(here) {
   const skills = join(here, "..", "..");
   const specFile = join(skills, "zw-to-spec", "references", "spec-template.md");
@@ -361,81 +366,76 @@ function selfTest() {
   const here = dirname(fileURLToPath(import.meta.url));
   const fixturesRoot = join(here, "fixtures", "artifacts");
   const failures = [];
+  const cli = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
 
-  const good = runOnRepo(join(fixturesRoot, "good"));
-  if (good.errors.length !== 0) failures.push("good fixture: expected 0 errors, got " + good.errors.join(" | "));
-  if (good.count !== 4) failures.push("good fixture: expected 4 artifacts, got " + good.count);
-
-  const bad = runOnRepo(join(fixturesRoot, "bad"));
-  if (bad.errors.length === 0) failures.push("bad fixture: expected errors, got none");
-  const needles = [
-    "missing required section ## Further Notes",
-    "src/x.ts",
-    ":42",
-    "duplicate ticket number 1",
-    "does not reference ticket 03-adapter",
-  ];
-  for (const needle of needles) {
-    if (!bad.errors.some((e) => e.includes(needle))) failures.push("bad fixture: expected an error containing " + JSON.stringify(needle));
+  const passing = [["good", 4], ["dependencies/good", 4], ["shapes/good", 2], ["numbering/good", 2]];
+  for (const [tree, count] of passing) {
+    const result = cli(join(fixturesRoot, tree));
+    if (result.status !== 0 || result.stdout !== "ok: " + count + " artifacts\n" || result.stderr !== "") {
+      failures.push(tree + ": expected exit 0 and " + count + " artifacts, got " + result.status + " " + JSON.stringify(result.stdout + result.stderr));
+    }
   }
 
-  const dependencyGood = spawnSync(process.execPath, [fileURLToPath(import.meta.url), join(fixturesRoot, "dependencies", "good")], { encoding: "utf8" });
-  if (dependencyGood.status !== 0 || dependencyGood.stdout !== "ok: 4 artifacts\n") {
-    failures.push("valid blockers: expected exit 0 and 4 artifacts, got " + dependencyGood.status + " " + dependencyGood.stdout + dependencyGood.stderr);
-  }
-  const dependencyBad = spawnSync(process.execPath, [fileURLToPath(import.meta.url), join(fixturesRoot, "dependencies", "bad")], { encoding: "utf8" });
-  if (dependencyBad.status !== 1) failures.push("invalid blockers: expected exit 1, got " + dependencyBad.status);
-  for (const needle of [
-    "must have a lower ticket number",
-    "cannot block itself",
-    "missing ticket 02-provider",
-    "missing ticket 01-ghost",
-    "invalid Blocked by entry",
-    ".scratch/bullet/tickets/01-first.md:5: blocker 02-second must have a lower ticket number",
-  ]) {
-    if (!dependencyBad.stderr.includes(needle)) failures.push("invalid blockers: expected " + JSON.stringify(needle) + ", got " + JSON.stringify(dependencyBad.stderr));
+  const failing = {
+    "bad": [
+      ".scratch/other/tickets/01-b.md: duplicate ticket number 1",
+      ".scratch/sync/tickets/01-contract.md:3: :42 looks like a line number",
+      ".scratch/sync/spec.md: missing required section ## Further Notes",
+      ".scratch/sync/spec.md:27: src/x.ts looks like a path",
+      ".scratch/sync/spec.md: does not reference ticket 03-adapter (name it on the spec's Tickets line by its NN-<slug> token, or link it)",
+    ],
+    "dependencies/bad": [
+      ".scratch/bullet/tickets/01-first.md:5: blocker 02-second must have a lower ticket number than 01-first",
+      ".scratch/cycle/tickets/01-consumer.md:5: blocker 02-provider must have a lower ticket number than 01-consumer",
+      ".scratch/malformed/tickets/01-provider.md:5: invalid Blocked by entry \"Upstream provider.\"; expected a ticket number or NN-<slug>",
+      ".scratch/markers/tickets/01-first.md:3: blocker 02-second must have a lower ticket number than 01-first",
+      ".scratch/markers/tickets/02-second.md:3: Blocked by references missing ticket 03-ghost",
+      ".scratch/missing/tickets/01-consumer.md:5: Blocked by references missing ticket 02-provider",
+      ".scratch/ordered/tickets/01-first.md:3: blocker 02-second must have a lower ticket number than 01-first",
+      ".scratch/ordered/tickets/02-second.md:3: Blocked by references missing ticket 07-ghost",
+      ".scratch/ordered/tickets/03-third.md:3: Blocked by references missing ticket 04-nowhere",
+      ".scratch/pair/tickets/02-consumer.md:3: Blocked by references missing ticket 09-ghost",
+      ".scratch/self/tickets/01-self.md:5: a ticket cannot block itself (01-self)",
+      ".scratch/slug/tickets/02-consumer.md:5: Blocked by names 01-ghost, but ticket 01 is 01-provider",
+    ],
+    "shapes/bad": [
+      ".scratch/duplicate/tickets/01-twice.md:7: duplicate Blocked by line",
+      ".scratch/layout/tickets/00-zero.md: ticket number must be a positive integer",
+      ".scratch/layout/tickets/drafts: unexpected directory inside tickets",
+      ".scratch/layout/tickets/notes.md: ticket filename must be NN-<slug>.md",
+      ".scratch/lines/tickets/01-lines.md:9: /usr/local/bin looks like a path (an HTTP route is written with its method, as in GET /items)",
+      ".scratch/lines/tickets/01-lines.md:9: src/feed/load.ts looks like a path",
+      ".scratch/lines/tickets/01-lines.md:11: model/user.ts looks like a path",
+      ".scratch/notdir/tickets: not a directory",
+      ".scratch/parens/tickets/02-consumer.md:5: invalid Blocked by entry: unbalanced title parentheses",
+      ".scratch/paths/tickets/01-paths.md:3: /usr/local/bin looks like a path (an HTTP route is written with its method, as in GET /items)",
+      ".scratch/paths/tickets/01-paths.md:3: ./scripts/setup looks like a path",
+      ".scratch/paths/tickets/01-paths.md:3: ../shared/config looks like a path",
+      ".scratch/specdir/spec.md: unreadable (EISDIR)",
+    ],
+  };
+  for (const [tree, expected] of Object.entries(failing)) {
+    const result = cli(join(fixturesRoot, tree));
+    const actual = result.stderr.split("\n").filter(Boolean);
+    if (result.status !== 1) failures.push(tree + ": expected exit 1, got " + result.status);
+    for (const line of expected) if (!actual.includes(line)) failures.push(tree + ": missing " + JSON.stringify(line));
+    for (const line of actual) if (!expected.includes(line)) failures.push(tree + ": unexpected " + JSON.stringify(line));
   }
 
-  const cli = (root) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), root], { encoding: "utf8" });
-  const shapesGood = cli(join(fixturesRoot, "shapes", "good"));
-  if (shapesGood.status !== 0 || shapesGood.stdout !== "ok: 2 artifacts\n") {
-    failures.push("allowed shapes: tracker routes, URLs, a commented path, method routes and a vendor media type must pass, got " + shapesGood.status + " " + shapesGood.stdout + shapesGood.stderr);
-  }
-  const shapesBad = cli(join(fixturesRoot, "shapes", "bad"));
-  if (shapesBad.status !== 1) failures.push("refused shapes: expected exit 1, got " + shapesBad.status);
-  if (/\n\s+at /.test(shapesBad.stderr)) failures.push("refused shapes: a bad tree must print problems, not a stack trace");
-  for (const needle of [
-    ".scratch/duplicate/tickets/01-twice.md:7: duplicate Blocked by line",
-    ".scratch/parens/tickets/02-consumer.md:5: invalid Blocked by entry: unbalanced title parentheses",
-    ".scratch/layout/tickets/drafts: unexpected directory inside tickets",
-    ".scratch/layout/tickets/notes.md: ticket filename must be NN-<slug>.md",
-    ".scratch/paths/tickets/01-paths.md:3: ./scripts/setup looks like a path",
-    ".scratch/paths/tickets/01-paths.md:3: ../shared/config looks like a path",
-    ".scratch/paths/tickets/01-paths.md:3: /usr/local/bin looks like a path",
-    ".scratch/lines/tickets/01-lines.md:9: src/feed/load.ts looks like a path",
-    ".scratch/lines/tickets/01-lines.md:9: /usr/local/bin looks like a path",
-    ".scratch/lines/tickets/01-lines.md:11: model/user.ts looks like a path",
-    ".scratch/notdir/tickets: not a directory",
-  ]) {
-    if (!shapesBad.stderr.includes(needle)) failures.push("refused shapes: expected " + JSON.stringify(needle) + ", got " + JSON.stringify(shapesBad.stderr));
-  }
-
-  const gap = runOnRepo(join(fixturesRoot, "numbering", "good"));
-  if (gap.errors.length !== 0) failures.push("numbering gap: a deleted ticket leaves a legal gap, got " + gap.errors.join(" | "));
-  if (gap.count !== 2) failures.push("numbering gap: expected 2 artifacts, got " + gap.count);
-
-  const templates = checkShippedTemplates(here);
-  for (const problem of templates) failures.push("shipped templates: " + problem);
-
-  const tmp = mkdtempSync(join(tmpdir(), "verify-artifacts-empty-"));
-  const empty = runOnRepo(tmp);
-  if (empty.errors.length !== 0) failures.push("empty repo: expected 0 errors, got " + empty.errors.join(" | "));
-  if (empty.count !== 0) failures.push("empty repo: expected 0 artifacts, got " + empty.count);
+  const tmp = mkdtempSync(join(tmpdir(), "verify-artifacts-"));
+  const empty = cli(tmp);
+  if (empty.status !== 0 || empty.stdout !== "ok: 0 artifacts\n") failures.push("a repo with no .scratch: expected exit 0 and 0 artifacts, got " + empty.status + " " + JSON.stringify(empty.stdout + empty.stderr));
+  writeFileSync(join(tmp, ".scratch"), "A file where the drafts directory belongs.\n", "utf8");
+  const notDir = cli(tmp);
+  if (notDir.status !== 1 || notDir.stderr !== ".scratch: not a directory\n") failures.push("a .scratch that is a file: expected exit 1 and one line, got " + notDir.status + " " + JSON.stringify(notDir.stderr));
   rmSync(tmp, { recursive: true, force: true });
 
-  console.log("artifacts --test: good=" + (good.errors.length === 0 ? "ok" : "FAIL") + " artifacts=" + good.count);
-  console.log("artifacts --test: bad=" + (bad.errors.length > 0 ? "ok" : "FAIL") + " errors=" + bad.errors.length);
-  console.log("artifacts --test: empty=" + (empty.count === 0 && empty.errors.length === 0 ? "ok" : "FAIL") + " artifacts=" + empty.count);
+  for (const args of [[], ["--bogus"], [fixturesRoot, fixturesRoot]]) {
+    const usage = cli(...args);
+    if (usage.status !== 2 || !usage.stderr.startsWith("Usage: ")) failures.push("usage error for " + JSON.stringify(args) + ": expected exit 2 and the usage text, got " + usage.status + " " + JSON.stringify(usage.stderr));
+  }
+
+  for (const problem of checkShippedTemplates(here)) failures.push("shipped templates: " + problem);
 
   if (failures.length) {
     for (const f of failures) console.error("artifacts --test FAIL: " + f);
