@@ -46,8 +46,8 @@
  *   authority), scripts/fixtures/ (proven by the script's --test) and
  *   dot-entries need no name.
  * - A vendor/ tree carries a VENDOR.md whose table lists every file with a
- *   sha256 and a state. A vendored file must hash to its listed value, a file
- *   marked omitted must be absent, and an unlisted file is reported. A copy
+ *   sha256 and a state, once. A vendored file must hash to its listed value, a
+ *   file marked omitted must be absent, and an unlisted file is reported. A copy
  *   nobody can prove identical is a fork, so the tree is compared, not trusted.
  *
  * The self-test builds its fixtures in a temporary directory, because shipping
@@ -328,6 +328,10 @@ function checkVendor(skillDir, push) {
   const entries = parseVendorManifest(readFileSync(manifestPath, "utf8"), push);
   const listed = new Set();
   for (const entry of entries) {
+    if (listed.has(entry.rel)) {
+      push(VENDOR_MANIFEST + " lists " + entry.rel + " twice");
+      continue;
+    }
     listed.add(entry.rel);
     const full = join(vendorDir, entry.rel);
     if (entry.omitted) {
@@ -668,6 +672,9 @@ function selfTest() {
     ["manifest row without a state", vendorSkill(
       vendorTable([["lib/tool.ts", hex, "copied"]]),
     ), 1, "VENDOR.md row for lib/tool.ts must say vendored or omitted"],
+    ["manifest lists a file twice", vendorSkill(
+      vendorTable([["lib/tool.ts", hex, "vendored"], ["lib/tool.ts", hex, "vendored"]]),
+    ), 1, "VENDOR.md lists lib/tool.ts twice"],
     ["duplicate Codex policy", codexSkill("policy:\n  allow_implicit_invocation: true\npolicy:\n  allow_implicit_invocation: true\n"), 1, "agents/openai.yaml has a duplicate policy key"],
     ["inline Codex policy", codexSkill("policy: {allow_implicit_invocation: true}\n"), 1, "agents/openai.yaml policy must be a block mapping"],
     ["duplicate Codex flag", codexSkill("policy:\n  allow_implicit_invocation: true\n  allow_implicit_invocation: true\n"), 1, "agents/openai.yaml has a duplicate allow_implicit_invocation key"],

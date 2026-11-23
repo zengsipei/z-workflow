@@ -15,7 +15,6 @@ Paths below are relative to this directory. A vendored file is byte-identical to
 | matt/setup-matt-pocock-skills/issue-tracker-local.md | 7dcda20a2eb4bdc89b95d1143423c0691309921cadae3132e6424f371030506e | vendored |
 | matt/setup-matt-pocock-skills/triage-labels.md | ae512af838c78b8750471c42cd2b20fa32319553e61d84c9a23d171b40ce14aa | vendored |
 | matt/setup-matt-pocock-skills/SKILL.md | b01e05bfe8c323171275c6ceec78b12f1bd4c62dfd26c2cfe8be806d3883f1ed | omitted: an installer rewrites a nested SKILL.md |
-| matt/setup-matt-pocock-skills/SKILL.md | b01e05bfe8c323171275c6ceec78b12f1bd4c62dfd26c2cfe8be806d3883f1ed | omitted: an installer rewrites a nested SKILL.md |
 
 ## cursor pstack
 
