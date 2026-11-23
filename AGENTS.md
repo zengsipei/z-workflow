@@ -96,7 +96,7 @@ Target-repo paths, including `<repo>/` paths, and citations under `## Provenance
 Vendored resources are checked against `VENDOR.md`, including intentional omissions, rather than interpreting upstream examples as local dependencies.
 An operational skill body that depends on another file outside `skills/` breaks the install contract.
 
-The converse holds: every file a skill ships is named by an installed document, so deleting it fails the check.
+The converse holds: every file a skill ships is named by an installed document, so deleting it fails the check. Naming a directory names no file in it, so a file added beside named ones fails until a step names it too.
 `SKILL.md`, `agents/` metadata, `vendor/`, `scripts/fixtures/` and dot-entries need no name. A manifest covers a vendor tree, and a script's `--test` covers its fixtures.
 
 ## Frozen list

@@ -42,7 +42,8 @@
  * - Every file a skill ships is named by an installed document: the converse
  *   of the rule above, so a reference whose only pointer sits under
  *   ## Provenance, or a helper no step mentions, fails instead of shipping
- *   unprotected. SKILL.md, agents/ metadata, vendor/ (its manifest is the
+ *   unprotected. Naming a directory names no file in it: the files under it
+ *   are read and followed, and each still needs its own name. SKILL.md, agents/ metadata, vendor/ (its manifest is the
  *   authority), scripts/fixtures/ (proven by the script's --test) and
  *   dot-entries need no name.
  * - A vendor/ tree carries a VENDOR.md whose table lists every file with a
@@ -164,14 +165,16 @@ function parseFrontmatter(raw, push) {
 function checkBody(body, skillDir, skillsRoot, push) {
   const visited = new Set([realpathSync(join(skillDir, "SKILL.md"))]);
   const checked = new Set();
+  const named = new Set();
   const trimPath = (value) => value.replace(/[.,;:]+$/, "");
 
-  function inspect(target, owner, origin, token, sibling = false) {
+  function inspect(target, owner, origin, token, sibling = false, insideNamedDirectory = false) {
     const rel = relative(owner, target);
     if (rel === ".." || rel.startsWith(".." + sep) || isAbsolute(rel)) {
       push(origin + " names " + token + " outside its installed skill; use an explicit sibling resource path");
       return;
     }
+    if (!insideNamedDirectory) named.add(target);
     if (checked.has(target)) return;
     checked.add(target);
     let info;
@@ -189,7 +192,7 @@ function checkBody(body, skillDir, skillsRoot, push) {
     if (info.isDirectory()) {
       for (const entry of readdirSync(target, { withFileTypes: true })) {
         if (entry.name.startsWith(".")) continue;
-        inspect(join(target, entry.name), owner, relative(owner, target), entry.name);
+        inspect(join(target, entry.name), owner, relative(owner, target), entry.name, false, true);
       }
     } else if (info.isFile() && extname(target).toLowerCase() === ".md") {
       scan(readFileSync(target, "utf8"), target, owner);
@@ -228,7 +231,7 @@ function checkBody(body, skillDir, skillsRoot, push) {
   }
 
   scan(body, join(skillDir, "SKILL.md"), skillDir);
-  return checked;
+  return named;
 }
 
 function needsNoName(rel) {
@@ -547,6 +550,7 @@ function selfTest() {
     ["default model skill", "", "", 0, "ok: 1 skills"],
     ["enabled model skill", "", "policy:\n  allow_implicit_invocation: true\n", 0, "ok: 1 skills"],
     ["string policy flag", "", 'policy:\n  allow_implicit_invocation: "true"\n', 1, "allow_implicit_invocation must be a boolean"],
+    ["policy field that is not a pair", "", "policy:\n  - allow_implicit_invocation\n", 1, "agents/openai.yaml policy has an invalid field"],
   ];
   for (const [label, flag, policy, status, output] of invocationCases) {
     const root = join(tmp, label.replaceAll(" ", "-"));
@@ -626,10 +630,19 @@ function selfTest() {
       "zw-beta/SKILL.md": resourceSkill("zw-beta", "No direct resource."),
       "zw-beta/references/shared.md": "Shared.\n",
     }, 0, "ok: 2 skills"],
-    ["resources named by their directory", {
-      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Choose a route under playbooks/."),
+    ["a named directory names no file in it", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Choose a route under playbooks/, such as playbooks/feature.md."),
+      "zw-alpha/playbooks/feature.md": "One.\n",
+      "zw-alpha/playbooks/stray.md": "Nothing names this route.\n",
+    }, 1, "zw-alpha: ships playbooks/stray.md, which no installed document names"],
+    ["a directory and each file in it named", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Choose a route under playbooks/: playbooks/feature.md or playbooks/ship.md."),
       "zw-alpha/playbooks/feature.md": "One.\n",
       "zw-alpha/playbooks/ship.md": "Two.\n",
+    }, 0, "ok: 1 skills"],
+    ["a file named after its directory was walked", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read everything under references/ first, then references/detail.md again."),
+      "zw-alpha/references/detail.md": "Detail.\n",
     }, 0, "ok: 1 skills"],
     ["fixtures, metadata and dotfiles need no name", {
       "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run scripts/check.mjs."),
@@ -701,23 +714,58 @@ function selfTest() {
   }
 
   const sharedRoot = join(tmp, "shared-root");
+  const foreign = (name) => FENCE + "\nname: " + name + "\ndescription: Another skill set ships this.\nmetadata:\n  author: someone\n" + FENCE + "\n\n# " + name + "\n";
   writeTree(sharedRoot, {
+    "zw/SKILL.md": resourceSkill("zw", "The entry skill."),
+    "zwx/SKILL.md": foreign("zwx"),
     "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "No resources."),
-    "other-skill/SKILL.md": FENCE + "\nname: other-skill\ndescription: Another skill set ships this.\nmetadata:\n  author: someone\n" + FENCE + "\n\n# other-skill\n",
+    "other-skill/SKILL.md": foreign("other-skill"),
     "other-skill/references/unnamed.md": "Theirs, not ours.\n",
   });
   symlinkSync(join(tmp, "absent"), join(sharedRoot, "stale-foreign-link"), "dir");
-  checkCli("shared root, default scope", sharedRoot, 0, "ok: 1 skills, 2 other entries not checked");
+  checkCli("shared root, default scope", sharedRoot, 0, "ok: 2 skills, 3 other entries not checked");
+  checkCli("a name that only starts with zw is not ours", sharedRoot, 1, "zwx: directory name is outside the zw namespace", ["--all"]);
+
+  const oneOtherRoot = join(tmp, "one-other");
+  writeTree(oneOtherRoot, {
+    "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "No resources."),
+    "other-skill/SKILL.md": foreign("other-skill"),
+  });
+  checkCli("one other entry", oneOtherRoot, 0, "ok: 1 skills, 1 other entry not checked");
+  checkCli("unknown flag", oneOtherRoot, 2, "Usage: ", ["--every"]);
+  checkCli("the same flag twice", oneOtherRoot, 2, "Usage: ", ["--all", "--all"]);
+  for (const args of [[], [oneOtherRoot, oneOtherRoot]]) {
+    const usage = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
+    if (usage.status !== 2 || !usage.stderr.startsWith("Usage: ")) failures.push("usage error for " + args.length + " roots: expected exit 2 and the usage text, got " + usage.status + " " + JSON.stringify(usage.stderr));
+  }
   checkCli("shared root, every directory", sharedRoot, 1, "other-skill: frontmatter key metadata is outside the portable subset", ["--all"]);
   checkCli("every directory names the namespace", sharedRoot, 1, "other-skill: directory name is outside the zw namespace", ["--all"]);
   checkCli("every directory reports a foreign broken link", sharedRoot, 1, "stale-foreign-link: broken skill symlink", ["--all"]);
   checkCli("flag before the root", sharedRoot, 1, "other-skill: directory name is outside the zw namespace", ["--all"], true);
 
-  const namedRoot = join(tmp, "name-shape");
-  writeTree(namedRoot, {
-    "zw-Bad_Name/SKILL.md": FENCE + "\nname: zw-Bad_Name\ndescription: In the namespace, wrong shape.\n" + FENCE + "\n\n# zw-Bad_Name\n",
-  });
-  checkCli("name shape", namedRoot, 1, "zw-Bad_Name: directory name is outside the zw namespace");
+  for (const name of ["zw-Bad", "zw-bad_name", "zw-", "zw--bad"]) {
+    const namedRoot = join(tmp, "name-shape-" + name);
+    writeTree(namedRoot, {
+      [name + "/SKILL.md"]: FENCE + "\nname: " + name + "\ndescription: In the namespace, wrong shape.\n" + FENCE + "\n\n# " + name + "\n",
+    });
+    checkCli("name shape " + name, namedRoot, 1, name + ": directory name is outside the zw namespace");
+  }
+
+  const frontCases = [
+    ["no frontmatter", "# zw-alpha\n\nA body with no frontmatter block.\n", "zw-alpha: SKILL.md does not start with a --- frontmatter block"],
+    ["a line that is not a pair", FENCE + "\nname: zw-alpha\ndescription: A stray line follows.\njust some words\n" + FENCE + "\n\n# zw-alpha\n", "zw-alpha: frontmatter line 4 is not a key: value pair"],
+  ];
+  for (const [label, content, output] of frontCases) {
+    const root = join(tmp, "front-" + label.replaceAll(" ", "-"));
+    writeTree(root, { "zw-alpha/SKILL.md": content });
+    checkCli(label, root, 1, output);
+  }
+
+  const loopRoot = join(tmp, "resource-loop");
+  writeTree(loopRoot, { "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read references/loop.md.") });
+  mkdirSync(join(loopRoot, "zw-alpha", "references"));
+  symlinkSync("loop.md", join(loopRoot, "zw-alpha", "references", "loop.md"));
+  checkCli("a resource that cannot be inspected", loopRoot, 1, "zw-alpha: body cannot inspect references/loop.md (ELOOP)");
 
   rmSync(tmp, { recursive: true, force: true });
 
