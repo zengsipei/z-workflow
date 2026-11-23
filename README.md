@@ -57,8 +57,9 @@ prints what is in effect.
 node <skills-root>/zw/scripts/verify-install.mjs <skills-root>
 ```
 
-It checks directories and symlinked skills, frontmatter syntax and types, directory names, and Codex
-invocation policy. Named resources must ship with the skill, including playbooks, templates, and
+It checks this workflow's skills, the ones named `zw` or `zw-*`, and leaves other skill sets in the same
+root alone. For each one it checks the directory or symlink, frontmatter syntax and types, the directory
+name, and Codex invocation policy. Named resources must ship with the skill, including playbooks, templates, and
 helpers reached through first-party Markdown references, and every shipped file must be named by a step. Vendor files must match their hash manifests.
 
 ## Working in this repo

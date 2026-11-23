@@ -26,7 +26,7 @@ samples/                      proof runs
 
 ## Skill authoring rules
 
-1. Directory name is the skill name: lower case, kebab case, `zw-` prefix. The entry skill is the single exception and is named `zw`.
+1. Directory name is the skill name: lower case, kebab case, `zw-` prefix. The entry skill is the single exception and is named `zw`. The install check enforces this shape, because its default scope is that namespace and would skip a skill named outside it.
 2. Frontmatter carries `name` and `description` only, plus `disable-model-invocation: true` for human-invoked skills. No other keys: anything harness-specific belongs in the body.
    `name` and `description` are non-empty, printable, single-line YAML strings, plain or quoted. Quote values YAML resolves as numbers, booleans, nulls, or timestamps. The optional invocation flag is a lowercase boolean, not a quoted string. Block scalars, collections, tags, anchors, comments, and duplicate keys are outside this subset.
    When `agents/openai.yaml` is present, its block `policy.allow_implicit_invocation` matches the portable invocation mode. Codex defaults this flag to `true`, so human-invoked skills set it to `false` explicitly.
@@ -65,12 +65,12 @@ The checkers live under `skills/zw/scripts/` so `npx skills add` ships them with
 - The notes gate is the vendored write-notes-like-deepseek tree, not a port: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx`. z-workflow adds no note rule of its own.
 - `verify-artifacts.mjs` runs against the target repo, in the closing step of `zw` and the last step of `zw-implement`, beside the notes gate. A repo that skips either one is unverified, not clean.
 - `playbooks.mjs` resolves the routes in effect for a repo: the project layer first, then the user's, then the built-ins. It checks nothing: a playbook binds by its wording, so a bad one gets edited rather than rejected.
-- `verify-install.mjs` runs against `skills/` and is this repo's own gate. It checks the portable frontmatter, directory names, Codex invocation policy, resource completeness in both directions, and vendor hashes. Skill directories may be symlinks; a broken skill link fails the check. An empty skills root remains valid.
+- `verify-install.mjs` runs against `skills/` with `--all` and is this repo's own gate. Without the flag it judges only `zw` and `zw-*`, which is the scope for an installed root shared with other skill sets. It checks the portable frontmatter, directory names, Codex invocation policy, resource completeness in both directions, and vendor hashes. Skill directories may be symlinks; a broken skill link fails the check. An empty skills root remains valid.
 
 ## Install contract
 
 `npx skills add zengsipei/z-workflow` must produce a complete, runnable workflow on a machine with nothing else installed.
-`node skills/zw/scripts/verify-install.mjs skills` checks that contract. Every skill must be discovered and every named resource must ship with it.
+`node skills/zw/scripts/verify-install.mjs skills --all` checks that contract. Every skill must be discovered and every named resource must ship with it.
 
 Resource paths beginning with `references/`, `scripts/`, `vendor/`, `playbooks/`, or `templates/` start at the owning skill directory.
 The `<skill-dir>/` prefix names that same installed directory in a command.

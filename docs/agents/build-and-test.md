@@ -7,6 +7,7 @@ There are no workspace packages, generated bundles, build prerequisites, or depe
 
 Each helper's `--test` mode runs its fixtures. Use the affected helper's mode during a fix.
 Run an install regression through `verify-install.mjs <skills-root>` and an artifact regression through `verify-artifacts.mjs <repo-root>`.
+Add `--all` when the root is this repo's own `skills/` tree, so a directory outside the `zw` namespace is judged instead of skipped.
 Those CLIs are the verification route for checker changes.
 
 ## Full gate
@@ -19,7 +20,7 @@ node skills/zw/scripts/verify-artifacts.mjs --test
 node skills/zw/scripts/playbooks.mjs --test
 node skills/zw/scripts/role-route.mjs --test
 node skills/zw-how/scripts/coverage.mjs --test
-node skills/zw/scripts/verify-install.mjs skills
+node skills/zw/scripts/verify-install.mjs skills --all
 node skills/zw/scripts/verify-artifacts.mjs .
 npx --yes tsx skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts
 npx --yes tsx skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/scripts/verify-agent-note-format.ts
