@@ -4,8 +4,7 @@ Paths below are relative to this directory. A vendored file is byte-identical to
 
 ## matt skills
 
-Source: mattpocock/skills, skills/engineering/setup-matt-pocock-skills
-Commit: 5863806dd4e15c63174bee4e7515a4256792ecfa
+- Upstream: `mattpocock/skills` at commit `5863806dd4e15c63174bee4e7515a4256792ecfa`, path `skills/engineering/setup-matt-pocock-skills`.
 
 | file | sha256 | state |
 | --- | --- | --- |
@@ -16,12 +15,11 @@ Commit: 5863806dd4e15c63174bee4e7515a4256792ecfa
 | matt/setup-matt-pocock-skills/issue-tracker-local.md | 7dcda20a2eb4bdc89b95d1143423c0691309921cadae3132e6424f371030506e | vendored |
 | matt/setup-matt-pocock-skills/triage-labels.md | ae512af838c78b8750471c42cd2b20fa32319553e61d84c9a23d171b40ce14aa | vendored |
 | matt/setup-matt-pocock-skills/SKILL.md | b01e05bfe8c323171275c6ceec78b12f1bd4c62dfd26c2cfe8be806d3883f1ed | omitted: an installer rewrites a nested SKILL.md |
-| matt/setup-matt-pocock-skills/SKILL.md | b01e05bfe8c323171275c6ceec78b12f1bd4c62dfd26c2cfe8be806d3883f1ed | omitted: an installer rewrites a nested SKILL.md |
 
-## pstack
+## cursor pstack
 
-Source: cursor/plugins, skills/show-me-your-work and agents/
-Commit: 3dbd22ff12742fb28c9700b9760baa29ed41dc13
+- Upstream: `cursor/plugins` at commit `3dbd22ff12742fb28c9700b9760baa29ed41dc13`, path `pstack/skills/show-me-your-work`.
+- Upstream: `cursor/plugins` at commit `3dbd22ff12742fb28c9700b9760baa29ed41dc13`, path `pstack/agents`.
 
 | file | sha256 | state |
 | --- | --- | --- |

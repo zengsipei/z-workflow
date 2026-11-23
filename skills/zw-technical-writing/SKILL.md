@@ -45,6 +45,6 @@ None of its own. The real artifact is the text itself, in place or in the reply,
 
 ## Provenance
 
-- Upstream: pstack `technical-writing`, as shipped in pstack-dsh 0.2.5.
+- Upstream: `cursor/plugins` at commit `71ed0d1`, path `pstack/skills/technical-writing`. Read through pstack-dsh 0.2.5, a third-party DSH port of cursor pstack whose README pins its skill text to this commit.
 - Split back out of the merged `zw-write` on 2026-11-15. That skill is deleted in the same change, so the name is history here and no step points a reader at it.
 - Changed in this port: kept the three rules above the layers, the codebase word list, the rhythm, the four Diataxis modes with the no-mixing rule, the Google sentence rules, the STE load limits, the Global English disambiguation, the repo specifics, and the worked example. Compressed each mode to one sentence and grouped the sentence rules to fit under the line limit, and gave every step an artifact and a done test where upstream wrote rules alone. Dropped the stable rule-id numbering and the instruction to edit the slop skill, which became a report line for `zw-unslop` because no step may edit another skill. "Diataxis" is spelled without its accent to keep the file ASCII.

@@ -1,10 +1,10 @@
-# DESIGN — z-workflow v1
+# DESIGN: z-workflow v1
 
 Status: design, awaiting owner sign-off. Date 2026-11-14.
 
 ## 1. What this is
 
-A portable personal agent workflow, shipped as skills in the `.agents/skills` convention and harness-neutral by construction. This repo is the only source of truth; `scripts/link-skills.sh` symlinks every skill into `~/.agents/skills` (and `~/.claude/skills` when it exists), so `git pull` updates every harness at once.
+A portable personal agent workflow, shipped as skills in the `.agents/skills` convention and harness-neutral by construction. This repo is the only source of truth; `scripts/link-skills.sh` symlinks every skill into `~/.agents/skills` (and `~/.claude/skills` when it exists), so `git pull` updates every harness at once. Running it again converges: it prunes a link whose skill was renamed or deleted, and it leaves a link that points at a live copy elsewhere, a worktree for example, unless told to take it over.
 
 Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `domain-modeling` and `codebase-design` as reference), no team or multi-agent product, no event-driven automations.
 
@@ -14,14 +14,14 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 |---|---|---|
 | D1 | Host-neutral, lives under `.agents/skills` | Owner's call: not a DSH-only workflow |
 | D2 | Self-contained: a needed capability is vendored byte-identical, and only the skill body that drives it is written here | Refactoring a copy forks behaviour silently; a verbatim copy can be re-synced and proved |
-| D3 | Every self-authored skill carries the `zw-` prefix; the entry skill is `zw` | Never collides with the 27 installed matt skills or pstack's 46 |
+| D3 | Every self-authored skill carries the `zw-` prefix; the entry skill is `zw` | Never collides with the 27 installed matt skills or the 46 that pstack-dsh, a third party's DSH port of cursor pstack, installed |
 | D4 | Skills plus zero-dependency check scripts | Discipline needs mechanical teeth, not more prose |
 | D5 | Decision notes live in `<repo>/.agents/notes` with a unified format and a checker | Notes travel with the code and show up in review |
 | D6 | Local artifacts by default; a repo with a tracker uses the tracker | psst (Gitea) keeps its single ledger; empty repos still work |
 | D7 | Scope: the spine plus verification plus notes, 10-21 skills | Each skill must be one the owner actually reaches for |
-| D9 | No step names an external skill. A capability the spine needs is copied in as a `zw-` skill; installed skills are reference only | The workflow must run with no host-specific skill set present |
+| D9 | No step names an external skill. A capability the spine needs is copied in as a `zw-` skill; installed skills are reference only. A target repo's `verify-<app>` skill is this workflow's own artifact, generated there, and a route may name it | The workflow must run with no host-specific skill set present |
 | D8 | v1 is done when the spine runs once on a real repo, artifacts kept as samples | Otherwise this becomes a documentation project |
-| D10 | Delegation is one adapter per harness under `skills/zw/references/harness/`, pointed at by sibling path; the two agent definitions are pstack's own files, vendored verbatim, and every route keyed by playbook, sub-workload or agent type comes from z-workflow's own key table at `~/.agents/zw-roles.md` | The harness-specific part gets one home, and nothing in the workflow depends on an installed plugin |
+| D10 | Delegation is one adapter per harness under `skills/zw/references/harness/`, pointed at by sibling path; the two agent definitions are cursor pstack's own files, vendored verbatim, and every route keyed by playbook, sub-workload or agent type comes from z-workflow's own key table at `~/.agents/zw-roles.md` | The harness-specific part gets one home, and nothing in the workflow depends on an installed plugin |
 | D11 | A playbook is a markdown file under `skills/zw/playbooks/`, and `.agents/zw-playbooks/` layers a repo's own and then the user's over it, the same name replacing; a route binds by its wording, and nothing checks it | Adapting the workflow is writing a file, and the route keeps the weight of a procedure rather than a hint |
 | D12 | Third-party assets are vendored byte-identical under `skills/<skill>/vendor/<source>/`, and a `VENDOR.md` records the source repo, the commit, and a sha256 per file, including every file deliberately left out | A copy that cannot be proved identical is a fork nobody notices |
 | D13 | The upstream checker is the gate, never a re-implementation: the notes gate runs write-notes-like-deepseek's own three TypeScript checkers through `npx tsx`, and `verify-notes.mjs` is deleted | Two implementations of one rule diverge, and the divergence surfaces only when a repo moves between tools |
@@ -29,7 +29,9 @@ Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `dom
 | D15 | A vendored script keeps its own runtime; the zero-dependency rule covers z-workflow's own scripts only | Vendoring a TypeScript checker means running it as TypeScript, or the copy stops being verbatim |
 | D16 | A repo's build and test topology is recorded once in `docs/agents/build-and-test.md`, written by the setup step beside the three upstream files; it is the one file z-workflow writes that upstream does not expect, so D14 stays true of the other three | The minutes a full run costs, and the build a stale `dist` needs, are paid once per repo instead of once per run; the exception is written down rather than left to read like a mistake |
 | D17 | A skill that tracks one upstream keeps the upstream name behind the `zw-` prefix (`zw-how`, `zw-wayfinder`, `zw-create-verification-skill`); a skill merged from several upstreams keeps its merged name and records every source in `Provenance` | The name is what tells a reader which upstream file to diff against when upstream moves; inventing a single source for a merged skill would misreport what was taken |
+| D18 | Invocation follows the upstream skill: one shipped human-invoked stays human-invoked here, one shipped model-invoked stays model-invoked. A merged skill takes the mode of the source the workflow routes to, and says so in `Provenance`. A step that needs a human-invoked skill reads its body by sibling path (`../zw-how/SKILL.md`) and follows it | A description in context is the price of a model-invoked skill, and upstream already decided which skills earn it; the read is one file open, paid only when a step needs it, where a wrong guess about the mode is silent |
 | D19 | An explanation worth paying for twice is kept as an `implemented` Agent Note carrying a `## Scope` section, and subsystem coverage is printed by `zw-how`'s `scripts/coverage.mjs` on demand, never stored as a file | Reusing the existing notes tree adds no document class, and D14 holds because upstream accepts a free section. A stored index is the one shared writable file two branches edit at once, so it is derived at print time instead. The report is a hint and exits zero: a note written with the upstream skill directly carries no `## Scope`, which is the adoption curve, not a failure |
+| D20 | A source is one line in a fixed form, `- Upstream:` with the repo, the commit and the path, in a skill's `## Provenance` or in a `VENDOR.md`. The repo is the one the text was taken from, never a port of it, and the pin is the commit the local text descends from. `scripts/upstream-drift.mjs` reads the lines and prints which paths moved | The record was prose nobody read: six skills named a port's version where the upstream commit belonged, one pin was newer than its text, and recorded paths had moved upstream with no command to say so. A line a script can read is a line a script can prove |
 
 ## 3. Repo layout
 
@@ -45,6 +47,9 @@ z-workflow/
   skills/<name>/vendor/      third-party files, byte-identical, with VENDOR.md beside them
   skills/<name>/agents/      harness metadata for one skill, never a second SKILL.md
   scripts/link-skills.sh     symlink skills into the harness roots
+  scripts/gate.sh            this repo's own gate, one command; CI runs it
+  scripts/upstream-drift.mjs which pinned upstream sources moved, read from the Upstream lines
+  scripts/verify-authoring.mjs  the authoring rules a script can read
   skills/zw/scripts/verify-artifacts.mjs  spec/ticket contract checker (zero deps)
   skills/zw/scripts/verify-install.mjs    install and vendor-integrity checker (zero deps)
   skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/  the notes skill and its checkers, verbatim
@@ -87,15 +92,15 @@ Frontmatter stays inside the portable subset: `name`, `description`, and optiona
 | Decision map | `.scratch/<feature>/map.md` | tracker map ticket, or `docs/maps/` |
 | Spec | `.scratch/<feature>/spec.md` | `docs/specs/<slug>.md` or tracker |
 | Tickets | `.scratch/<feature>/tickets/NN-<slug>.md` | tracker issues (psst: Gitea, commit carries `Closes #n`) |
-| Decision note | — | `<repo>/.agents/notes/{proposed,implemented,rejected,archived}/<class>/yyyy-mm-dd-topic.md`, sealed by its own `archived/manifest.json` |
-| Repo config | — | `<repo>/docs/agents/issue-tracker.md`, `<repo>/docs/agents/triage-labels.md`, `<repo>/docs/agents/domain.md`, and z-workflow's own `<repo>/docs/agents/build-and-test.md` |
-| Glossary | — | `<repo>/GLOSSARY.md` |
+| Decision note | none | `<repo>/.agents/notes/{proposed,implemented,rejected,archived}/<class>/yyyy-mm-dd-topic.md`, sealed by its own `archived/manifest.json` |
+| Repo config | none | `<repo>/docs/agents/issue-tracker.md`, `<repo>/docs/agents/triage-labels.md`, `<repo>/docs/agents/domain.md`, and z-workflow's own `<repo>/docs/agents/build-and-test.md` |
+| Glossary | none | `<repo>/GLOSSARY.md` |
 | Experiment log | `<repo>/.scratch/<feature>/decision.tsv` | never settles; it is a running log and stays gitignored |
 | Run log | `<repo>/.scratch/<feature>/decisions.tsv`, or `<repo>/.audit/<task-slug>.tsv` when several runs share a repo | never settles; written with the vendored `log.sh`, gitignored like the rest of `.scratch/` |
-| Verification skill | — | `<repo>/.agents/skills/verify-<app>/`, or `<repo>/.dsh/skills/verify-<app>/` when the repo is DSH-only and has no `.agents` convention |
-| Formal verification skill | — | `<repo>/.agents/skills/verify-<app>-formal/`, or `<repo>/.dsh/skills/verify-<app>-formal/` under the same DSH-only criterion |
-| Playbook | — | `<repo>/.agents/zw-playbooks/<name>.md` for one repo, `~/.agents/zw-playbooks/<name>.md` for the user |
-| Architecture decision | — | `docs/adr/NNNN-<slug>.md` |
+| Verification skill | none | `<repo>/.agents/skills/verify-<app>/`, or `<repo>/.dsh/skills/verify-<app>/` when the repo is DSH-only and has no `.agents` convention |
+| Formal verification skill | none | `<repo>/.agents/skills/verify-<app>-formal/`, or `<repo>/.dsh/skills/verify-<app>-formal/` under the same DSH-only criterion |
+| Playbook | none | `<repo>/.agents/zw-playbooks/<name>.md` for one repo, `~/.agents/zw-playbooks/<name>.md` for the user |
+| Architecture decision | none | `docs/adr/NNNN-<slug>.md` |
 
 Drafts are gitignored; only settled artifacts are committed. Tickets and specs describe interfaces and behaviour, never file paths or line numbers.
 
@@ -103,17 +108,17 @@ Drafts are gitignored; only settled artifacts are committed. Tickets and specs d
 
 The notes gate is the vendored copy of write-notes-like-deepseek: `vendor/write-notes-like-deepseek/scripts/verify-agent-note-tree.ts`, `verify-agent-note-format.ts` and `verify-archived-agent-notes.ts`, run through `npx tsx` against the notes tree. z-workflow adds no note rule of its own, so a tree that passes here passes the upstream skill, and the reverse holds too. Sealing and the archive move are the same vendored scripts, `verify-archived-agent-notes.ts --write` and `archive-agent-note.ts`. `verify-artifacts.mjs` checks ticket numbering and dependency order, spec-to-ticket links, and the no-file-paths rule. It ships inside `skills/zw/scripts/` so a skills-CLI install carries it.
 
-`verify-install.mjs` is this repo's own gate. It checks directories and symlinked skills, frontmatter scalar syntax and types, Codex invocation policy, and vendor integrity. It follows first-party Markdown resource references, including playbooks and templates, and resolves sibling resources inside the installed skills root. Target-repo paths and provenance citations are not install dependencies. Upstream vendor contents remain governed by their hash manifests.
+`verify-install.mjs` is this repo's own gate, run with `--all` so every directory under `skills/` is judged. On an installed root, which other skill sets usually share, it judges only this workflow's namespace, `zw` and `zw-*`, and counts the rest. It checks directories and symlinked skills, the name shape, frontmatter scalar syntax and types, Codex invocation policy, and vendor integrity. It follows first-party Markdown resource references, including playbooks and templates, and resolves sibling resources inside the installed skills root. A shipped file that no installed document names fails too, so a resource cannot ship with nothing protecting it. Target-repo paths and provenance citations are not install dependencies. Upstream vendor contents remain governed by their hash manifests.
 
 `playbooks.mjs` resolves which routes are in effect for a repo: the project layer first, then the user's, then the built-ins. It validates nothing: a playbook binds by its wording, so the checker has nothing to add.
 
 `zw-how`'s `scripts/coverage.mjs` is not a gate. It prints which subsystem units no note claims and which `implemented` notes carry no `## Scope`, then exits zero whatever it says, because a tree also written by the upstream skill directly is heterogeneous by construction. Its own `--test` does exit non-zero, like every checker here.
 
-No host hooks: the gate runs where the workflow already runs, namely the closing step of `zw` and the last step of `zw-implement`. Each checker exits non-zero and prints what failed.
+No host hooks in a target repo: the gate runs where the workflow already runs, namely the closing step of `zw` and the last step of `zw-implement`. Each checker exits non-zero and prints what failed. This repo's own gate is one command, `scripts/gate.sh`, and CI runs it on every push to `main` and every pull request, so the checkers that judge other repos are themselves checked without anyone remembering to. The same script runs `scripts/verify-authoring.mjs`, which holds each skill to the mechanical authoring rules in `AGENTS.md`, and the offline record check of `scripts/upstream-drift.mjs`.
 
 ## 7. Harness adaptation
 
-Delegation is the one thing that cannot be written harness-neutral, so it has one adapter file per harness under `skills/zw/references/harness/`, and every delegating skill names that adapter in its `## Harness` block instead of repeating it. `index.md` holds the portable part: one namespace of route keys, of which two are agent definitions upstream wrote and this repo vendors verbatim, `vendor/pstack/agents/poteto-agent.md` for every delegate and `comment-sicko.md` for the report-only comment pass, and the rest are the five playbook keys plus the sub-workload keys a fan-out leg can name. It also holds the order a route resolves in: the key's line first, a panel selected by index, then a model or effort field the brief names, then inheritance, with a `budget:` line supplying the effort a route leaves out. `dsh.md` is the first adapter and uses only DSH's own `subagent` tool, whose per-child provider, model and effort fields carry the route.
+Delegation is the one thing that cannot be written harness-neutral, so it has one adapter file per harness under `skills/zw/references/harness/`, and every delegating skill names that adapter in its `## Harness` block instead of repeating it. `index.md` holds the portable part: one namespace of route keys, of which two are agent definitions upstream wrote and this repo vendors verbatim, `vendor/pstack/agents/poteto-agent.md` for every delegate and `comment-sicko.md` for the report-only comment pass, and the rest are the five playbook keys plus the sub-workload keys a fan-out leg can name. It also holds the order a route resolves in, most specific first: a model or effort the brief names for that leg, then the key's line, a panel selected by index, then inheritance, with a `budget:` line supplying the effort a route leaves out. `dsh.md` is the first adapter and uses only DSH's own `subagent` tool, whose per-child provider, model and effort fields carry the route.
 
 Routes live in z-workflow's own key table, `~/.agents/zw-roles.md`, resolved by `skills/zw/scripts/role-route.mjs`: one section per harness, one line per role, `inherit` when unset. It sits outside the skills root so an upgrade never overwrites it, and no plugin owns it, so uninstalling one changes nothing. With no table, every role inherits the parent route.
 
@@ -126,8 +131,8 @@ Run the spine once on psst: `zw` -> `zw-wayfinder` -> `zw-to-spec` -> `zw-to-tic
 ## 9. Risks
 
 - Twenty-one self-maintained skills is a real upkeep cost; the frozen list in `AGENTS.md` is what keeps it bounded.
-- Self-contained copies drift from upstream; each skill records the upstream commit it was taken from.
+- Self-contained copies drift from upstream. Each skill records the upstream repo, commit and path it was taken from, and `scripts/upstream-drift.mjs` prints which of them moved. Nothing re-syncs a skill: reading the upstream diff and deciding stays manual.
 - Without host hooks the gates are honour-system wherever a human skips the closing step.
 - `docs/agents/build-and-test.md` is prose nobody checks: a build command that changes costs one wrong diagnosis before the file is fixed. That is still cheaper than the same diagnosis on every run.
 - The vendored checkers need `npx tsx` on first run, so a machine with no network and no cache runs the notes gate only after one install. That is the price of running the upstream script instead of a port.
-- A vendor tree drifts silently if nobody notices an upstream commit. `VENDOR.md` carries a sha256 per file and `verify-install.mjs` compares the tree against it, so an edited copy fails instead of passing as the original.
+- A vendor tree drifts if nobody runs the drift report. `VENDOR.md` carries a sha256 per file and `verify-install.mjs` compares the tree against it, so an edited copy fails instead of passing as the original, and the drift report says when the upstream file itself changed.

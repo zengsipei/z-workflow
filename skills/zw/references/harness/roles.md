@@ -21,7 +21,8 @@ comment-sicko: inherit
 ```
 
 - One optional `budget: <effort>` line at the top, which supplies the effort a route line leaves out.
-- One section per harness, opened by `## <harness>`: `dsh`, `claude-code`, or `codex`.
+- One section per harness, opened by `## <harness>`: `dsh`, `claude-code`, or `codex`. Nothing follows the
+  name: a header with a note after it fails `--check`, and the lines under it join no section.
 - One line per key: `<key>: <provider> <model> [effort]`, or `inherit`. A comma between routes makes
   a panel, and `--route-index` picks from it.
 - A role with no line inherits, and a harness with no section inherits everywhere. Blank lines are
@@ -42,7 +43,7 @@ node <zw-skill>/scripts/role-route.mjs --init
 The result is one JSON object: either `inherit` with a reason, or the provider, model and effort to
 pass to the call. `--check` validates every line and exits non-zero on a bad one, with its line
 number, so a typo fails loudly instead of silently inheriting. `--init` writes a commented template
-and never overwrites an existing file.
+for the harness `--harness` names, `dsh` when it names none, and never overwrites an existing file.
 
 ## Setup
 

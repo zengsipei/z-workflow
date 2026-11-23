@@ -58,6 +58,6 @@ None of its own. The real artifact is the text, edited in place, or the reply it
 
 ## Provenance
 
-- Upstream: pstack `unslop`, as shipped in pstack-dsh 0.2.5.
+- Upstream: `cursor/plugins` at commit `71ed0d1`, path `pstack/skills/unslop`. Read through pstack-dsh 0.2.5, a third-party DSH port of cursor pstack whose README pins its skill text to this commit.
 - Split back out of the merged `zw-write` on 2026-11-15, which had curated this catalog from pstack `unslop`, `technical-writing` and `no-comments`.
 - Changed in this port: the stable rule numbers are gone, because the body groups the tells instead of citing ids. Plain speech and active voice are added back, since the merge had left them inside drafting steps that no longer live here. Sentence length and load limits stay with the writing standard, which owns sentences. The name takes the house prefix, and the pass is written out as steps with done tests where upstream gave one line of instruction and then a list.

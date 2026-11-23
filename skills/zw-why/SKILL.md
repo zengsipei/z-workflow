@@ -58,5 +58,5 @@ None committed. The read is the artifact, in the reply. Keep it as a note throug
 
 ## Provenance
 
-- Upstream: pstack `why`, as shipped in pstack-dsh 0.2.5.
+- Upstream: `cursor/plugins` at commit `71ed0d1`, path `pstack/skills/why`. Read through pstack-dsh 0.2.5, a third-party DSH port of cursor pstack whose README pins its skill text to this commit.
 - Changed: renamed to zw-why. The seven vendor source playbooks collapsed into one `references/sources.md` written for the sources this workflow can reach, with the vendor tools kept only as examples to adapt. The epistemics framework trimmed into `references/epistemics.md`. The investigator and synthesizer prompt templates folded into the steps and the output contract. Kept: the code anchor before any search, one investigator per source, a null result is a finding, and the rule that the code is never read for intent.

@@ -51,6 +51,6 @@ This is not `zw-maintain-verification-skill`, which keeps a behavioral verificat
 
 ## Provenance
 
-- Upstream: pstack `maintain-formal-verification-skill` at commit `3dbd22f`.
-- Changed: made model-invoked; moved the target root from upstream's `.cursor/skills/` to the two roots `zw-create-formal-verification-skill` uses; dropped the upstream `/statechart` instruction, because no step here may name an installed external skill, and required instead that a counterexample become a short sequence of steps in the code's own words; moved harness tool names into Harness.
+- Upstream: `cursor/plugins` at commit `3dbd22f`, path `pstack/skills/maintain-formal-verification-skill`.
+- Changed: moved the target root from upstream's `.cursor/skills/` to the two roots `zw-create-formal-verification-skill` uses; dropped the upstream `/statechart` instruction, because no step here may name an installed external skill, and required instead that a counterexample become a short sequence of steps in the code's own words; moved harness tool names into Harness.
 - Structural: upstream's prose sections Outcomes, Edit scope, Pass and Report were collapsed into six numbered Steps, so each carries its artifact and its done test; the four outcomes, the rule that one check can be both updated and bug, the edit scope and the report contract are all kept in full, in steps 1 to 6.

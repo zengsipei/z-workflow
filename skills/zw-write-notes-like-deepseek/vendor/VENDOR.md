@@ -1,7 +1,6 @@
 # Vendor: write-notes-like-deepseek
 
-Source: https://github.com/czm15053/write-notes-like-deepseek
-Commit: 72573a5b179de7798bbb7c4aeacdc0df6bf62439
+- Upstream: `czm15053/write-notes-like-deepseek` at commit `72573a5b179de7798bbb7c4aeacdc0df6bf62439`, path `skills/write-notes-like-deepseek`.
 
 | file | sha256 | state |
 | --- | --- | --- |

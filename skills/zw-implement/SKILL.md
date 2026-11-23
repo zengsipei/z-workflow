@@ -25,7 +25,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 4. When fanning out, hand each worker a brief: goal, scope as behaviour and interfaces, the data shape decided before code, success criteria, and pointers to the spec, tickets and notes. Spec, ticket, and note bodies never carry file paths or line numbers. Each worker starts fresh and reports through the frontier, not through chat. Ownership follows the obligation rather than the discovery: work a worker finds while working its ticket is recorded on the frontier as its own ticket, never done inside the ticket that found it. Every brief carries its stop conditions: the outcomes that end the work without a fix. Not a defect, cannot reproduce, and risk too large are terminal results, reported as such, never overridden by an improvised fix.
 5. Implement in frontier order. Use `zw-tdd` at the pre-agreed seams. Run the typecheck often and one test file often. The full suite runs once, after the last edit: it is the freeze, so freeze scope first, start it in the background, and spend the wait on review rather than on more edits. A change made after it re-arms it.
 6. Review the finished work against the spec, then run `zw-code-review` on the whole diff. Fix raised issues in one fresh pass.
-7. Run the notes gate and the artifact checker, and confirm both exit zero. A repo that skips them is unverified, not clean.
+7. Run the notes gate, whose three commands are in the Harness block of `../zw-write-notes-like-deepseek/SKILL.md`, and the artifact checker, `../zw/scripts/verify-artifacts.mjs`, against the target repo's root, and confirm both exit zero. A repo that skips them is unverified, not clean.
 
 ## Artifacts
 
@@ -50,7 +50,9 @@ The user says implement, build, or land this, and a spec or ticket graph already
 
 ## Provenance
 
-- Upstream: mattpocock/skills `implement` and `implement-spec` at commit `5863806`; pstack `poteto-mode` playbook `feature.md` at commit `3dbd22f`.
+- Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/implement`.
+- Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/implement-spec`.
+- Upstream: `cursor/plugins` at commit `3dbd22f`, path `pstack/skills/poteto-mode/playbooks/feature.md`. This is cursor pstack's Feature playbook.
 - Changed: merged the single-ticket and spec-scale flows into one skill, kept the frontier semantics, replaced the worktree plus merger topology with direct-by-default and fan-out at three or more orthogonal subtasks, added the four throughput checkpoints, and moved harness specifics to Harness.
-- Phase-boundary fan-out and stop conditions added 2026-11-14 from pstack `poteto-mode/playbooks/feature.md:19` at commit `3dbd22f`: parent-level fan-out is for slices that produce independent artifacts, and a stage that can stop the line is what makes a loop trustworthy.
-- Scope ownership added 2026-11-18 from `GhabiX/SpineCodex` at commit `846cc3c`, `codex-rs/spine-core/config/spine.toml`: work does not belong to the scope that discovered it, only to the one that owns the obligation, and attaching it elsewhere is resolved before the work starts.
+- Phase-boundary fan-out and stop conditions added 2026-11-14 from line 19 of that playbook at the same commit: parent-level fan-out is for slices that produce independent artifacts, and a stage that can stop the line is what makes a loop trustworthy.
+- Upstream: `GhabiX/SpineCodex` at commit `846cc3c`, path `codex-rs/spine-core/config/spine.toml`. Scope ownership added 2026-11-18 from it: work does not belong to the scope that discovered it, only to the one that owns the obligation, and attaching it elsewhere is resolved before the work starts.

@@ -46,6 +46,6 @@ The user asks how something works, a nontrivial change is about to start in code
 
 ## Provenance
 
-- Upstream: pstack `how` at commit `3dbd22f`.
+- Upstream: `cursor/plugins` at commit `3dbd22f`, path `pstack/skills/how`.
 - Changed: dropped the fixed role names and the spawn mechanics in favour of a harness-neutral step; kept the simple-versus-complex split, the read-only explorer rule, the five output sections, and the single synthesizer. Added the placement question to Fires when, and the explicit stop before designing.
 - Persistence added 2026-11-20: an explanation worth paying for twice becomes an `implemented` Agent Note with a `## Scope` free section, and the coverage view is printed by a script rather than stored. The reasoning is in `docs/adr/0008-knowledge-coverage.md`; the tree, the gate and the closed class set stay upstream's, so a tree written here still passes `write-notes-like-deepseek`.

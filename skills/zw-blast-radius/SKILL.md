@@ -45,3 +45,8 @@ None committed, unless the proof script is cheap to keep: then it sits beside th
 - DSH: the multi-reader step goes through `../zw/references/harness/index.md` with one child per reader on the `research` key and one `poteto-agent` child for the judgement; the proof script runs in bash; the commit range and pull request come from the repo's own git and forge commands.
 - Claude Code: readers are delegated with Task; everything else is the same.
 - Codex: readers run in sequence and the reply says the read was not independent.
+
+## Provenance
+
+- Upstream: `cursor/plugins` at commit `71ed0d1`, path `pstack/skills/blast-radius`. Read through pstack-dsh 0.2.5, a third-party DSH port of cursor pstack whose README pins its skill text to this commit.
+- Changed: kept the one safety fact, the five-rung ladder, the look where grep stops list, and the rule that a fact short of the fourth rung is written as unproven. The upstream `arena` call for a wide change became several independent readers through this workflow's harness adapter, and the report shape moved into Done.

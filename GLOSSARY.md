@@ -28,6 +28,18 @@ _Avoid_: Human-invoked skill
 The promise that an installed skill set carries every resource its workflow requires.
 _Avoid_: Runtime verification
 
+**Upstream**:
+The repo a skill or a vendored file was taken from, recorded as a repo, a commit and a path.
+_Avoid_: Port, mirror
+
+**pstack**:
+Cursor's plugin, `pstack/` in `cursor/plugins`, and the upstream of every skill here that says pstack. pstack-dsh is a third party's DSH port of it: a route some text was read through, never a source.
+_Avoid_: pstack-dsh as an upstream
+
+**Pin**:
+The upstream commit a local text descends from. It moves forward only when every upstream change up to the new commit was read.
+_Avoid_: Latest commit, version
+
 **Dependency order**:
 The numbering of local tickets with every blocker before the ticket it gates.
 _Avoid_: Priority order

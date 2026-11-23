@@ -65,10 +65,17 @@ The mechanism here stands: one table at `~/.agents/zw-roles.md`, one line per ke
 
 What changed on 2026-11-14 is what a line is keyed by. Five invented roles were first replaced by
 the two agents pstack defines, vendored verbatim at `skills/zw/vendor/pstack/agents/`. That was a
-misread: pstack keys its config by workload, not by agent type, and its own `pstack-dsh.json` names
-`feature`, `how-explainer` and `independent-verifier` in the same namespace as `poteto-agent`. The
+misread: pstack keys its config by workload, not by agent type. cursor pstack's `pstack-models.mdc`
+has one line per role, `feature`, `how explorer` and `why synthesizer` among them, and
+`pstack-dsh.json`, the file of the third-party DSH port that was read at the time, names `feature`,
+`how-explainer` and `independent-verifier` in the same namespace as `poteto-agent`. The
 final shape keeps one namespace and fills it from both sides: the five playbook keys, the
 sub-workload keys a fan-out leg names (`how-explorer`, `why-synthesizer`, `review-standards`,
 `independent-verifier` and the rest), and the two vendored agent types. A line may hold a panel, and
 a `budget:` line supplies the effort a route leaves out, which restores the cheap-explorer and
 strong-judge split the last alternative above was worried about losing.
+
+The order above, the table and then a route the brief names, was reversed the same evening, in the
+change that added panels and the budget line: a model or effort the brief names for one leg wins over
+the key's line, and the line supplies the rest. The adapter's numbered list kept the old order until
+2026-11-23, when it was brought in line with the three sentences beside it that already said so.

@@ -4,12 +4,21 @@
  *
  * Usage:
  *   node <zw-skill>/scripts/verify-install.mjs <skillsRoot>
+ *   node <zw-skill>/scripts/verify-install.mjs <skillsRoot> --all
  *   node <zw-skill>/scripts/verify-install.mjs --test
  *
  * Exit 0 on pass. On failure every problem prints as "<skill>: <problem>"
  * and the exit code is non-zero.
  *
+ * Scope: a skills root is usually shared with other skill sets, whose
+ * frontmatter and resources follow their own rules. By default only this
+ * workflow's entries are judged, the ones named zw or zw-*, and the rest are
+ * counted and left alone. --all judges every entry, for a root that holds this
+ * workflow and nothing else: this repo's own skills/ tree.
+ *
  * What it enforces, per skill directory, including symlinked directories:
+ * - The directory name is zw or zw-<kebab-case>. A skill outside that
+ *   namespace would be skipped by the default scope once installed.
  * - SKILL.md exists at the skill root and starts with a --- delimited
  *   frontmatter block.
  * - No other SKILL.md sits anywhere below that root. An installer that treats
@@ -30,9 +39,16 @@
  *   ../<skill>/vendor/... or ../<skill>/SKILL.md, resolves inside the skills root, so
  *   the shared harness adapter and a skill body read by path are checked rather than skipped.
  * - The body names no file that only exists at the repository root.
+ * - Every file a skill ships is named by an installed document: the converse
+ *   of the rule above, so a reference whose only pointer sits under
+ *   ## Provenance, or a helper no step mentions, fails instead of shipping
+ *   unprotected. Naming a directory names no file in it: the files under it
+ *   are read and followed, and each still needs its own name. SKILL.md, agents/ metadata, vendor/ (its manifest is the
+ *   authority), scripts/fixtures/ (proven by the script's --test) and
+ *   dot-entries need no name.
  * - A vendor/ tree carries a VENDOR.md whose table lists every file with a
- *   sha256 and a state. A vendored file must hash to its listed value, a file
- *   marked omitted must be absent, and an unlisted file is reported. A copy
+ *   sha256 and a state, once. A vendored file must hash to its listed value, a
+ *   file marked omitted must be absent, and an unlisted file is reported. A copy
  *   nobody can prove identical is a fork, so the tree is compared, not trusted.
  *
  * The self-test builds its fixtures in a temporary directory, because shipping
@@ -55,6 +71,8 @@ const RELATIVE = /(?:^|[\s`"'(\[])(?:<(?:skill-dir|zw-skill)>\/)?((?:references|
 const DOCUMENT_RESOURCE = /(?:^|[\s`"'(\[])((?:\.{1,2}\/)+(?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+)/g;
 const SIBLING = /(?:^|[\s`"'(\[])(?:\.\.\/)+([A-Za-z0-9_-]+)\/((?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
 const INSTALLED_RESOURCE = /(?:^|[\s`"'(\[])<skills-root>\/([A-Za-z0-9_-]+)\/((?:references|scripts|vendor|playbooks|templates)\/[A-Za-z0-9_.\/-]+|SKILL[.]md)/g;
+const SKILL_NAME = /^zw(?:-[a-z0-9]+)*$/;
+const inNamespace = (name) => name === "zw" || name.startsWith("zw-");
 const VENDOR_ROOT = "vendor";
 const VENDOR_MANIFEST = "VENDOR.md";
 const YAML_ESCAPES = {
@@ -147,14 +165,16 @@ function parseFrontmatter(raw, push) {
 function checkBody(body, skillDir, skillsRoot, push) {
   const visited = new Set([realpathSync(join(skillDir, "SKILL.md"))]);
   const checked = new Set();
+  const named = new Set();
   const trimPath = (value) => value.replace(/[.,;:]+$/, "");
 
-  function inspect(target, owner, origin, token, sibling = false) {
+  function inspect(target, owner, origin, token, sibling = false, insideNamedDirectory = false) {
     const rel = relative(owner, target);
     if (rel === ".." || rel.startsWith(".." + sep) || isAbsolute(rel)) {
       push(origin + " names " + token + " outside its installed skill; use an explicit sibling resource path");
       return;
     }
+    if (!insideNamedDirectory) named.add(target);
     if (checked.has(target)) return;
     checked.add(target);
     let info;
@@ -172,7 +192,7 @@ function checkBody(body, skillDir, skillsRoot, push) {
     if (info.isDirectory()) {
       for (const entry of readdirSync(target, { withFileTypes: true })) {
         if (entry.name.startsWith(".")) continue;
-        inspect(join(target, entry.name), owner, relative(owner, target), entry.name);
+        inspect(join(target, entry.name), owner, relative(owner, target), entry.name, false, true);
       }
     } else if (info.isFile() && extname(target).toLowerCase() === ".md") {
       scan(readFileSync(target, "utf8"), target, owner);
@@ -211,6 +231,12 @@ function checkBody(body, skillDir, skillsRoot, push) {
   }
 
   scan(body, join(skillDir, "SKILL.md"), skillDir);
+  return named;
+}
+
+function needsNoName(rel) {
+  return rel === "SKILL.md" || rel.startsWith("agents/") || rel.startsWith(VENDOR_ROOT + "/") ||
+    rel.startsWith("scripts/fixtures/") || rel.split("/").some((part) => part.startsWith("."));
 }
 
 function checkCodexInvocation(skillDir, disabled, push) {
@@ -305,6 +331,10 @@ function checkVendor(skillDir, push) {
   const entries = parseVendorManifest(readFileSync(manifestPath, "utf8"), push);
   const listed = new Set();
   for (const entry of entries) {
+    if (listed.has(entry.rel)) {
+      push(VENDOR_MANIFEST + " lists " + entry.rel + " twice");
+      continue;
+    }
     listed.add(entry.rel);
     const full = join(vendorDir, entry.rel);
     if (entry.omitted) {
@@ -325,17 +355,22 @@ function checkVendor(skillDir, push) {
   }
 }
 
-function runOnSkills(skillsRoot) {
+function runOnSkills(skillsRoot, { all = false } = {}) {
   skillsRoot = resolve(skillsRoot);
   const errors = [];
   if (!existsSync(skillsRoot) || !statSync(skillsRoot).isDirectory()) {
-    return { errors: [skillsRoot + ": not a directory"], count: 0 };
+    return { errors: [skillsRoot + ": not a directory"], count: 0, others: 0 };
   }
   let count = 0;
+  let others = 0;
+  const named = new Set();
+  const shipped = [];
   for (const entry of readdirSync(skillsRoot, { withFileTypes: true })) {
     if (entry.name.startsWith(".") || (!entry.isDirectory() && !entry.isSymbolicLink())) continue;
+    if (!all && !inNamespace(entry.name)) { others += 1; continue; }
     const skillDir = join(skillsRoot, entry.name);
     const push = (msg) => errors.push(entry.name + ": " + msg);
+    if (!SKILL_NAME.test(entry.name)) push("directory name is outside the zw namespace; a skill here is named zw or zw-<kebab-case>");
     if (entry.isSymbolicLink()) {
       try {
         if (!statSync(skillDir).isDirectory()) continue;
@@ -355,13 +390,20 @@ function runOnSkills(skillsRoot) {
     if (parsed.fields.name !== entry.name) push("frontmatter name " + JSON.stringify(parsed.fields.name || "") + " does not match the directory name");
     if (typeof parsed.fields.description !== "string") push("frontmatter has no valid string description");
     checkCodexInvocation(skillDir, parsed.fields["disable-model-invocation"] === true, push);
-    checkBody(parsed.body, skillDir, skillsRoot, push);
+    for (const target of checkBody(parsed.body, skillDir, skillsRoot, push)) named.add(target);
+    shipped.push({ skillDir, push });
     checkVendor(skillDir, push);
     for (const nested of findNestedSkillFiles(skillDir, skillDir, [])) {
       push("ships a nested SKILL.md at " + nested.slice(skillDir.length + 1) + ", which an installer rewrites as a packaged skill");
     }
   }
-  return { errors, count };
+  for (const { skillDir, push } of shipped) {
+    for (const rel of listFiles(skillDir)) {
+      if (needsNoName(rel) || named.has(join(skillDir, rel))) continue;
+      push("ships " + rel + ", which no installed document names; name it in the step that uses it, or delete it");
+    }
+  }
+  return { errors, count, others };
 }
 
 function writeTree(root, files) {
@@ -377,8 +419,9 @@ const FENCE = "---";
 function selfTest() {
   const tmp = mkdtempSync(join(tmpdir(), "verify-install-"));
   const failures = [];
-  const checkCli = (label, root, status, output) => {
-    const result = spawnSync(process.execPath, [fileURLToPath(import.meta.url), root], { encoding: "utf8" });
+  const checkCli = (label, root, status, output, flags = [], flagsFirst = false) => {
+    const args = flagsFirst ? [...flags, root] : [root, ...flags];
+    const result = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
     const actual = result.stdout + result.stderr;
     if (result.status !== status || !actual.includes(output)) {
       failures.push(label + ": expected exit " + status + " and " + JSON.stringify(output) +
@@ -393,12 +436,12 @@ function selfTest() {
 
   const goodRoot = join(tmp, "good");
   writeTree(goodRoot, {
-    "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A well formed skill.\ndisable-model-invocation: true\n" + FENCE + "\n\n# alpha\n\nRead references/detail.md, run scripts/check.mjs, and load vendor/lib/tool.ts.\n",
-    "alpha/references/detail.md": "detail\n",
-    "alpha/scripts/check.mjs": "console.log(1);\n",
-    "alpha/vendor/lib/tool.ts": vendorSource,
-    "alpha/vendor/VENDOR.md": vendorManifest,
-    "beta/SKILL.md": FENCE + "\nname: beta\ndescription: \"Quoted: because the value holds a colon.\"\n" + FENCE + "\n\n# beta\n\nNo helpers of its own, but it points at ../alpha/references/detail.md and is read by ../alpha/SKILL.md.\n",
+    "zw-alpha/SKILL.md": FENCE + "\nname: zw-alpha\ndescription: A well formed skill.\ndisable-model-invocation: true\n" + FENCE + "\n\n# zw-alpha\n\nRead references/detail.md, run scripts/check.mjs, and load vendor/lib/tool.ts.\n",
+    "zw-alpha/references/detail.md": "detail\n",
+    "zw-alpha/scripts/check.mjs": "console.log(1);\n",
+    "zw-alpha/vendor/lib/tool.ts": vendorSource,
+    "zw-alpha/vendor/VENDOR.md": vendorManifest,
+    "zw-beta/SKILL.md": FENCE + "\nname: zw-beta\ndescription: \"Quoted: because the value holds a colon.\"\n" + FENCE + "\n\n# zw-beta\n\nNo helpers of its own, but it points at ../zw-alpha/references/detail.md and is read by ../zw-alpha/SKILL.md.\n",
   });
   const good = runOnSkills(goodRoot);
   if (good.errors.length !== 0) failures.push("good fixture: expected 0 errors, got " + good.errors.join(" | "));
@@ -406,22 +449,22 @@ function selfTest() {
 
   const badRoot = join(tmp, "bad");
   writeTree(badRoot, {
-    "alpha-name/SKILL.md": FENCE + "\nname: not-alpha-name\ndescription: Name disagrees with the directory.\n" + FENCE + "\n\n# alpha-name\n",
-    "beta-yaml/SKILL.md": FENCE + "\nname: beta-yaml\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n\n# beta-yaml\n",
-    "gamma-missing/SKILL.md": FENCE + "\nname: gamma-missing\ndescription: Names a file it does not ship.\n" + FENCE + "\n\n# gamma-missing\n\nSee references/absent.md.\n",
-    "delta-root/SKILL.md": FENCE + "\nname: delta-root\ndescription: Names a repository root file.\n" + FENCE + "\n\n# delta-root\n\nPaths come from DESIGN.md, which only exists in the source repo.\n",
-    "epsilon-key/SKILL.md": FENCE + "\nname: epsilon-key\ndescription: Carries a harness specific key.\nallowed-tools: bash\n" + FENCE + "\n\n# epsilon-key\n",
-    "zeta-nested/SKILL.md": FENCE + "\nname: zeta-nested\ndescription: Ships a nested fixture skill.\n" + FENCE + "\n\n# zeta-nested\n",
-    "zeta-nested/scripts/fixtures/bad/inner/SKILL.md": FENCE + "\nname: inner\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n",
-    "eta-nofile/README.md": "no SKILL.md here\n",
-    "kappa-sibling/SKILL.md": FENCE + "\nname: kappa-sibling\ndescription: Reads a skill body that is not installed.\n" + FENCE + "\n\n# kappa-sibling\n\nRead ../ghost/SKILL.md for the rules.\n",
-    "theta-dangling/SKILL.md": FENCE + "\nname: theta-dangling\ndescription: Points at a skill that is not installed.\n" + FENCE + "\n\n# theta-dangling\n\nRead ../ghost/references/absent.md.\n",
-    "theta-vendor/SKILL.md": FENCE + "\nname: theta-vendor\ndescription: Ships an edited vendor copy.\n" + FENCE + "\n\n# theta-vendor\n\nLoad vendor/lib/tool.ts.\n",
-    "theta-vendor/vendor/lib/tool.ts": "export const tool = 2;\n",
-    "theta-vendor/vendor/lib/extra.ts": "export const extra = 1;\n",
-    "theta-vendor/vendor/VENDOR.md": "# VENDOR sample\n\n| file | sha256 | state |\n| --- | --- | --- |\n| lib/tool.ts | " + "a".repeat(64) + " | vendored |\n",
-    "iota-vendor/SKILL.md": FENCE + "\nname: iota-vendor\ndescription: Ships a vendor tree with no manifest.\n" + FENCE + "\n\n# iota-vendor\n",
-    "iota-vendor/vendor/lib/x.ts": "export const x = 1;\n",
+    "zw-alpha-name/SKILL.md": FENCE + "\nname: not-alpha-name\ndescription: Name disagrees with the directory.\n" + FENCE + "\n\n# zw-alpha-name\n",
+    "zw-beta-yaml/SKILL.md": FENCE + "\nname: zw-beta-yaml\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n\n# zw-beta-yaml\n",
+    "zw-gamma-missing/SKILL.md": FENCE + "\nname: zw-gamma-missing\ndescription: Names a file it does not ship.\n" + FENCE + "\n\n# zw-gamma-missing\n\nSee references/absent.md.\n",
+    "zw-delta-root/SKILL.md": FENCE + "\nname: zw-delta-root\ndescription: Names a repository root file.\n" + FENCE + "\n\n# zw-delta-root\n\nPaths come from DESIGN.md, which only exists in the source repo.\n",
+    "zw-epsilon-key/SKILL.md": FENCE + "\nname: zw-epsilon-key\ndescription: Carries a harness specific key.\nallowed-tools: bash\n" + FENCE + "\n\n# zw-epsilon-key\n",
+    "zw-zeta-nested/SKILL.md": FENCE + "\nname: zw-zeta-nested\ndescription: Ships a nested fixture skill.\n" + FENCE + "\n\n# zw-zeta-nested\n",
+    "zw-zeta-nested/scripts/fixtures/bad/inner/SKILL.md": FENCE + "\nname: inner\ndescription: Unquoted: value with a colon.\n" + FENCE + "\n",
+    "zw-eta-nofile/README.md": "no SKILL.md here\n",
+    "zw-kappa-sibling/SKILL.md": FENCE + "\nname: zw-kappa-sibling\ndescription: Reads a skill body that is not installed.\n" + FENCE + "\n\n# zw-kappa-sibling\n\nRead ../zw-ghost/SKILL.md for the rules.\n",
+    "zw-theta-dangling/SKILL.md": FENCE + "\nname: zw-theta-dangling\ndescription: Points at a skill that is not installed.\n" + FENCE + "\n\n# zw-theta-dangling\n\nRead ../zw-ghost/references/absent.md.\n",
+    "zw-theta-vendor/SKILL.md": FENCE + "\nname: zw-theta-vendor\ndescription: Ships an edited vendor copy.\n" + FENCE + "\n\n# zw-theta-vendor\n\nLoad vendor/lib/tool.ts.\n",
+    "zw-theta-vendor/vendor/lib/tool.ts": "export const tool = 2;\n",
+    "zw-theta-vendor/vendor/lib/extra.ts": "export const extra = 1;\n",
+    "zw-theta-vendor/vendor/VENDOR.md": "# VENDOR sample\n\n| file | sha256 | state |\n| --- | --- | --- |\n| lib/tool.ts | " + "a".repeat(64) + " | vendored |\n",
+    "zw-iota-vendor/SKILL.md": FENCE + "\nname: zw-iota-vendor\ndescription: Ships a vendor tree with no manifest.\n" + FENCE + "\n\n# zw-iota-vendor\n",
+    "zw-iota-vendor/vendor/lib/x.ts": "export const x = 1;\n",
   });
   const bad = runOnSkills(badRoot);
   if (bad.errors.length === 0) failures.push("bad fixture: expected errors, got none");
@@ -434,7 +477,7 @@ function selfTest() {
     "nested SKILL.md",
     "no SKILL.md",
     "which the installed skill set does not ship",
-    "../ghost/SKILL.md",
+    "../zw-ghost/SKILL.md",
     "does not match its VENDOR.md sha256",
     "is not listed in VENDOR.md",
     "but no vendor/VENDOR.md",
@@ -445,19 +488,19 @@ function selfTest() {
 
   const linkedRoot = join(tmp, "linked");
   mkdirSync(linkedRoot);
-  symlinkSync(join(goodRoot, "alpha"), join(linkedRoot, "alpha"), "dir");
-  symlinkSync(join(goodRoot, "beta"), join(linkedRoot, "beta"), "dir");
+  symlinkSync(join(goodRoot, "zw-alpha"), join(linkedRoot, "zw-alpha"), "dir");
+  symlinkSync(join(goodRoot, "zw-beta"), join(linkedRoot, "zw-beta"), "dir");
   checkCli("linked skills", linkedRoot, 0, "ok: 2 skills");
 
   const invalidLinkRoot = join(tmp, "invalid-link");
   mkdirSync(invalidLinkRoot);
-  symlinkSync(join(badRoot, "beta-yaml"), join(invalidLinkRoot, "beta-yaml"), "dir");
-  checkCli("invalid linked skill", invalidLinkRoot, 1, "beta-yaml: description is an unquoted value");
+  symlinkSync(join(badRoot, "zw-beta-yaml"), join(invalidLinkRoot, "zw-beta-yaml"), "dir");
+  checkCli("invalid linked skill", invalidLinkRoot, 1, "zw-beta-yaml: description is an unquoted value");
 
   const brokenLinkRoot = join(tmp, "broken-link");
   mkdirSync(brokenLinkRoot);
-  symlinkSync(join(tmp, "absent"), join(brokenLinkRoot, "ghost"), "dir");
-  checkCli("broken skill symlink", brokenLinkRoot, 1, "ghost: broken skill symlink");
+  symlinkSync(join(tmp, "absent"), join(brokenLinkRoot, "zw-ghost"), "dir");
+  checkCli("broken skill symlink", brokenLinkRoot, 1, "zw-ghost: broken skill symlink");
 
   const emptyRoot = join(tmp, "empty");
   mkdirSync(emptyRoot);
@@ -482,21 +525,21 @@ function selfTest() {
   for (const [label, value, status, output] of scalarCases) {
     const root = join(tmp, "scalar-" + label.replaceAll(" ", "-"));
     writeTree(root, {
-      "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: " + value + "\n" + FENCE + "\n\n# alpha\n",
+      "zw-alpha/SKILL.md": FENCE + "\nname: zw-alpha\ndescription: " + value + "\n" + FENCE + "\n\n# zw-alpha\n",
     });
     checkCli(label, root, status, output);
   }
   const typedRoot = join(tmp, "typed-fields");
   writeTree(typedRoot, {
-    "alpha/SKILL.md": FENCE + '\nname: "alpha"\ndescription: A quoted name is still a string.\ndisable-model-invocation: false\n' + FENCE + "\n\n# alpha\n",
+    "zw-alpha/SKILL.md": FENCE + '\nname: "zw-alpha"\ndescription: A quoted name is still a string.\ndisable-model-invocation: false\n' + FENCE + "\n\n# zw-alpha\n",
   });
   checkCli("quoted name", typedRoot, 0, "ok: 1 skills");
   writeTree(typedRoot, {
-    "alpha/SKILL.md": FENCE + '\nname: alpha\ndescription: A flag must be a boolean.\ndisable-model-invocation: "true"\n' + FENCE + "\n\n# alpha\n",
+    "zw-alpha/SKILL.md": FENCE + '\nname: zw-alpha\ndescription: A flag must be a boolean.\ndisable-model-invocation: "true"\n' + FENCE + "\n\n# zw-alpha\n",
   });
   checkCli("quoted flag", typedRoot, 1, "disable-model-invocation must be true or false");
   writeTree(typedRoot, {
-    "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: First value.\ndescription: Second value.\n" + FENCE + "\n\n# alpha\n",
+    "zw-alpha/SKILL.md": FENCE + "\nname: zw-alpha\ndescription: First value.\ndescription: Second value.\n" + FENCE + "\n\n# zw-alpha\n",
   });
   checkCli("duplicate key", typedRoot, 1, "duplicate frontmatter key description");
 
@@ -507,12 +550,13 @@ function selfTest() {
     ["default model skill", "", "", 0, "ok: 1 skills"],
     ["enabled model skill", "", "policy:\n  allow_implicit_invocation: true\n", 0, "ok: 1 skills"],
     ["string policy flag", "", 'policy:\n  allow_implicit_invocation: "true"\n', 1, "allow_implicit_invocation must be a boolean"],
+    ["policy field that is not a pair", "", "policy:\n  - allow_implicit_invocation\n", 1, "agents/openai.yaml policy has an invalid field"],
   ];
   for (const [label, flag, policy, status, output] of invocationCases) {
     const root = join(tmp, label.replaceAll(" ", "-"));
     writeTree(root, {
-      "alpha/SKILL.md": FENCE + "\nname: alpha\ndescription: A skill with Codex metadata.\n" + flag + FENCE + "\n\n# alpha\n",
-      "alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n' + policy,
+      "zw-alpha/SKILL.md": FENCE + "\nname: zw-alpha\ndescription: A skill with Codex metadata.\n" + flag + FENCE + "\n\n# zw-alpha\n",
+      "zw-alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n' + policy,
     });
     checkCli(label, root, status, output);
   }
@@ -520,60 +564,208 @@ function selfTest() {
   const resourceSkill = (name, body) => FENCE + "\nname: " + name + "\ndescription: A resource fixture.\n" + FENCE + "\n\n# " + name + "\n\n" + body + "\n";
   const resourceCases = [
     ["missing playbooks", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Choose a route under playbooks/."),
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Choose a route under playbooks/."),
     }, 1, "playbooks/"],
     ["missing template", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Choose playbooks/investigation.md."),
-      "alpha/playbooks/investigation.md": "Copy ../templates/decision.tsv before the first attempt.\n",
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Choose playbooks/investigation.md."),
+      "zw-alpha/playbooks/investigation.md": "Copy ../templates/decision.tsv before the first attempt.\n",
     }, 1, "../templates/decision.tsv"],
     ["indirect helper", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
-      "alpha/references/guide.md": "Run scripts/missing.mjs.\n",
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read references/guide.md."),
+      "zw-alpha/references/guide.md": "Run scripts/missing.mjs.\n",
     }, 1, "references/guide.md names scripts/missing.mjs"],
     ["indirect sibling helper", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Read ../beta/references/guide.md."),
-      "beta/SKILL.md": resourceSkill("beta", "No direct helper."),
-      "beta/references/guide.md": "Run scripts/missing.mjs.\n",
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read ../zw-beta/references/guide.md."),
+      "zw-beta/SKILL.md": resourceSkill("zw-beta", "No direct helper."),
+      "zw-beta/references/guide.md": "Run scripts/missing.mjs.\n",
     }, 1, "references/guide.md names scripts/missing.mjs"],
     ["missing local link", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
-      "alpha/references/guide.md": "Read [the detail](detail.md).\n",
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read references/guide.md."),
+      "zw-alpha/references/guide.md": "Read [the detail](detail.md).\n",
     }, 1, "references/guide.md names detail.md"],
     ["missing parent link", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Read references/guide.md."),
-      "alpha/references/guide.md": "Read [the detail](../detail.md).\n",
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read references/guide.md."),
+      "zw-alpha/references/guide.md": "Read [the detail](../detail.md).\n",
     }, 1, "references/guide.md names ../detail.md"],
     ["missing dotted resource", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Read ./references/guide.md."),
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read ./references/guide.md."),
     }, 1, "./references/guide.md"],
     ["resource cycle", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Read references/a.md and choose playbooks/feature.md."),
-      "alpha/references/a.md": "Read [the detail](b.md).\n",
-      "alpha/references/b.md": "Read [the entry](a.md), then run scripts/check.mjs.\n",
-      "alpha/playbooks/feature.md": "Read ../references/a.md and copy ../templates/decision.tsv.\n",
-      "alpha/templates/decision.tsv": "id\tnote\n",
-      "alpha/scripts/check.mjs": "console.log(1);\n",
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read references/a.md and choose playbooks/feature.md."),
+      "zw-alpha/references/a.md": "Read [the detail](b.md).\n",
+      "zw-alpha/references/b.md": "Read [the entry](a.md), then run scripts/check.mjs.\n",
+      "zw-alpha/playbooks/feature.md": "Read ../references/a.md and copy ../templates/decision.tsv.\n",
+      "zw-alpha/templates/decision.tsv": "id\tnote\n",
+      "zw-alpha/scripts/check.mjs": "console.log(1);\n",
     }, 0, "ok: 1 skills"],
     ["resource escapes skill", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Run scripts/../../beta/scripts/check.mjs."),
-      "beta/SKILL.md": resourceSkill("beta", "No direct helper."),
-      "beta/scripts/check.mjs": "console.log(1);\n",
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run scripts/../../zw-beta/scripts/check.mjs."),
+      "zw-beta/SKILL.md": resourceSkill("zw-beta", "No direct helper."),
+      "zw-beta/scripts/check.mjs": "console.log(1);\n",
     }, 1, "outside its installed skill"],
     ["target and provenance paths", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Run <repo>/scripts/verify.mjs.\n\n## Provenance\n\nCopied from `skills/poteto-mode/playbooks/hillclimb.md` upstream; its DESIGN.md and references/upstream.md record the source."),
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run <repo>/scripts/verify.mjs.\n\n## Provenance\n\nCopied from `skills/poteto-mode/playbooks/hillclimb.md` upstream; its DESIGN.md and references/upstream.md record the source."),
     }, 0, "ok: 1 skills"],
     ["installed skill command", {
-      "alpha/SKILL.md": resourceSkill("alpha", "Run node <skill-dir>/scripts/check.mjs."),
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run node <skill-dir>/scripts/check.mjs."),
     }, 1, "scripts/check.mjs"],
     ["quoted installed command", {
-      "alpha/SKILL.md": resourceSkill("alpha", 'Run node "<skill-dir>/scripts/check.mjs".'),
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", 'Run node "<skill-dir>/scripts/check.mjs".'),
     }, 1, "scripts/check.mjs"],
+    ["unnamed resource", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read references/guide.md."),
+      "zw-alpha/references/guide.md": "The guide.\n",
+      "zw-alpha/references/stray.md": "Nothing points here.\n",
+    }, 1, "zw-alpha: ships references/stray.md, which no installed document names"],
+    ["resource named only under Provenance", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Write the draft.\n\n## Provenance\n\nTemplate: `references/template.md`."),
+      "zw-alpha/references/template.md": "The template.\n",
+    }, 1, "zw-alpha: ships references/template.md, which no installed document names"],
+    ["unnamed file at the skill root", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "No resources."),
+      "zw-alpha/NOTES.md": "Left behind.\n",
+    }, 1, "zw-alpha: ships NOTES.md, which no installed document names"],
+    ["resource named by a sibling", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read ../zw-beta/references/shared.md."),
+      "zw-beta/SKILL.md": resourceSkill("zw-beta", "No direct resource."),
+      "zw-beta/references/shared.md": "Shared.\n",
+    }, 0, "ok: 2 skills"],
+    ["a named directory names no file in it", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Choose a route under playbooks/, such as playbooks/feature.md."),
+      "zw-alpha/playbooks/feature.md": "One.\n",
+      "zw-alpha/playbooks/stray.md": "Nothing names this route.\n",
+    }, 1, "zw-alpha: ships playbooks/stray.md, which no installed document names"],
+    ["a directory and each file in it named", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Choose a route under playbooks/: playbooks/feature.md or playbooks/ship.md."),
+      "zw-alpha/playbooks/feature.md": "One.\n",
+      "zw-alpha/playbooks/ship.md": "Two.\n",
+    }, 0, "ok: 1 skills"],
+    ["a file named after its directory was walked", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read everything under references/ first, then references/detail.md again."),
+      "zw-alpha/references/detail.md": "Detail.\n",
+    }, 0, "ok: 1 skills"],
+    ["fixtures, metadata and dotfiles need no name", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run scripts/check.mjs."),
+      "zw-alpha/scripts/check.mjs": "console.log(1);\n",
+      "zw-alpha/scripts/fixtures/good/.scratch/case/spec.md": "A fixture.\n",
+      "zw-alpha/scripts/fixtures/bad/case.md": "Another fixture.\n",
+      "zw-alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n',
+      "zw-alpha/.DS_Store": "x",
+    }, 0, "ok: 1 skills"],
   ];
   for (const [label, files, status, output] of resourceCases) {
     const root = join(tmp, label.replaceAll(" ", "-"));
     writeTree(root, files);
     checkCli(label, root, status, output);
   }
+
+  const hex = sha256(Buffer.from(vendorSource, "utf8"));
+  const vendorTable = (rows) => "# VENDOR sample\n\n| file | sha256 | state |\n| --- | --- | --- |\n" + rows.map((row) => "| " + row.join(" | ") + " |\n").join("");
+  const vendorSkill = (manifest, extra = {}) => ({
+    "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Load vendor/lib/tool.ts."),
+    "zw-alpha/vendor/lib/tool.ts": vendorSource,
+    "zw-alpha/vendor/VENDOR.md": manifest,
+    ...extra,
+  });
+  const codexSkill = (policy) => ({
+    "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "No resources."),
+    "zw-alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n' + policy,
+  });
+  const shapeCases = [
+    ["omitted vendor file present", vendorSkill(
+      vendorTable([["lib/tool.ts", hex, "vendored"], ["lib/left-out.ts", hex, "omitted: not needed here"]]),
+      { "zw-alpha/vendor/lib/left-out.ts": vendorSource },
+    ), 1, "VENDOR.md marks lib/left-out.ts omitted but the file is present"],
+    ["listed vendor file missing", vendorSkill(
+      vendorTable([["lib/tool.ts", hex, "vendored"], ["lib/gone.ts", hex, "vendored"]]),
+    ), 1, "VENDOR.md lists lib/gone.ts but vendor/ does not ship it"],
+    ["manifest row without a digest", vendorSkill(
+      vendorTable([["lib/tool.ts", "not-a-digest", "vendored"]]),
+    ), 1, "VENDOR.md row for lib/tool.ts needs a 64 character hex sha256"],
+    ["manifest row without a state", vendorSkill(
+      vendorTable([["lib/tool.ts", hex, "copied"]]),
+    ), 1, "VENDOR.md row for lib/tool.ts must say vendored or omitted"],
+    ["manifest lists a file twice", vendorSkill(
+      vendorTable([["lib/tool.ts", hex, "vendored"], ["lib/tool.ts", hex, "vendored"]]),
+    ), 1, "VENDOR.md lists lib/tool.ts twice"],
+    ["duplicate Codex policy", codexSkill("policy:\n  allow_implicit_invocation: true\npolicy:\n  allow_implicit_invocation: true\n"), 1, "agents/openai.yaml has a duplicate policy key"],
+    ["inline Codex policy", codexSkill("policy: {allow_implicit_invocation: true}\n"), 1, "agents/openai.yaml policy must be a block mapping"],
+    ["duplicate Codex flag", codexSkill("policy:\n  allow_implicit_invocation: true\n  allow_implicit_invocation: true\n"), 1, "agents/openai.yaml has a duplicate allow_implicit_invocation key"],
+    ["unclosed frontmatter", {
+      "zw-alpha/SKILL.md": FENCE + "\nname: zw-alpha\ndescription: The block never closes.\n\n# zw-alpha\n",
+    }, 1, "zw-alpha: frontmatter block is never closed with ---"],
+    ["missing description", {
+      "zw-alpha/SKILL.md": FENCE + "\nname: zw-alpha\n" + FENCE + "\n\n# zw-alpha\n",
+    }, 1, "zw-alpha: frontmatter has no valid string description"],
+    ["installed-root resource", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run node <skills-root>/zw-beta/scripts/check.mjs <repo>."),
+      "zw-beta/SKILL.md": resourceSkill("zw-beta", "No direct helper."),
+    }, 1, "zw-alpha: body names ../zw-beta/scripts/check.mjs, which the installed skill set does not ship"],
+    ["installed-root resource present", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run node <skills-root>/zw-beta/scripts/check.mjs <repo>."),
+      "zw-beta/SKILL.md": resourceSkill("zw-beta", "No direct helper."),
+      "zw-beta/scripts/check.mjs": "console.log(1);\n",
+    }, 0, "ok: 2 skills"],
+  ];
+  for (const [label, files, status, output] of shapeCases) {
+    const root = join(tmp, "shape-" + label.replaceAll(" ", "-"));
+    writeTree(root, files);
+    checkCli(label, root, status, output);
+  }
+
+  const sharedRoot = join(tmp, "shared-root");
+  const foreign = (name) => FENCE + "\nname: " + name + "\ndescription: Another skill set ships this.\nmetadata:\n  author: someone\n" + FENCE + "\n\n# " + name + "\n";
+  writeTree(sharedRoot, {
+    "zw/SKILL.md": resourceSkill("zw", "The entry skill."),
+    "zwx/SKILL.md": foreign("zwx"),
+    "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "No resources."),
+    "other-skill/SKILL.md": foreign("other-skill"),
+    "other-skill/references/unnamed.md": "Theirs, not ours.\n",
+  });
+  symlinkSync(join(tmp, "absent"), join(sharedRoot, "stale-foreign-link"), "dir");
+  checkCli("shared root, default scope", sharedRoot, 0, "ok: 2 skills, 3 other entries not checked");
+  checkCli("a name that only starts with zw is not ours", sharedRoot, 1, "zwx: directory name is outside the zw namespace", ["--all"]);
+
+  const oneOtherRoot = join(tmp, "one-other");
+  writeTree(oneOtherRoot, {
+    "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "No resources."),
+    "other-skill/SKILL.md": foreign("other-skill"),
+  });
+  checkCli("one other entry", oneOtherRoot, 0, "ok: 1 skills, 1 other entry not checked");
+  checkCli("unknown flag", oneOtherRoot, 2, "Usage: ", ["--every"]);
+  checkCli("the same flag twice", oneOtherRoot, 2, "Usage: ", ["--all", "--all"]);
+  for (const args of [[], [oneOtherRoot, oneOtherRoot]]) {
+    const usage = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
+    if (usage.status !== 2 || !usage.stderr.startsWith("Usage: ")) failures.push("usage error for " + args.length + " roots: expected exit 2 and the usage text, got " + usage.status + " " + JSON.stringify(usage.stderr));
+  }
+  checkCli("shared root, every directory", sharedRoot, 1, "other-skill: frontmatter key metadata is outside the portable subset", ["--all"]);
+  checkCli("every directory names the namespace", sharedRoot, 1, "other-skill: directory name is outside the zw namespace", ["--all"]);
+  checkCli("every directory reports a foreign broken link", sharedRoot, 1, "stale-foreign-link: broken skill symlink", ["--all"]);
+  checkCli("flag before the root", sharedRoot, 1, "other-skill: directory name is outside the zw namespace", ["--all"], true);
+
+  for (const name of ["zw-Bad", "zw-bad_name", "zw-", "zw--bad"]) {
+    const namedRoot = join(tmp, "name-shape-" + name);
+    writeTree(namedRoot, {
+      [name + "/SKILL.md"]: FENCE + "\nname: " + name + "\ndescription: In the namespace, wrong shape.\n" + FENCE + "\n\n# " + name + "\n",
+    });
+    checkCli("name shape " + name, namedRoot, 1, name + ": directory name is outside the zw namespace");
+  }
+
+  const frontCases = [
+    ["no frontmatter", "# zw-alpha\n\nA body with no frontmatter block.\n", "zw-alpha: SKILL.md does not start with a --- frontmatter block"],
+    ["a line that is not a pair", FENCE + "\nname: zw-alpha\ndescription: A stray line follows.\njust some words\n" + FENCE + "\n\n# zw-alpha\n", "zw-alpha: frontmatter line 4 is not a key: value pair"],
+  ];
+  for (const [label, content, output] of frontCases) {
+    const root = join(tmp, "front-" + label.replaceAll(" ", "-"));
+    writeTree(root, { "zw-alpha/SKILL.md": content });
+    checkCli(label, root, 1, output);
+  }
+
+  const loopRoot = join(tmp, "resource-loop");
+  writeTree(loopRoot, { "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Read references/loop.md.") });
+  mkdirSync(join(loopRoot, "zw-alpha", "references"));
+  symlinkSync("loop.md", join(loopRoot, "zw-alpha", "references", "loop.md"));
+  checkCli("a resource that cannot be inspected", loopRoot, 1, "zw-alpha: body cannot inspect references/loop.md (ELOOP)");
 
   rmSync(tmp, { recursive: true, force: true });
 
@@ -590,18 +782,22 @@ function selfTest() {
 
 function main() {
   const args = process.argv.slice(2);
-  if (args[0] === "--test") process.exit(selfTest() ? 0 : 1);
-  if (args.length !== 1 || args[0].startsWith("-")) {
-    console.error("Usage: node <zw-skill>/scripts/verify-install.mjs <skillsRoot>");
+  if (args.length === 1 && args[0] === "--test") process.exit(selfTest() ? 0 : 1);
+  const roots = args.filter((arg) => !arg.startsWith("-"));
+  const flags = args.filter((arg) => arg.startsWith("-"));
+  if (roots.length !== 1 || flags.some((flag) => flag !== "--all") || flags.length > 1) {
+    console.error("Usage: node <zw-skill>/scripts/verify-install.mjs <skillsRoot> [--all]");
     console.error("       node <zw-skill>/scripts/verify-install.mjs --test");
+    console.error("Without --all only zw and zw-* entries are checked; --all checks every entry in the root.");
     process.exit(2);
   }
-  const { errors, count } = runOnSkills(args[0]);
+  const { errors, count, others } = runOnSkills(roots[0], { all: flags.length === 1 });
   if (errors.length) {
     for (const e of errors) console.error(e);
     process.exit(1);
   }
-  console.log("ok: " + count + " skills");
+  const skipped = others === 0 ? "" : ", " + others + " other " + (others === 1 ? "entry" : "entries") + " not checked (--all checks every entry)";
+  console.log("ok: " + count + " skills" + skipped);
 }
 
 main();

@@ -57,6 +57,6 @@ The user wants more than tests on a concurrency, retry, state-machine, parser or
 
 ## Provenance
 
-- Upstream: pstack `create-formal-verification-skill` at commit `3dbd22f`.
+- Upstream: `cursor/plugins` at commit `3dbd22f`, path `pstack/skills/create-formal-verification-skill`.
 - Changed: moved the generated skill root from Cursor's `.cursor/skills` to `.agents/skills` (preferred) or `.dsh/skills`, named `verify-<app>-formal`; dropped the instruction to read results through the upstream `/statechart` skill, and instead require the generated skill to translate each counterexample into a short sequence of steps in the code's own words, because no step in this workflow may name an installed external skill; pointed the upkeep handoff at `zw-maintain-formal-verification-skill` and named `zw-create-verification-skill` as the behavioural counterpart in Fires when.
 - Structural: upstream's prose sections Choose the target, Let the question choose the tool, What makes it good, Generate the verify skill, Prove it before you hand off and Hand off were collapsed into eight numbered Steps plus Done, so each keeps its artifact and its done test; the quality bar stayed a bulleted list inside the step that sets it.

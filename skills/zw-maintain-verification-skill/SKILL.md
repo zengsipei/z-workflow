@@ -54,5 +54,5 @@ Edit only the verification skill's own directory: its SKILL.md, features, and an
 
 ## Provenance
 
-- Upstream: pstack `maintain-verification-skill` at commit `3dbd22f`.
-- Changed: kept source wave, forced live pass, triage and the three outcomes; made the skill model-invoked; updated the target root to the two roots `zw-create-verification-skill` uses; moved harness tool names to Harness.
+- Upstream: `cursor/plugins` at commit `3dbd22f`, path `pstack/skills/maintain-verification-skill`.
+- Changed: kept source wave, forced live pass, triage and the three outcomes; updated the target root to the two roots `zw-create-verification-skill` uses; moved harness tool names to Harness.

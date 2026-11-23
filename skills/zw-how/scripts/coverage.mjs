@@ -15,9 +15,10 @@
  * level. Only directories that exist today count as units.
  */
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DEFAULT_UNITS = ["packages/*", "apps/*", "services/*"];
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", "target", "vendor"]);
@@ -222,8 +223,20 @@ function selfTest() {
     writeFileSync(full, body, "utf8");
   };
   try {
-    for (const dir of ["packages/alpha", "packages/beta", "services/api"]) put(dir + "/keep.txt", "x\n");
-    put(".agents/notes/implemented/architecture/2026-01-01-alpha.md", noteWith("Alpha", ["packages/alpha", "packages/ghost", "the alpha thing"]));
+    for (const dir of ["packages/alpha", "packages/beta", "services/api", "packages/node_modules/dep", "apps/dist"]) put(dir + "/keep.txt", "x\n");
+    put(".agents/notes/implemented/architecture/2026-01-01-alpha.md", noteWith("Alpha", [
+      "packages/alpha",
+      "packages/ghost",
+      "the alpha thing",
+      "packages/alpha/keep.txt",
+      "\x60\x60\x60text",
+      "packages/beta",
+      "\x60\x60\x60",
+      "<!--",
+      "services/api",
+      "-->",
+      "<!-- a one-line comment -->",
+    ]));
     put(".agents/notes/implemented/architecture/2026-01-03-alpha-followup.md", noteWith("Alpha followup", ["packages/alpha"]));
     put(".agents/notes/implemented/feature/2026-01-02-beta.md", noteWith("Beta", []));
     put(".agents/notes/implemented/feature/2026-01-02-beta.zh.md", "# Agent Note: Beta zh\n\nStatus: implemented\n");
@@ -231,6 +244,10 @@ function selfTest() {
     const report = buildReport(root, DEFAULT_UNITS);
     check(report.units.includes("packages/alpha") && report.units.includes("packages/beta"), "default patterns should find packages/*");
     check(report.units.includes("services/api"), "default patterns should find services/*");
+    check(report.units.join(",") === "packages/alpha,packages/beta,services/api", "build output and dependency directories are not units, got " + report.units.join(","));
+    check(report.problems.some((p) => p.kind === "no such directory" && p.id === "packages/alpha/keep.txt"), "a Scope id naming a file is a problem, not a claim");
+    check(!report.claimed.some((item) => item.id === "packages/alpha/keep.txt"), "a file is never claimed");
+    check(!report.problems.some((p) => p.id.includes("<!--")), "a comment inside Scope is skipped, not reported as a bad id");
     check(report.noteCount === 3, "a .zh.md note must be skipped, got " + report.noteCount + " note(s)");
     check(report.unclaimed.join(",") === "packages/beta,services/api", "unclaimed should be packages/beta then services/api, got " + report.unclaimed.join(","));
     check(report.claimed.some((item) => item.id === "packages/alpha"), "packages/alpha should be claimed");
@@ -243,6 +260,17 @@ function selfTest() {
     const override = buildReport(root, ["services/*"]);
     check(override.units.length === 1 && override.units[0] === "services/api", "--units should replace the defaults, got " + override.units.join(","));
     check(override.unclaimed.length === 1 && override.unclaimed[0] === "services/api", "services/api should be unclaimed under the override");
+
+    const run = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
+    const spaced = run(root, "--units", "services/*");
+    check(spaced.status === 0 && spaced.stdout.includes(" from services/*\n") && spaced.stdout.includes("\nUnclaimed (1)\n  services/api\n"), "--units <glob> should replace the default patterns on the command line");
+    const joined = run(root, "--units=services/*", "--units", "packages/*");
+    check(joined.status === 0 && joined.stdout.includes(" from services/*, packages/*\n"), "--units=<glob> and a repeated --units should both be read");
+    const refused = [[[], "Usage: "], [[root, "--nope"], "unknown flag: --nope"], [[root, root], "unexpected argument: "], [[join(root, "absent")], "absent: not a directory"]];
+    for (const [args, reason] of refused) {
+      const result = run(...args);
+      check(result.status === 2 && result.stderr.includes(reason) && result.stdout === "", "exit 2 with a reason for: " + JSON.stringify(args.map((arg) => arg.replace(root, "<root>"))));
+    }
 
     const empty = mkdtempSync(join(tmpdir(), "zw-how-coverage-empty-"));
     try {

@@ -22,12 +22,17 @@ playbooks do where a skill cannot be called.
 ## Reading them
 
 ```text
-node scripts/playbooks.mjs --list
-node scripts/playbooks.mjs <name>
+node scripts/playbooks.mjs --list --repo <repo>
+node scripts/playbooks.mjs <name> --repo <repo>
 ```
 
 `--list` prints every route in effect with the layer it came from and the layers it covers, and
 `<name>` prints the file that wins, content and all. Both take `--repo` and `--user`.
+
+`<repo>` is any directory inside the target repo. The script walks up from it to the nearest `.git`
+and reads the project layer there, so a subdirectory finds the same routes as the root. Without
+`--repo` it starts from the working directory, which is the wrong repo whenever the session started
+somewhere else, a directory of several checkouts for example. The root in use prints on stderr.
 
 ## Writing one
 
@@ -41,11 +46,13 @@ Recommended when a design question needs a throwaway answer.
 
 1. `zw-wayfinder` the decisions the spike has to settle
 2. `zw-implement` prototype only
-3. `zw-create-verification-skill`
+3. Drive the prototype through the repo's verification route and keep the evidence
 ```
 
 Naming a `zw-` skill in a step hands off to that skill. Naming none, as the reproduction step of Bug
-fix does, means the agent carries it out directly. That is the whole convention, and departing from it
+fix and the last step of this example do, means the agent carries it out directly. Name
+`zw-create-verification-skill` only where a route has to be built: the step that gathers evidence
+drives the `verify-<app>` skill it generated. That is the whole convention, and departing from it
 costs nothing but a step that reads oddly.
 
 Every shipped route ends with a `Reply:` line listing what the closing message to the user must

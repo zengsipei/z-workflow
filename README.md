@@ -48,8 +48,8 @@ spine.
 
 Five routes ship by default, each a procedure written in prose. A repo replaces or adds one in
 `.agents/zw-playbooks/`, and `~/.agents/zw-playbooks/` does the same for every repo: the nearest layer
-wins, and whatever the file says is the route. `node <skills-root>/zw/scripts/playbooks.mjs --list`
-prints what is in effect.
+wins, and whatever the file says is the route. `node <skills-root>/zw/scripts/playbooks.mjs --list --repo <repo>`
+prints what is in effect for the repo that holds `<repo>`.
 
 ## Verify the install
 
@@ -57,10 +57,12 @@ prints what is in effect.
 node <skills-root>/zw/scripts/verify-install.mjs <skills-root>
 ```
 
-It checks directories and symlinked skills, frontmatter syntax and types, directory names, and Codex
-invocation policy. Named resources must ship with the skill, including playbooks, templates, and
-helpers reached through first-party Markdown references. Vendor files must match their hash manifests.
+It checks this workflow's skills, the ones named `zw` or `zw-*`, and leaves other skill sets in the same
+root alone. For each one it checks the directory or symlink, frontmatter syntax and types, the directory
+name, and Codex invocation policy. Named resources must ship with the skill, including playbooks, templates, and
+helpers reached through first-party Markdown references, and every shipped file must be named by a step. Vendor files must match their hash manifests.
 
 ## Working in this repo
 
-Read `AGENTS.md` before writing a skill. `docs/workflow-dag.md` is the graph.
+Read `AGENTS.md` before writing a skill. `docs/workflow-dag.md` is the graph. `sh scripts/gate.sh` runs every
+check, and `node scripts/upstream-drift.mjs` prints which pinned upstream sources have moved.
