@@ -156,14 +156,18 @@ function referencesTicket(specRaw, specPath, ticket) {
   return false;
 }
 
-function checkSpec(rel, absPath, tickets, errors) {
-  let raw;
+function readDraft(rel, absPath, errors) {
   try {
-    raw = readFileSync(absPath, "utf8");
+    return readFileSync(absPath, "utf8");
   } catch (err) {
     errors.push(rel + ": unreadable (" + (err.code || err.message) + ")");
-    return;
+    return null;
   }
+}
+
+function checkSpec(rel, absPath, tickets, errors) {
+  const raw = readDraft(rel, absPath, errors);
+  if (raw === null) return;
   const src = maskSource(raw);
   const proseIdx = [];
   for (let i = 0; i < src.lines.length; i++) if (isProseLine(src, i)) proseIdx.push(i);
@@ -264,13 +268,8 @@ function checkTickets(featureRel, ticketsDir, errors) {
   for (const t of tickets) byNum.set(t.num, t);
 
   for (const t of tickets) {
-    let raw;
-    try {
-      raw = readFileSync(t.path, "utf8");
-    } catch (err) {
-      errors.push(t.rel + ": unreadable (" + (err.code || err.message) + ")");
-      continue;
-    }
+    const raw = readDraft(t.rel, t.path, errors);
+    if (raw === null) continue;
     for (const v of pathViolations(raw)) {
       errors.push(t.rel + ":" + v.line + ": " + describeViolation(v));
     }
