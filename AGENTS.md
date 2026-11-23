@@ -22,6 +22,7 @@ skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/  the notes
 scripts/link-skills.sh        install: symlink every skill into the harness roots
 scripts/gate.sh               this repo's gate: every self-test, then the checkers against this tree
 scripts/upstream-drift.mjs    report: which pinned upstream sources moved, read from the Upstream lines
+scripts/verify-authoring.mjs  the authoring rules a script can read, checked on every skill
 .github/workflows/gate.yml    CI: runs scripts/gate.sh on every push to main and every pull request
 docs/adr/                     architecture decisions
 samples/                      proof runs
@@ -47,6 +48,8 @@ samples/                      proof runs
 7. Artifacts never name file paths or line numbers in their text. Describe interfaces, types, and behaviour, so a ticket written today is still true after a refactor. A ticket refers to its sibling drafts by number (`NN-<slug>`), never by path; a spec names every sibling ticket by the same token, on its `Tickets:` line, or by a relative link.
 8. English throughout. No em dashes.
 
+The gate enforces every rule here that a script can read. `verify-install.mjs` checks rules 1 and 2 and that a named resource ships. `scripts/verify-authoring.mjs` checks rules 3 to 6 and 8: the description shape, the title, the required sections and their order, the three harness cases, a CLI flag in `## Steps`, the line limit, and the em dash. `scripts/upstream-drift.mjs --records` checks the Upstream line. Rule 7 is `verify-artifacts.mjs`'s, in the target repo. What stays with the reviewer is judgement: whether a step names its artifact and done test, and whether a model or tool name crept into `## Steps`.
+
 ## Script rules
 
 Zero dependencies for a script written here: node ESM or POSIX shell, nothing to install. Exit non-zero on failure and print what failed and where. Every checker ships fixtures and a `--test` mode that runs them, so a broken checker fails loudly instead of passing silently. A vendored script keeps the runtime it shipped with; the notes checkers are TypeScript and run through `npx tsx`.
@@ -63,7 +66,7 @@ The skill that drives a vendored capability names its files by relative path and
 
 ## Upstream drift
 
-`node scripts/upstream-drift.mjs` reads every `- Upstream:` line, in a skill's `## Provenance` and in a `VENDOR.md`, and prints which paths moved between the pinned commit and the upstream's head. It also proves the record: a commit the upstream does not have, or a path that commit does not hold, is reported as a problem. Run it before a re-sync and before a release. It reads the network, so the gate runs only its `--test`.
+`node scripts/upstream-drift.mjs` reads every `- Upstream:` line, in a skill's `## Provenance` and in a `VENDOR.md`, and prints which paths moved between the pinned commit and the upstream's head. It also proves the record: a commit the upstream does not have, or a path that commit does not hold, is reported as a problem. Run it before a re-sync and before a release. It reads the network, so the gate runs only its `--test` and its offline `--records` check.
 
 A pin is the commit the local text descends from, not the newest commit that was at hand. Moving a pin forward says every upstream change up to that commit was read and either taken or declined.
 

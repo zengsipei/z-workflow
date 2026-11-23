@@ -48,6 +48,7 @@ z-workflow/
   scripts/link-skills.sh     symlink skills into the harness roots
   scripts/gate.sh            this repo's own gate, one command; CI runs it
   scripts/upstream-drift.mjs which pinned upstream sources moved, read from the Upstream lines
+  scripts/verify-authoring.mjs  the authoring rules a script can read
   skills/zw/scripts/verify-artifacts.mjs  spec/ticket contract checker (zero deps)
   skills/zw/scripts/verify-install.mjs    install and vendor-integrity checker (zero deps)
   skills/zw-write-notes-like-deepseek/vendor/write-notes-like-deepseek/  the notes skill and its checkers, verbatim
@@ -112,7 +113,7 @@ The notes gate is the vendored copy of write-notes-like-deepseek: `vendor/write-
 
 `zw-how`'s `scripts/coverage.mjs` is not a gate. It prints which subsystem units no note claims and which `implemented` notes carry no `## Scope`, then exits zero whatever it says, because a tree also written by the upstream skill directly is heterogeneous by construction. Its own `--test` does exit non-zero, like every checker here.
 
-No host hooks in a target repo: the gate runs where the workflow already runs, namely the closing step of `zw` and the last step of `zw-implement`. Each checker exits non-zero and prints what failed. This repo's own gate is one command, `scripts/gate.sh`, and CI runs it on every push to `main` and every pull request, so the checkers that judge other repos are themselves checked without anyone remembering to.
+No host hooks in a target repo: the gate runs where the workflow already runs, namely the closing step of `zw` and the last step of `zw-implement`. Each checker exits non-zero and prints what failed. This repo's own gate is one command, `scripts/gate.sh`, and CI runs it on every push to `main` and every pull request, so the checkers that judge other repos are themselves checked without anyone remembering to. The same script runs `scripts/verify-authoring.mjs`, which holds each skill to the mechanical authoring rules in `AGENTS.md`, and the offline record check of `scripts/upstream-drift.mjs`.
 
 ## 7. Harness adaptation
 

@@ -4,6 +4,7 @@
  *
  * Usage:
  *   node scripts/upstream-drift.mjs [--skills <dir>] [--cache <dir>] [--remote <base>] [--verbose]
+ *   node scripts/upstream-drift.mjs --records [--skills <dir>]
  *   node scripts/upstream-drift.mjs --test
  *
  * A skill records where it came from as one line per source, under ## Provenance in its SKILL.md
@@ -16,7 +17,8 @@
  * prints same, moved with what changed, or gone. It also proves the record: a commit the upstream
  * does not have, or a path the pinned commit does not hold, is a problem and not a status.
  *
- * It reads the network, so it is a report and not part of the gate; the gate runs only --test.
+ * It reads the network, so it is a report and not part of the gate. The gate runs --test, and
+ * --records, which checks the form of every line and that no skill lacks one, and reads no remote.
  * Each upstream is mirrored without file contents under --cache, by default refs/.upstream-cache
  * in this repo, which .gitignore already covers. --remote replaces https://github.com/.
  *
@@ -226,7 +228,13 @@ function selfTest() {
     const cli = (dir) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--skills", dir, "--cache", options.cache, "--remote", options.remote, "--verbose"], { encoding: "utf8" });
     const failing = cli(skills);
     check("problems exit 1 and print on stderr", failing.status === 1 && failing.stderr.includes("problem: zw-malformed/SKILL.md:14"));
+    const offline = (dir) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--skills", dir, "--records", "--remote", "file:///nowhere/"], { encoding: "utf8" });
+    const badRecords = offline(skills);
+    check("--records fails a malformed or missing line", badRecords.status === 1 && badRecords.stderr.includes("problem: zw-malformed/SKILL.md:14") && badRecords.stderr.includes("problem: zw-silent/SKILL.md: no Upstream line"));
+    check("--records reads no remote", !badRecords.stderr.includes("cannot clone"));
     for (const name of ["zw-badpath", "zw-badpin", "zw-malformed", "zw-silent", "zw-headless", "zw-offline"]) rmSync(join(skills, name), { recursive: true });
+    const goodRecords = offline(skills);
+    check("--records passes well formed lines without a network", goodRecords.status === 0 && goodRecords.stdout.includes("ok: 4 recorded source(s) in 4 skill(s)"));
     const passing = cli(skills);
     check("drift alone exits 0", passing.status === 0 && passing.stdout.includes("upstream drift: 4 recorded source(s), 3 moved, 1 gone, 0 same, 0 problem(s)"));
     check("--verbose lists the files", passing.stdout.includes("A skills/alpha/extra.md"));
@@ -245,12 +253,13 @@ function selfTest() {
 }
 
 function main() {
-  const options = { skills: join(REPO, "skills"), cache: join(REPO, "refs", ".upstream-cache"), remote: "https://github.com/", verbose: false };
+  const options = { skills: join(REPO, "skills"), cache: join(REPO, "refs", ".upstream-cache"), remote: "https://github.com/", verbose: false, records: false };
   const argv = process.argv.slice(2);
   if (argv.length === 1 && argv[0] === "--test") process.exit(selfTest() ? 0 : 1);
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--verbose") options.verbose = true;
+    else if (arg === "--records") options.records = true;
     else if (arg === "--skills" || arg === "--cache" || arg === "--remote") {
       const value = argv[++i];
       if (value === undefined || value.startsWith("--")) { console.error("upstream-drift: " + arg + " needs a value"); process.exit(2); }
@@ -258,12 +267,20 @@ function main() {
     } else {
       console.error("upstream-drift: unknown argument " + arg);
       console.error("Usage: node scripts/upstream-drift.mjs [--skills <dir>] [--cache <dir>] [--remote <base>] [--verbose]");
+      console.error("       node scripts/upstream-drift.mjs --records [--skills <dir>]");
       process.exit(2);
     }
   }
   if (!existsSync(options.skills) || !statSync(options.skills).isDirectory()) {
     console.error("upstream-drift: " + options.skills + " is not a directory");
     process.exit(2);
+  }
+  if (options.records) {
+    const { records, problems } = collect(options.skills);
+    for (const problem of problems) console.error("problem: " + problem);
+    if (problems.length) process.exit(1);
+    console.log("ok: " + records.length + " recorded source(s) in " + new Set(records.map((record) => record.skill)).size + " skill(s)");
+    return;
   }
   const result = report(options);
   print(result, options.verbose);

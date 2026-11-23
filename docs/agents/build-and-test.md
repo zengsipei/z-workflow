@@ -18,8 +18,8 @@ bash scripts/gate.sh
 
 The script runs these steps in order and stops at the first failure, naming the command that failed:
 
-1. The six self-tests: `verify-install.mjs`, `verify-artifacts.mjs`, `playbooks.mjs`, `role-route.mjs`, `zw-how`'s `coverage.mjs`, and `scripts/upstream-drift.mjs`, each with `--test`.
-2. The install check on `skills/` with `--all`.
+1. The seven self-tests: `verify-install.mjs`, `verify-artifacts.mjs`, `playbooks.mjs`, `role-route.mjs`, `zw-how`'s `coverage.mjs`, `scripts/upstream-drift.mjs` and `scripts/verify-authoring.mjs`, each with `--test`.
+2. The install check on `skills/` with `--all`, the authoring check on every skill, and the offline check of every `- Upstream:` line.
 3. The artifact check on this repo.
 4. The three vendored notes checkers, through `npx tsx`.
 5. The installer's syntax check, its self-test under temporary home directories, and its dry run.
@@ -43,6 +43,9 @@ One row per mechanical rule this repo keeps, with what enforces it. A rule that 
 | A skill directory is named `zw` or `zw-<kebab-case>`, and its frontmatter name matches | `verify-install.mjs` | the gate |
 | Frontmatter stays in the portable subset, and Codex policy matches the invocation mode | `verify-install.mjs` | the gate |
 | Every named resource ships, and every shipped file is named by an installed document | `verify-install.mjs` | the gate |
+| A skill body has its title, its required sections in order and three harness cases, stays under 120 lines, keeps CLI flags out of `## Steps`, and has no em dash | `scripts/verify-authoring.mjs` | the gate |
+| A model-invoked description starts "Use when", and a human-invoked one does not | `scripts/verify-authoring.mjs` | the gate |
+| Every skill records its source as an `- Upstream:` line in the fixed form, or says none | `scripts/upstream-drift.mjs --records` | the gate |
 | A vendored file matches its `VENDOR.md` hash, and an omitted file is absent | `verify-install.mjs` | the gate |
 | A draft written from the spec and ticket templates passes the artifact check | `verify-artifacts.mjs --test` | the gate |
 | A ticket's blockers exist and carry lower numbers, and a spec names its sibling tickets | `verify-artifacts.mjs` | the target repo, in the closing step |
