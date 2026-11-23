@@ -62,4 +62,4 @@ None of its own. The tests are the artifact, at the confirmed seam.
 - Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/tdd`. The seam rule, the anti-patterns and the loop rules come from it.
 - Upstream: `cursor/plugins` at commit `71ed0d1`, path `pstack/skills/tdd`. The bug-fix regression path, the impractical-test escape and the guardrails come from cursor pstack's `tdd`. The escape follows this commit's wording, which `3dbd22f` had already replaced, so this is the commit to diff from.
 - Changed: merged the two into one skill so the workflow never names an external `tdd`; dropped the reference to the installed `codebase-design` vocabulary and to a review skill by name; made it model-invoked so a step can load it.
-- Hollow test added 2026-11-18 from `unclebob/ub-mode` at commit `3da62bf`, section `Test Behavior, Not Implementation`: a test every function could satisfy by returning nothing is thrown out.
+- Upstream: `unclebob/ub-mode` at commit `3da62bf`, path `SKILL.md`. Hollow test added 2026-11-18 from its section `Test Behavior, Not Implementation`: a test every function could satisfy by returning nothing is thrown out.

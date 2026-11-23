@@ -42,7 +42,7 @@ function git(args, gitDir) {
   return { ok: result.status === 0, out: (result.stdout || "").trim(), err: (result.stderr || "").trim() };
 }
 
-function recordsIn(file, skill, where, text, firstLine) {
+function recordsIn(skill, where, text, firstLine) {
   const found = { records: [], problems: [], none: false };
   text.split("\n").forEach((line, index) => {
     if (!line.startsWith("- Upstream:")) return;
@@ -67,9 +67,9 @@ function collect(skillsDir) {
     const lines = readFileSync(skillFile, "utf8").replace(/\r\n?/g, "\n").split("\n");
     const heading = lines.findIndex((line) => /^## Provenance\s*$/.test(line));
     const parts = [];
-    if (heading !== -1) parts.push(recordsIn(skillFile, name, "SKILL.md", lines.slice(heading + 1).join("\n"), heading + 2));
+    if (heading !== -1) parts.push(recordsIn(name, "SKILL.md", lines.slice(heading + 1).join("\n"), heading + 2));
     const manifest = join(skillsDir, name, "vendor", "VENDOR.md");
-    if (existsSync(manifest)) parts.push(recordsIn(manifest, name, "vendor/VENDOR.md", readFileSync(manifest, "utf8").replace(/\r\n?/g, "\n"), 1));
+    if (existsSync(manifest)) parts.push(recordsIn(name, "vendor/VENDOR.md", readFileSync(manifest, "utf8").replace(/\r\n?/g, "\n"), 1));
     let count = 0;
     let none = false;
     for (const part of parts) {
@@ -134,6 +134,7 @@ function report({ skills, cache, remote }) {
 }
 
 const ORDER = { gone: 0, moved: 1, same: 2 };
+const counted = (n, noun) => n + " " + noun + (n === 1 ? "" : "s");
 
 function print(result, verbose) {
   const tally = { same: 0, moved: 0, gone: 0 };
@@ -149,7 +150,7 @@ function print(result, verbose) {
     console.log("");
   }
   for (const problem of result.problems) console.error("problem: " + problem);
-  console.log("upstream drift: " + result.total + " recorded source(s), " + tally.moved + " moved, " + tally.gone + " gone, " + tally.same + " same, " + result.problems.length + " problem(s)");
+  console.log("upstream drift: " + counted(result.total, "recorded source") + ", " + tally.moved + " moved, " + tally.gone + " gone, " + tally.same + " same, " + counted(result.problems.length, "problem"));
 }
 
 function selfTest() {
@@ -171,6 +172,7 @@ function selfTest() {
     put(work, "skills/gone/notes.md", "soon deleted\n");
     put(work, "skills/alpha/old-name.md", "a file that upstream renames without editing it\n");
     put(work, "agents/helper.md", "helper one\n");
+    put(work, "skills/still/SKILL.md", "never edited\n");
     inWork("add", "-A"); inWork("commit", "--quiet", "-m", "first");
     const pinned = inWork("rev-parse", "HEAD");
     put(work, "skills/alpha/SKILL.md", "alpha two\n");
@@ -192,6 +194,8 @@ function selfTest() {
     put(skills, "zw-self/SKILL.md", skill("zw-self", "- Upstream: none, written here."));
     put(skills, "zw-vendor/SKILL.md", skill("zw-vendor", "- Upstream: none, it only drives a vendored file."));
     put(skills, "zw-vendor/vendor/VENDOR.md", "# Vendor\n\n" + line("agents/helper.md") + "\n\n| file | sha256 | state |\n| --- | --- | --- |\n");
+    put(skills, "zw-still/SKILL.md", skill("zw-still", line("skills/still")));
+    put(skills, ".hidden/SKILL.md", skill(".hidden", null));
     const options = { skills, cache: join(tmp, "cache"), remote: "file://" + join(tmp, "remotes") + "/" };
 
     const first = report(options);
@@ -201,7 +205,7 @@ function selfTest() {
     check("an unchanged path is same, by short id and with a trailing slash", row("zw-beta").status === "same");
     check("a deleted path is gone", row("zw-gone").status === "gone");
     check("a vendor manifest line is read", row("zw-vendor").status === "moved" && row("zw-vendor").where === "vendor/VENDOR.md");
-    check("a line outside Provenance is not a record", first.total === 4);
+    check("a line outside Provenance is not a record, and a dot directory is not a skill", first.total === 5);
     check("the head is the default branch tip", first.repos[0].head === inWork("rev-parse", "HEAD").slice(0, 7));
 
     put(work, "skills/beta/SKILL.md", "beta two\n");
@@ -210,6 +214,14 @@ function selfTest() {
     const second = report(options);
     check("a second run fetches the mirror", second.repos.flatMap((entry) => entry.rows).find((entry) => entry.skill === "zw-beta").status === "moved");
 
+    const later = join(tmp, "remotes", "acme", "later.git");
+    spawnSync("git", ["clone", "--quiet", "--bare", work, later]);
+    put(skills, "zw-later/SKILL.md", skill("zw-later", line("skills/alpha", pinned, "acme/later")));
+    check("a second remote is mirrored", report(options).problems.length === 0);
+    rmSync(later, { recursive: true });
+    spawnSync("git", ["init", "--quiet", "--bare", join(tmp, "remotes", "acme", "empty.git")]);
+    put(skills, "zw-empty/SKILL.md", skill("zw-empty", line("skills/alpha", pinned, "acme/empty")));
+    put(skills, "zw-shortpin/SKILL.md", skill("zw-shortpin", line("skills/alpha", pinned.slice(0, 6))));
     put(skills, "zw-badpath/SKILL.md", skill("zw-badpath", line("skills/never-existed")));
     put(skills, "zw-badpin/SKILL.md", skill("zw-badpin", line("skills/alpha", "abcdef0123")));
     put(skills, "zw-malformed/SKILL.md", skill("zw-malformed", "- Upstream: acme tools at 1234567."));
@@ -222,8 +234,11 @@ function selfTest() {
     check("a commit the upstream lacks is a problem", has("zw-badpin/SKILL.md:14: commit abcdef0123 is not in acme/tools"));
     check("a malformed line is a problem", has("zw-malformed/SKILL.md:14: an Upstream line reads"));
     check("a skill with no line is a problem", has("zw-silent/SKILL.md: no Upstream line") && has("zw-headless/SKILL.md: no Upstream line"));
+    check("a commit id shorter than seven characters is a malformed line", has("zw-shortpin/SKILL.md:14: an Upstream line reads"));
     check("a remote that cannot be read is a problem", has("acme/missing: cannot clone"));
-    check("the readable records are still compared", bad.repos[0].rows.length === 4);
+    check("a mirror whose remote is gone is a problem", has("acme/later: cannot fetch"));
+    check("a remote with no commits is a problem", has("acme/empty: ") && has("empty.git has no default branch head"));
+    check("the readable records are still compared", bad.repos.length === 1 && bad.repos[0].repo === "acme/tools" && bad.repos[0].rows.length === 5);
 
     const cli = (dir) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--skills", dir, "--cache", options.cache, "--remote", options.remote, "--verbose"], { encoding: "utf8" });
     const failing = cli(skills);
@@ -232,11 +247,22 @@ function selfTest() {
     const badRecords = offline(skills);
     check("--records fails a malformed or missing line", badRecords.status === 1 && badRecords.stderr.includes("problem: zw-malformed/SKILL.md:14") && badRecords.stderr.includes("problem: zw-silent/SKILL.md: no Upstream line"));
     check("--records reads no remote", !badRecords.stderr.includes("cannot clone"));
-    for (const name of ["zw-badpath", "zw-badpin", "zw-malformed", "zw-silent", "zw-headless", "zw-offline"]) rmSync(join(skills, name), { recursive: true });
+    for (const name of ["zw-badpath", "zw-badpin", "zw-malformed", "zw-silent", "zw-headless", "zw-offline", "zw-later", "zw-empty", "zw-shortpin"]) rmSync(join(skills, name), { recursive: true });
     const goodRecords = offline(skills);
-    check("--records passes well formed lines without a network", goodRecords.status === 0 && goodRecords.stdout.includes("ok: 4 recorded source(s) in 4 skill(s)"));
+    check("--records passes well formed lines without a network", goodRecords.status === 0 && goodRecords.stdout === "ok: 5 recorded sources in 5 skills\n");
     const passing = cli(skills);
-    check("drift alone exits 0", passing.status === 0 && passing.stdout.includes("upstream drift: 4 recorded source(s), 3 moved, 1 gone, 0 same, 0 problem(s)"));
+    check("drift alone exits 0", passing.status === 0 && passing.stdout.includes("upstream drift: 5 recorded sources, 3 moved, 1 gone, 1 same, 0 problems\n"));
+    const at = (text) => passing.stdout.indexOf(text);
+    check("gone rows print first, then moved, then same", at("  gone ") !== -1 && at("  gone ") < at("  moved ") && passing.stdout.lastIndexOf("  moved ") < at("  same "));
+    put(skills, "zw-one/SKILL.md", skill("zw-one", line("skills/still")));
+    for (const name of ["zw-alpha", "zw-beta", "zw-gone", "zw-vendor", "zw-still", "zw-self"]) rmSync(join(skills, name), { recursive: true });
+    check("one source in one skill is singular", offline(skills).stdout === "ok: 1 recorded source in 1 skill\n");
+    const run = (...args) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], { encoding: "utf8" });
+    const refused = [[["--skills"], "--skills needs a value"], [["--cache", "--verbose"], "--cache needs a value"], [["--nope"], "unknown argument --nope"], [["--skills", join(tmp, "absent")], join(tmp, "absent") + " is not a directory"]];
+    for (const [args, reason] of refused) {
+      const result = run(...args);
+      check("exit 2 with a reason for: " + args[0] + (args[1] ? " " + args[1].replace(tmp, "<tmp>") : ""), result.status === 2 && result.stderr.includes("upstream-drift: " + reason) && result.stdout === "");
+    }
     check("--verbose lists the files", passing.stdout.includes("A skills/alpha/extra.md"));
     check("a row names its skill and its pin", passing.stdout.includes("  moved  " + pinned.slice(0, 7) + "  agents/helper.md  [zw-vendor vendor]  1 changed"));
   } catch (error) {
@@ -279,7 +305,7 @@ function main() {
     const { records, problems } = collect(options.skills);
     for (const problem of problems) console.error("problem: " + problem);
     if (problems.length) process.exit(1);
-    console.log("ok: " + records.length + " recorded source(s) in " + new Set(records.map((record) => record.skill)).size + " skill(s)");
+    console.log("ok: " + counted(records.length, "recorded source") + " in " + counted(new Set(records.map((record) => record.skill)).size, "skill"));
     return;
   }
   const result = report(options);

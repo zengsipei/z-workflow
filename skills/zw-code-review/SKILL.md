@@ -38,4 +38,4 @@ The user asks to review a branch, a PR, or work-in-progress changes, or says "re
 - Upstream: `mattpocock/skills` at commit `5863806`, path `skills/engineering/code-review`.
 - Changed: kept the two-axis split, the repo-overrides-baseline rule, and the under-400-words report contract; moved the review briefs into references/axes.md and the smell list into references/smell-baseline.md.
 - Veto and evidence-to-close added 2026-11-14 from poteto, `Loops You Can Trust` (x.com/poteto/status/2069824386283319343): every stage in a trustworthy loop can stop the line, and a rejection is an outcome rather than a failure.
-- Metric gate added 2026-11-18 from `unclebob/ub-mode` at commit `3da62bf` (`Crapper`, `Dryer`, `Mutator`): the three numbers are evidence and the threshold stays the repo's own, so an overage is a finding rather than a refusal.
+- Upstream: `unclebob/ub-mode` at commit `3da62bf`, path `SKILL.md`. Metric gate added 2026-11-18 from its sections `Crapper`, `Dryer` and `Mutator`: the three numbers are evidence and the threshold stays the repo's own, so an overage is a finding rather than a refusal.

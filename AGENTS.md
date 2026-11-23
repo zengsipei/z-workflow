@@ -42,7 +42,7 @@ samples/                      proof runs
    - `## Artifacts` exact paths from DESIGN.md section 5.
    - `## Done` checkable statements, not adjectives.
    - `## Harness` the three cases: DSH, Claude Code, Codex. Say what degrades and how.
-   - `## Provenance` one line per source, then what was changed when copying. The line reads ``- Upstream: `owner/repo` at commit `sha`, path `dir/or/file`.`` and names the repo the text was taken from, never a port or a mirror of it. A skill written here with no source says `- Upstream: none`.
+   - `## Provenance` one line per source that is a git repo, then what was changed when copying. The line reads ``- Upstream: `owner/repo` at commit `sha`, path `dir/or/file`.`` and names the repo the text was taken from, never a port or a mirror of it. The upstream a skill was ported from gets a line, and so does a repo one rule was borrowed from. A source that is not a git repo, an article for one, is cited in prose with its URL. A skill written here with no source says `- Upstream: none`.
 5. No model names, no harness tool names, and no CLI flags in `## Steps`. Those live in `## Harness`.
 6. Keep the main file under 120 lines. Push detail into `references/` and name it by relative path in the step that uses it. A pointer that sits only under `## Provenance` protects nothing, because the install check does not scan that section.
 7. Artifacts never name file paths or line numbers in their text. Describe interfaces, types, and behaviour, so a ticket written today is still true after a refactor. A ticket refers to its sibling drafts by number (`NN-<slug>`), never by path; a spec names every sibling ticket by the same token, on its `Tickets:` line, or by a relative link.
