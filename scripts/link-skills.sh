@@ -17,13 +17,15 @@
 # run exits 0 whatever it would skip: it reports, and changes nothing.
 set -euo pipefail
 
-SELF="${BASH_SOURCE[0]}"
-SRC="$(cd -- "$(dirname -- "$SELF")/.." && pwd -P)/skills"
+SELF="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/$(basename -- "${BASH_SOURCE[0]}")"
+SRC="$(dirname -- "$(dirname -- "$SELF")")/skills"
 
 # Where a link target really is: its directory with symlinks resolved, then its own name. A target
-# whose directory is gone comes back as written.
+# whose directory is gone comes back as written, and so does a relative one: this script writes
+# absolute links, so a relative link is someone else's.
 physical() {
   local dest="${1%/}" parent
+  case "$dest" in /*) ;; *) printf '%s\n' "$dest"; return ;; esac
   parent="$(dirname -- "$dest")"
   if [ -d "$parent" ]; then parent="$(cd -- "$parent" && pwd -P)"; fi
   printf '%s/%s\n' "$parent" "$(basename -- "$dest")"
@@ -101,6 +103,14 @@ self_test() {
   check "a link written through a symlinked path is still this checkout's" 'grep -q "linked 0, kept $count, repointed 0, pruned 0, skipped 0" <<<"$out"'
   out="$(HOME="$home" bash "$tmp/alias/scripts/link-skills.sh" --unlink 2>&1)" || true
   check "--unlink through a symlinked path removes them" 'grep -q "unlinked $count" <<<"$out" && [ -z "$(ls -A "$home/.agents/skills")" ]'
+
+  home="$tmp/relative"; mkdir -p "$home/.agents/skills/kept-here"
+  ln -s kept-here "$home/.agents/skills/zw-how"
+  ln -s zw-bro "$home/.agents/skills/zw-alias"
+  out="$(cd "$SRC" && HOME="$home" bash "$SELF" 2>&1)" || true
+  check "a relative link is someone else's, whatever directory the run starts in" 'grep -q "skip $home/.agents/skills/zw-how: points at another checkout, kept-here" <<<"$out"'
+  out="$(cd "$SRC" && HOME="$home" bash "$SELF" --unlink 2>&1)" || true
+  check "--unlink leaves relative links" '[ -L "$home/.agents/skills/zw-how" ] && [ -L "$home/.agents/skills/zw-alias" ]'
 
   rm -rf "$tmp"
   if [ "$fails" -gt 0 ]; then return 1; fi
