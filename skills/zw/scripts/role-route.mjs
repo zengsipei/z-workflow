@@ -320,6 +320,10 @@ function selfTest() {
   check("a four token route is reported", /route must be inherit/.test(messages));
   check("a bad budget is reported", /budget takes one effort token/.test(messages));
   check("inherit inside a panel is reported", /cannot sit in a panel/.test(messages));
+  const twice = parseRoles("## dsh\nfeature: a b\n## dsh\nship: c d\n");
+  check("a section declared twice is reported", twice.errors.some((e) => /declared twice/.test(e.message) && e.line === 3));
+  const routeless = parseRoles("## dsh\nfeature:\n");
+  check("a key line with no route is reported", routeless.errors.some((e) => /has no route/.test(e.message) && e.line === 2));
   const duplicated = parseRoles("## dsh\nfeature: a b\nfeature: c d\n");
   check("a duplicate key is reported", duplicated.errors.some((e) => /listed twice/.test(e.message)));
   check("errors carry a line number", broken.errors.every((e) => typeof e.line === "number" && e.line > 0));

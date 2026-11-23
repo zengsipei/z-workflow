@@ -27,3 +27,9 @@ A worker reconciles both stores every minute.
 The worker reads src/x.ts at startup.
 
 - [01-contract](tickets/01-contract.md)
+
+<!--
+## Further Notes
+
+A section that is commented out is not a section.
+-->

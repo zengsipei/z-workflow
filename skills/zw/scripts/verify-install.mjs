@@ -642,6 +642,57 @@ function selfTest() {
     checkCli(label, root, status, output);
   }
 
+  const hex = sha256(Buffer.from(vendorSource, "utf8"));
+  const vendorTable = (rows) => "# VENDOR sample\n\n| file | sha256 | state |\n| --- | --- | --- |\n" + rows.map((row) => "| " + row.join(" | ") + " |\n").join("");
+  const vendorSkill = (manifest, extra = {}) => ({
+    "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Load vendor/lib/tool.ts."),
+    "zw-alpha/vendor/lib/tool.ts": vendorSource,
+    "zw-alpha/vendor/VENDOR.md": manifest,
+    ...extra,
+  });
+  const codexSkill = (policy) => ({
+    "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "No resources."),
+    "zw-alpha/agents/openai.yaml": 'interface:\n  display_name: "Alpha"\n' + policy,
+  });
+  const shapeCases = [
+    ["omitted vendor file present", vendorSkill(
+      vendorTable([["lib/tool.ts", hex, "vendored"], ["lib/left-out.ts", hex, "omitted: not needed here"]]),
+      { "zw-alpha/vendor/lib/left-out.ts": vendorSource },
+    ), 1, "VENDOR.md marks lib/left-out.ts omitted but the file is present"],
+    ["listed vendor file missing", vendorSkill(
+      vendorTable([["lib/tool.ts", hex, "vendored"], ["lib/gone.ts", hex, "vendored"]]),
+    ), 1, "VENDOR.md lists lib/gone.ts but vendor/ does not ship it"],
+    ["manifest row without a digest", vendorSkill(
+      vendorTable([["lib/tool.ts", "not-a-digest", "vendored"]]),
+    ), 1, "VENDOR.md row for lib/tool.ts needs a 64 character hex sha256"],
+    ["manifest row without a state", vendorSkill(
+      vendorTable([["lib/tool.ts", hex, "copied"]]),
+    ), 1, "VENDOR.md row for lib/tool.ts must say vendored or omitted"],
+    ["duplicate Codex policy", codexSkill("policy:\n  allow_implicit_invocation: true\npolicy:\n  allow_implicit_invocation: true\n"), 1, "agents/openai.yaml has a duplicate policy key"],
+    ["inline Codex policy", codexSkill("policy: {allow_implicit_invocation: true}\n"), 1, "agents/openai.yaml policy must be a block mapping"],
+    ["duplicate Codex flag", codexSkill("policy:\n  allow_implicit_invocation: true\n  allow_implicit_invocation: true\n"), 1, "agents/openai.yaml has a duplicate allow_implicit_invocation key"],
+    ["unclosed frontmatter", {
+      "zw-alpha/SKILL.md": FENCE + "\nname: zw-alpha\ndescription: The block never closes.\n\n# zw-alpha\n",
+    }, 1, "zw-alpha: frontmatter block is never closed with ---"],
+    ["missing description", {
+      "zw-alpha/SKILL.md": FENCE + "\nname: zw-alpha\n" + FENCE + "\n\n# zw-alpha\n",
+    }, 1, "zw-alpha: frontmatter has no valid string description"],
+    ["installed-root resource", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run node <skills-root>/zw-beta/scripts/check.mjs <repo>."),
+      "zw-beta/SKILL.md": resourceSkill("zw-beta", "No direct helper."),
+    }, 1, "zw-alpha: body names ../zw-beta/scripts/check.mjs, which the installed skill set does not ship"],
+    ["installed-root resource present", {
+      "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "Run node <skills-root>/zw-beta/scripts/check.mjs <repo>."),
+      "zw-beta/SKILL.md": resourceSkill("zw-beta", "No direct helper."),
+      "zw-beta/scripts/check.mjs": "console.log(1);\n",
+    }, 0, "ok: 2 skills"],
+  ];
+  for (const [label, files, status, output] of shapeCases) {
+    const root = join(tmp, "shape-" + label.replaceAll(" ", "-"));
+    writeTree(root, files);
+    checkCli(label, root, status, output);
+  }
+
   const sharedRoot = join(tmp, "shared-root");
   writeTree(sharedRoot, {
     "zw-alpha/SKILL.md": resourceSkill("zw-alpha", "No resources."),

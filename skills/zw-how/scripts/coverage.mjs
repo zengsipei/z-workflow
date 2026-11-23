@@ -222,8 +222,20 @@ function selfTest() {
     writeFileSync(full, body, "utf8");
   };
   try {
-    for (const dir of ["packages/alpha", "packages/beta", "services/api"]) put(dir + "/keep.txt", "x\n");
-    put(".agents/notes/implemented/architecture/2026-01-01-alpha.md", noteWith("Alpha", ["packages/alpha", "packages/ghost", "the alpha thing"]));
+    for (const dir of ["packages/alpha", "packages/beta", "services/api", "packages/node_modules/dep", "apps/dist"]) put(dir + "/keep.txt", "x\n");
+    put(".agents/notes/implemented/architecture/2026-01-01-alpha.md", noteWith("Alpha", [
+      "packages/alpha",
+      "packages/ghost",
+      "the alpha thing",
+      "packages/alpha/keep.txt",
+      "\x60\x60\x60text",
+      "packages/beta",
+      "\x60\x60\x60",
+      "<!--",
+      "services/api",
+      "-->",
+      "<!-- a one-line comment -->",
+    ]));
     put(".agents/notes/implemented/architecture/2026-01-03-alpha-followup.md", noteWith("Alpha followup", ["packages/alpha"]));
     put(".agents/notes/implemented/feature/2026-01-02-beta.md", noteWith("Beta", []));
     put(".agents/notes/implemented/feature/2026-01-02-beta.zh.md", "# Agent Note: Beta zh\n\nStatus: implemented\n");
@@ -231,6 +243,10 @@ function selfTest() {
     const report = buildReport(root, DEFAULT_UNITS);
     check(report.units.includes("packages/alpha") && report.units.includes("packages/beta"), "default patterns should find packages/*");
     check(report.units.includes("services/api"), "default patterns should find services/*");
+    check(report.units.join(",") === "packages/alpha,packages/beta,services/api", "build output and dependency directories are not units, got " + report.units.join(","));
+    check(report.problems.some((p) => p.kind === "no such directory" && p.id === "packages/alpha/keep.txt"), "a Scope id naming a file is a problem, not a claim");
+    check(!report.claimed.some((item) => item.id === "packages/alpha/keep.txt"), "a file is never claimed");
+    check(!report.problems.some((p) => p.id.includes("<!--")), "a comment inside Scope is skipped, not reported as a bad id");
     check(report.noteCount === 3, "a .zh.md note must be skipped, got " + report.noteCount + " note(s)");
     check(report.unclaimed.join(",") === "packages/beta,services/api", "unclaimed should be packages/beta then services/api, got " + report.unclaimed.join(","));
     check(report.claimed.some((item) => item.id === "packages/alpha"), "packages/alpha should be claimed");

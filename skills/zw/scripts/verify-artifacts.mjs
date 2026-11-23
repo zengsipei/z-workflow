@@ -12,8 +12,9 @@
  * Known limitations:
  * - Only .scratch/<feature>/spec.md and .scratch/<feature>/tickets/NN-<slug>.md
  *   are checked; other .scratch entries are ignored.
- * - Path detection is line based. URLs and common tracker routes are
- *   allowed; a bare word with a slash and a file extension counts as a path.
+ * - Path detection is line based. URLs are removed first, and common
+ *   tracker routes are allowed; a bare word with a slash and a file
+ *   extension counts as a path.
  * - Spec-to-ticket links are checked only when a feature has both a spec.md
  *   and local ticket files; a spec may reference a ticket by its NN-<slug>
  *   token or by a relative Markdown link. Every sibling ticket counts,
@@ -66,8 +67,7 @@ function maskSource(raw) {
 }
 
 function isProseLine(src, i) {
-  if (src.fenced[i] || src.commented[i]) return false;
-  return !/^\s*>/.test(src.lines[i]);
+  return !(src.fenced[i] || src.commented[i]);
 }
 
 function headingBase(heading) {
@@ -377,6 +377,25 @@ function selfTest() {
     ".scratch/bullet/tickets/01-first.md:5: blocker 02-second must have a lower ticket number",
   ]) {
     if (!dependencyBad.stderr.includes(needle)) failures.push("invalid blockers: expected " + JSON.stringify(needle) + ", got " + JSON.stringify(dependencyBad.stderr));
+  }
+
+  const cli = (root) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), root], { encoding: "utf8" });
+  const shapesGood = cli(join(fixturesRoot, "shapes", "good"));
+  if (shapesGood.status !== 0 || shapesGood.stdout !== "ok: 1 artifacts\n") {
+    failures.push("allowed shapes: a tracker route, a URL and a commented path must pass, got " + shapesGood.status + " " + shapesGood.stdout + shapesGood.stderr);
+  }
+  const shapesBad = cli(join(fixturesRoot, "shapes", "bad"));
+  if (shapesBad.status !== 1) failures.push("refused shapes: expected exit 1, got " + shapesBad.status);
+  for (const needle of [
+    ".scratch/duplicate/tickets/01-twice.md:7: duplicate Blocked by line",
+    ".scratch/parens/tickets/02-consumer.md:5: invalid Blocked by entry: unbalanced title parentheses",
+    ".scratch/layout/tickets/drafts: unexpected directory inside tickets",
+    ".scratch/layout/tickets/notes.md: ticket filename must be NN-<slug>.md",
+    ".scratch/paths/tickets/01-paths.md:3: ./scripts/setup looks like a path",
+    ".scratch/paths/tickets/01-paths.md:3: ../shared/config looks like a path",
+    ".scratch/paths/tickets/01-paths.md:3: /usr/local/bin looks like a path",
+  ]) {
+    if (!shapesBad.stderr.includes(needle)) failures.push("refused shapes: expected " + JSON.stringify(needle) + ", got " + JSON.stringify(shapesBad.stderr));
   }
 
   const gap = runOnRepo(join(fixturesRoot, "numbering", "good"));

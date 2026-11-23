@@ -144,7 +144,7 @@ function selfTest() {
   check("a user route wins over the built-in", at("release").source === "user");
   check("a new project route is added", at("spike").source === "project");
   check("a built-in with nothing over it stays builtin", at("ship").source === "builtin");
-  check("non markdown files are ignored", routes.list.every((entry) => entry.name !== "notes"));
+  check("only markdown files are routes", routes.list.map((entry) => entry.name).join(",") === "bug-fix,feature,investigation,refactor,release,ship,spike");
   check("the winning file is the one read", /our way/.test(readFileSync(at("feature").file, "utf8")));
   check("the built-in is still readable underneath", existsSync(join(BUILTIN_DIR, "feature.md")));
 
