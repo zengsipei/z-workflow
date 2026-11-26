@@ -6,6 +6,8 @@ Status: design, awaiting owner sign-off. Date 2026-11-14.
 
 A portable personal agent workflow, shipped as skills in the `.agents/skills` convention and harness-neutral by construction. This repo is the only source of truth; `scripts/link-skills.sh` symlinks every skill into `~/.agents/skills` (and `~/.claude/skills` when it exists), so `git pull` updates every harness at once. Running it again converges: it prunes a link whose skill was renamed or deleted, and it leaves a link that points at a live copy elsewhere, a worktree for example, unless told to take it over.
 
+The purpose is composition, not replacement. Three upstream bodies of work are each good at one thing: pstack at the process, the matt skill set at domain-driven design and ticket management, and write-notes-like-deepseek at decision notes. This workflow combines them into one spine, and it stays usable beside any of them installed on its own: the `zw-` namespace, steps that name only `zw-` skills, and verbatim vendoring exist so that neither side collides with or requires the other. The workflow also has to hold the agent to its work, which is why its rules end in checkers that exit non-zero instead of in advice. Flexible and effective is the bar; a cheaper route is a means to it, never the goal.
+
 Non-goals: no DSH plugin, no new DDD vocabulary skills (reuse the installed `domain-modeling` and `codebase-design` as reference), no team or multi-agent product, no event-driven automations.
 
 ## 2. Settled decisions
