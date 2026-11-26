@@ -55,14 +55,28 @@ ignores `model`. It is the cheapest child for a review or a continuation that al
 context in play, and the wrong one for `independent-verifier`, which exists to run on a route the
 writer did not use.
 
+## First use
+
+When the resolver answers `no claude-code section`, follow the
+[shared first-use steps](roles.md#first-use) with `--harness claude-code` before the first
+delegation. The source is the `Agent` tool's own schema, which lists the model aliases and the
+efforts. The schema names aliases and not what they resolve to, so read the
+`ANTHROPIC_DEFAULT_<ALIAS>_MODEL` environment variables before calling one alias fast or another a
+different family; with none set, the alias names are the only evidence. Leave a key on the
+session's own model out of the section, or write `inherit`.
+
 ## Keys
 
 `scripts/role-route.mjs <key> --harness claude-code` prints the model and effort for a key, plus the
 whole panel when the line holds more than one route. Pass `--route-index` to choose from a panel.
 
-The agent-type keys have no installed definition here. For `poteto-agent` and `comment-sicko`, spawn
-the general agent type and hand the absolute path of the vendored definition in the brief, with the
-path to `zw/SKILL.md` beside it, as `index.md` describes. A built-in read-only type suits a
+The workflow installs no agent definition, because the skills installer ships skills and nothing
+else: a definition this workflow needed would be missing on a machine set up that way. For
+`poteto-agent` and `comment-sicko`, spawn the general agent type and hand the absolute path of the
+vendored definition in the brief, with the path to `zw/SKILL.md` beside it, as `index.md`
+describes. When the session already lists an agent type of that name, installed by pstack itself,
+use it as `subagent_type` and still hand over the `zw/SKILL.md` path: the same definition under the
+same name is reuse, not a conflict. A built-in read-only type suits a
 `how-explorer` or `why-investigator` leg that only searches; the key's line still supplies the model.
 
 A brief names the key, and the key's line decides the route. When the brief also names a model or

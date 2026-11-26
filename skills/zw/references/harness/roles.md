@@ -33,10 +33,10 @@ comment-sicko: inherit
   followed by a model alias the delegation tool lists and an effort from its ladder:
   `how-explorer: alias sonnet low`. `--check` refuses any other provider in that section. The
   `claude-code.md` adapter beside this file has the reasoning.
+- Write `default` in the effort slot, in any section, to use the selected model without passing an
+  effort or applying the global `budget:`. This is a table value, not a spawn argument.
 - Codex has no provider field either. Write the fixed word `model` followed by the full id from the
   session: `review-spec: model <id> [effort]`. Replace the placeholders before running `--check`.
-  Write `default` in the effort slot to use the selected model without passing an effort or
-  applying the global `budget:`. This is a table value, not a spawn argument.
   Configuring a non-`inherit` line in your table opts that workload into automatic selection when
   the live spawn tool permits it. Use `inherit` to opt a workload out. See the [Codex adapter](codex.md).
   A legacy Codex line with a provider fails `--check` and Codex lookups without blocking other
@@ -56,17 +56,45 @@ pass to the call. `--check` validates every line and exits non-zero on a bad one
 number, so a typo fails loudly instead of silently inheriting. `--init` writes a commented template
 for the harness `--harness` names, `dsh` when it names none, and never overwrites an existing file.
 
-## Setup
+## First use
 
-In Codex, the first authorized delegation without a Codex section offers
-[first-use setup](codex.md#first-use). It chooses workload routes from the live session, previews
-them, and adds only that section with the user's authorization. An existing section, including
-explicit `inherit` entries, is not updated by first-use setup. Installing the skills never writes
-this file.
+A harness with no section in this file gets one at its first delegation. Setup runs in that
+session and never from the installer, because only the live session knows which models it may send
+a child to. Installing the skills never writes this file.
+
+The trigger is the resolver answering `no <harness> section` when a delegation is about to start.
+An absent key in an existing section, an explicit `inherit`, and a request for defaults do not
+trigger it. The user can also ask for it directly; the steps are the same.
+
+1. Read the models and their efforts from the source the harness adapter names under its own
+   `First use` heading. Use only what this session confirms: a model list from somewhere else, an
+   old cache, and an id that looks valid are not evidence. If no model is confirmed, write no
+   section and carry on without one.
+2. Choose the routes yourself from the [keys](index.md#keys). Prefer a model described as fast or
+   lightweight for exploration, and one described as strong at reasoning for synthesis or review.
+   When the listing does not tell the models apart, use different supported efforts on one model
+   rather than inventing ability, family or price from an id. Size the efforts by the
+   [ladder rules](index.md#tiers-within-a-key), starting from the user's budget. Give every model
+   route an explicit supported effort, or `default` when the effort is unsupported or unconfirmed.
+   Leave an unresolved key out, and leave `budget:` alone. Propose an `independent-verifier` route
+   only from a family known to differ from the writer's, and say so when that cannot be confirmed.
+3. Form the one section in the format above and pass it on stdin to
+   `node <zw-skill>/scripts/role-route.mjs --preview --harness <name>`. If it reports an existing
+   section, resolve the key again and propose nothing. Otherwise show the routes and ask once
+   whether to use and save them. Do not make the user pick individual models. Skip the question
+   when the user already asked for routes to be chosen and saved. If the user declines, send no
+   saved override and do not ask again in that session.
+4. With that answer, pass the same section to
+   `node <zw-skill>/scripts/role-route.mjs --setup --harness <name>` and resolve the pending key
+   again. If either command fails, say why and continue the task without a saved route.
+
+Setup adds one new section and nothing else: it never edits an existing section, another harness's
+lines or the budget, and a second run changes nothing. Saving a route is not permission to
+delegate; the harness adapter's own rule decides that.
 
 ### Manual setup
 
-Set up the table once. The user can choose the routes or ask the agent to select and save them:
+To write or change routes by hand instead:
 
 1. Ask the harness which routes it authorizes. In DSH that is `list_subagent_models`: no argument
    lists providers, a provider lists models, and a model lists the reasoning efforts it declares. In

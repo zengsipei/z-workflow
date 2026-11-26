@@ -18,7 +18,8 @@ A route in the `## claude-code` section writes the fixed word `alias` in the pro
 The model token is not validated: the aliases are whatever the tool's schema lists in the session, and what an alias resolves to is set by the deployment's environment.
 
 A fork child ignores the model field, so the adapter rules it out for `independent-verifier`.
-The agent-type keys have no installed definition in Claude Code; the adapter spawns the general type and hands over the vendored definition's path in the brief.
+The workflow installs no agent definition in Claude Code; the adapter spawns the general type and hands over the vendored definition's path in the brief.
+An agent type of the same name that pstack itself installed is used directly, because the same definition under the same name is reuse.
 
 ## Alternatives considered
 
@@ -33,6 +34,10 @@ It needs no code change. It loses because a DSH line pasted under `## claude-cod
 ### Why not hardcode the alias list in the checker?
 
 A typo in an alias would fail at `--check` instead of at the spawn. It loses because the list belongs to the harness and changes with it; the adapter already sends a rejected model to inheritance with one line in the reply.
+
+### Why not link the vendored agent definitions into the harness's agent directory?
+
+`poteto-agent` and `comment-sicko` would be real agent types, and a child would not spend a read on its definition. It loses because the skills installer ships skills and nothing else, so the definitions exist only on a machine set up from a checkout, and the path in the brief has to stay as the route that always works. Two routes to one definition is one more thing to keep in step. A name shared with an installed pstack is not the reason: that is the reuse this workflow is built on.
 
 ## Consequences
 

@@ -18,9 +18,10 @@ checkers are TypeScript and run through `npx tsx`, which fetches tsx on first us
 Then start a task by loading the `zw` skill. It restates the goal, picks a playbook, and runs the
 spine.
 
-In a Codex session that permits child model overrides, the first delegation with no
-saved Codex routes offers to choose and save them from that session's model catalog. No special
-Codex profile is required. Decline or use a session without overrides to keep native defaults.
+There is no setup step. The first delegation in a harness with no saved routes offers to choose
+and save them from the models that session lists, in DSH, Claude Code and Codex alike. In Codex the
+session must also permit child model overrides, and no special profile is required. Decline, or
+use a session without overrides, to keep the harness's own defaults.
 
 ## What you get
 

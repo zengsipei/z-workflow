@@ -7,7 +7,7 @@
  *   node role-route.mjs --list [--harness <name>] [--file <path>]
  *   node role-route.mjs --check [--file <path>]
  *   node role-route.mjs --init [--harness <name>] [--file <path>]
- *   node role-route.mjs --preview-codex|--setup-codex [--file <path>] < codex-section.md
+ *   node role-route.mjs --preview|--setup --harness <name> [--file <path>] < section.md
  *   node role-route.mjs --test
  *
  * The keys file lives outside the skills root, at ~/.agents/zw-roles.md by
@@ -70,7 +70,7 @@ function template(harness) {
     "# A claude-code route has no provider: write the fixed word alias in its place,",
     "# as in: alias sonnet low.",
     "# A codex route uses the fixed word model, then an exact id from the session.",
-    "# In a Codex route, the effort word default omits the effort even with a budget.",
+    "# The effort word default omits the effort even with a budget.",
     "# A configured Codex route opts that workload into automatic selection, not delegation.",
     "#",
     "# The keys are defined in the zw skill, in references/harness/index.md. Resolve one with",
@@ -217,7 +217,7 @@ function resolveRoute(sections, key, harness, file, routeIndex = 0, budget = nul
   const routes = entry.routes.map((route) => ({
     provider: route.provider,
     model: route.model,
-    reasoningEffort: harness === "codex" && route.reasoningEffort === "default"
+    reasoningEffort: route.reasoningEffort === "default"
       ? undefined
       : route.reasoningEffort ?? (budget === null ? undefined : budget),
   }));
@@ -262,18 +262,18 @@ function readRoles(file) {
   }
 }
 
-function prepareCodexSection(file, section) {
+function prepareSection(file, section, harness) {
   const { contents, sections, errors } = readRoles(file);
   if (errors.length) throw new Error(errors.map(({ line, message }) => file + ":" + line + ": " + message).join("\n"));
-  if (sections.has("codex")) return null;
+  if (sections.has(harness)) return null;
   const parsed = parseRoles(section);
   if (parsed.errors.length) {
     throw new Error(parsed.errors.map(({ line, message }) => "proposal:" + line + ": " + message).join("\n"));
   }
-  if (parsed.sections.size !== 1 || !parsed.sections.has("codex") || parsed.budget !== null) {
-    throw new Error("proposal must contain only a Codex section, without a budget");
+  if (parsed.sections.size !== 1 || !parsed.sections.has(harness) || parsed.budget !== null) {
+    throw new Error("proposal must contain only a " + harness + " section, without a budget");
   }
-  const routes = [...parsed.sections.get("codex").values()].flatMap((entry) => entry.routes).filter((route) => !route.inherit);
+  const routes = [...parsed.sections.get(harness).values()].flatMap((entry) => entry.routes).filter((route) => !route.inherit);
   if (!routes.length || routes.some((route) => !route.reasoningEffort)) {
     throw new Error("proposal needs at least one model route and an effort or default for every model route");
   }
@@ -283,7 +283,7 @@ function prepareCodexSection(file, section) {
   return { contents, addition: Buffer.from(separator + section.replaceAll("\n", newline)) };
 }
 
-function appendCodexSection(file, configuredPath, current) {
+function appendSection(file, configuredPath, current, harness) {
   const changed = () => new Error(file + " changed during setup; run it again");
   const descriptor = openSync(file, constants.O_RDWR | constants.O_APPEND);
   try {
@@ -295,25 +295,26 @@ function appendCodexSection(file, configuredPath, current) {
     if (!readFileSync(descriptor).equals(current.contents)) throw changed();
     if (!selected()) throw changed();
     const appended = writeSync(descriptor, current.addition);
-    if (appended !== current.addition.length) throw new Error(file + ": incomplete write; inspect the Codex section");
+    if (appended !== current.addition.length) throw new Error(file + ": incomplete write; inspect the " + harness + " section");
     const expected = Buffer.concat([current.contents, current.addition]);
     if (!readFileSync(file).equals(expected) || !selected()) {
-      throw new Error(configuredPath + " changed during setup; inspect the Codex section");
+      throw new Error(configuredPath + " changed during setup; inspect the " + harness + " section");
     }
   } finally {
     closeSync(descriptor);
   }
 }
 
-function setupCodex(options) {
+function setupSection(options) {
+  const harness = options.harness;
   const file = existsSync(options.file) ? realpathSync(options.file) : options.file;
   const section = readFileSync(0, "utf8").replace(/\r\n?/g, "\n").trim() + "\n";
-  const prepared = prepareCodexSection(file, section);
+  const prepared = prepareSection(file, section, harness);
   if (prepared === null) {
-    console.error(file + " already has a Codex section; left untouched");
+    console.error(file + " already has a " + harness + " section; left untouched");
     return;
   }
-  if (options.mode === "preview-codex") {
+  if (options.mode === "preview") {
     process.stdout.write(section);
     return;
   }
@@ -321,12 +322,12 @@ function setupCodex(options) {
   const lock = file + ".lock";
   mkdirSync(lock);
   try {
-    const current = prepareCodexSection(file, section);
+    const current = prepareSection(file, section, harness);
     if (current === null) {
-      console.error(file + " already has a Codex section; left untouched");
+      console.error(file + " already has a " + harness + " section; left untouched");
       return;
     }
-    if (current.contents !== null) appendCodexSection(file, options.file, current);
+    if (current.contents !== null) appendSection(file, options.file, current, harness);
     else {
       const temporary = join(lock, "routes.md");
       try {
@@ -339,15 +340,15 @@ function setupCodex(options) {
   } finally {
     rmdirSync(lock);
   }
-  console.log("wrote Codex routes to " + file);
+  console.log("wrote " + harness + " routes to " + file);
 }
 
 const MODE_FLAGS = {
   "--test": "test", "--check": "check", "--init": "init", "--list": "list",
-  "--preview-codex": "preview-codex", "--setup-codex": "setup-codex",
+  "--preview": "preview", "--setup": "setup",
 };
 const VALUE_FLAGS = {
-  "--harness": (options, value) => { options.harness = value; },
+  "--harness": (options, value) => { options.harness = value; options.harnessNamed = true; },
   "--file": (options, value) => { options.file = value; },
   "--efforts": (options, value) => { options.efforts = value; },
   "--shift": (options, value) => {
@@ -386,6 +387,9 @@ function parseArgs(argv) {
     if (!options.efforts) return { error: "--shift needs --efforts, the ladder the harness printed for this model" };
     options.effortLadder = options.efforts.split(",").map((part) => part.trim()).filter(Boolean);
     if (options.effortLadder.length < 2) return { error: "--efforts needs at least two effort ids, lowest first" };
+  }
+  if ((options.mode === "preview" || options.mode === "setup") && !options.harnessNamed) {
+    return { error: "--" + options.mode + " needs --harness, the section the proposal is for" };
   }
   if (!HARNESSES.includes(options.harness)) {
     return { error: 'unknown harness "' + options.harness + '"; expected one of ' + HARNESSES.join(", ") };
@@ -508,35 +512,47 @@ function selfTest() {
   check("the file --init wrote passes --check", run("--check", "--file", made).status === 0);
   const setupFile = join(tmp, "bootstrap", "routes.md");
   const proposal = "## codex\nhow-explorer: model catalog/reader default\nreview-spec: model catalog/judge high\nindependent-verifier: inherit\n";
-  const setup = (mode, file, input = proposal) => spawnSync(
-    process.execPath, [fileURLToPath(import.meta.url), mode], { encoding: "utf8", input, env: { ...process.env, ZW_ROLES: file } },
+  const setup = (mode, file, input = proposal, harness = "codex") => spawnSync(
+    process.execPath, [fileURLToPath(import.meta.url), mode, "--harness", harness], { encoding: "utf8", input, env: { ...process.env, ZW_ROLES: file } },
   );
-  const preview = setup("--preview-codex", setupFile);
+  const preview = setup("--preview", setupFile);
   check("Codex setup previews without creating the directory", preview.status === 0 && preview.stdout === proposal && !existsSync(dirname(setupFile)));
-  const saved = setup("--setup-codex", setupFile);
+  const saved = setup("--setup", setupFile);
   const savedRoute = run("review-spec", "--harness", "codex", "--file", setupFile);
   check("a fresh setup writes the chosen model and effort", saved.status === 0 && savedRoute.status === 0 && JSON.parse(savedRoute.stdout).model === "catalog/judge" && JSON.parse(savedRoute.stdout).reasoningEffort === "high");
   const original = Buffer.from("# keep this \xe9\r\nbudget: xhigh\r\n## dsh\r\nfeature: p1 m1\r\n\r\n## claude-code\r\nfeature: alias m2", "latin1");
   const shared = join(tmp, "shared.md");
   writeFileSync(shared, original, { mode: 0o640 });
   const originalMode = statSync(shared).mode;
-  const mergedSetup = setup("--setup-codex", shared);
+  const mergedSetup = setup("--setup", shared);
   const combined = Buffer.concat([original, Buffer.from("\r\n\r\n" + proposal.replaceAll("\n", "\r\n"))]);
   check("setup adds only the Codex section and preserves non-UTF-8 comments and mode", mergedSetup.status === 0 && readFileSync(shared).equals(combined) && statSync(shared).mode === originalMode && run("--check", "--file", shared).status === 0);
   const modelOnly = run("how-explorer", "--harness", "codex", "--file", shared);
   check("default selects the Codex model without sending the shared effort", modelOnly.status === 0 && JSON.parse(modelOnly.stdout).model === "catalog/reader" && JSON.parse(modelOnly.stdout).reasoningEffort === undefined);
-  check("repeating setup preserves the saved routes", setup("--setup-codex", shared, proposal.replace("catalog/judge", "catalog/other")).status === 0 && readFileSync(shared).equals(combined));
+  check("repeating setup preserves the saved routes", setup("--setup", shared, proposal.replace("catalog/judge", "catalog/other")).status === 0 && readFileSync(shared).equals(combined));
   const linked = join(tmp, "linked.md");
   writeFileSync(shared, original);
   symlinkSync(shared, linked, "file");
-  check("setup keeps a symlink and updates its target", setup("--setup-codex", linked).status === 0 && realpathSync(linked) === realpathSync(shared) && readFileSync(shared).equals(combined));
-  const unsafePreview = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--preview-codex", "--setup-codex", "--file", made], { encoding: "utf8", input: proposal });
+  check("setup keeps a symlink and updates its target", setup("--setup", linked).status === 0 && realpathSync(linked) === realpathSync(shared) && readFileSync(shared).equals(combined));
+  const unsafePreview = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--preview", "--setup", "--harness", "codex", "--file", made], { encoding: "utf8", input: proposal });
   check("conflicting modes fail before writing", unsafePreview.status === 2 && unsafePreview.stderr.includes("choose only one mode") && !/^## codex$/m.test(readFileSync(made, "utf8")));
   for (const invalid of [proposal.replace(" high", ""), "budget: low\n" + proposal, proposal + "## dsh\nfeature: p1 m1\n", "## codex\nfeature: inherit\n"]) {
-    check("setup rejects an unusable or non-Codex proposal", setup("--setup-codex", made, invalid).status === 1 && !/^## codex$/m.test(readFileSync(made, "utf8")));
+    check("setup rejects an unusable or non-Codex proposal", setup("--setup", made, invalid).status === 1 && !/^## codex$/m.test(readFileSync(made, "utf8")));
   }
+  const perHarness = join(tmp, "per-harness.md");
+  writeFileSync(perHarness, "## codex\nship: model m3 high\n", "utf8");
+  const claudeProposal = "## claude-code\nhow-explorer: alias quick default\nindependent-verifier: alias other high\n";
+  const dshProposal = "## dsh\nhow-explorer: p1 flash default\nfeature: p1 strong high\n";
+  check("setup adds a Claude Code section beside another harness", setup("--setup", perHarness, claudeProposal, "claude-code").status === 0 && JSON.parse(run("independent-verifier", "--harness", "claude-code", "--file", perHarness).stdout).model === "other");
+  check("setup adds a DSH section, and default omits the effort there too", setup("--setup", perHarness, dshProposal, "dsh").status === 0 && JSON.parse(run("how-explorer", "--harness", "dsh", "--file", perHarness).stdout).reasoningEffort === undefined && run("--check", "--file", perHarness).status === 0);
+  const mismatched = setup("--preview", join(tmp, "none.md"), claudeProposal, "dsh");
+  check("a proposal for another harness is refused", mismatched.status === 1 && mismatched.stderr.includes("proposal must contain only a dsh section"));
+  const strayAlias = setup("--preview", join(tmp, "none.md"), "## claude-code\nfeature: magpie strong high\n", "claude-code");
+  check("a proposal is held to its harness's provider rule", strayAlias.status === 1 && strayAlias.stderr.includes('proposal:2: a claude-code route names no provider'));
+  const unnamed = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--setup", "--file", perHarness], { encoding: "utf8", input: dshProposal });
+  check("setup without a named harness is a usage error", unnamed.status === 2 && unnamed.stderr.includes("--setup needs --harness"));
   writeFileSync(shared, "## codex\nreview-spec: inherit\n", "utf8");
-  check("presence of an explicit inherit prevents first-run setup", setup("--setup-codex", shared).status === 0 && readFileSync(shared, "utf8") === "## codex\nreview-spec: inherit\n");
+  check("presence of an explicit inherit prevents first-run setup", setup("--setup", shared).status === 0 && readFileSync(shared, "utf8") === "## codex\nreview-spec: inherit\n");
   writeFileSync(join(tmp, "merged.md"), "## dsh\nfeature: p1 m1\n\n## claude-code (wip)\nship: p2 m2\n", "utf8");
   const checked = run("--check", "--file", join(tmp, "merged.md"));
   check("--check fails a malformed header with its line", checked.status === 1 && checked.stderr.includes("merged.md:4: is not a section header"));
@@ -597,9 +613,9 @@ function main() {
   }
   if (options.mode === "test") process.exit(selfTest() ? 0 : 1);
 
-  if (options.mode === "preview-codex" || options.mode === "setup-codex") {
+  if (options.mode === "preview" || options.mode === "setup") {
     try {
-      setupCodex(options);
+      setupSection(options);
     } catch (error) {
       console.error("role-route: " + error.message);
       process.exitCode = 1;

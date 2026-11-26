@@ -32,6 +32,14 @@ context in play.
 routes this session authorizes when the deployment enforces routing. Never send a route the session
 does not authorize, and never invent a model id: a rejected route costs a call and teaches nothing.
 
+## First use
+
+When the resolver answers `no dsh section`, follow the [shared first-use steps](roles.md#first-use)
+with `--harness dsh` before the first delegation. The source is `list_subagent_models`: with no
+argument it lists providers, with a provider its models, and with a model the reasoning efforts
+that model declares. Propose only routes its closing list says this session authorizes. A model
+that declares no effort gets `default`, because an effort filled in for it is rejected at the call.
+
 ## Keys
 
 `scripts/role-route.mjs <key> --harness dsh` prints the provider, model and effort for a key, plus

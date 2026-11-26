@@ -60,33 +60,18 @@ Run setup in the current Codex session, not from the installer. It does not star
 the parent, or load another profile. Skip it if the tool does not expose `model` or will not let
 the user authorize future workload-based overrides in this session.
 
-1. Read the models and effort ladders from the live spawn description or the session catalog it
-   names. Use only confirmed models and efforts. A provider's model list, an unrelated cache, and
-   an id that looks valid are not evidence. A known rejection by this session's active provider or
-   spawn tool rules out the pair even if advertised. An absent ladder does not authorize `low`.
-   If no model is confirmed, do not write a section.
-2. Choose the routes yourself from the existing [keys](index.md#keys). Prefer a model described
-   as fast or lightweight for exploration, and one described as strong at reasoning for synthesis
-   or review. If the catalog does not distinguish the models, use different supported efforts on
-   one suitable model rather than inventing ability, family, or price from its id. Use pstack's
-   setup order and the [existing effort ladder rules](index.md#tiers-within-a-key): start from the
-   user's budget, or pstack's `large` (`xhigh`) when unset, then choose the supported level at or
-   below the target and size it to the workload. Do not change `budget:` in the table. Give each
-   generated model line an explicit supported effort, or write `default` if an effort is not
-   supported or cannot be confirmed. `default` omits the spawn effort and ignores the shared budget.
-   Leave unresolved keys out. Only propose verifier candidates from known families and check
-   against the actual writer again at spawn time. If diversity cannot be confirmed, say so.
-3. Form a `## codex` section in the [existing table format](roles.md#format). Pass it on stdin to
-   `node <zw-skill>/scripts/role-route.mjs --preview-codex`. If it reports an existing section,
-   re-resolve the workload without proposing any changes. Otherwise show the routes and ask once
-   whether to use and save them for future Codex delegations. Do not make the user pick individual
-   models. Skip that question if the user already authorized choosing and saving routes and the
-   live tool accepts that authorization. If the user declines, skip saved overrides and do not
-   repeat the prompt in that session. A valid one-off instruction still applies.
-4. With authorization, pass the same section to
-   `node <zw-skill>/scripts/role-route.mjs --setup-codex` and resolve the pending workload again.
-   If either command fails, say why and apply any valid one-off override or use native defaults.
-   Do not retry with another provider or rewrite a saved route that the session cannot use.
+Follow the [shared first-use steps](roles.md#first-use) with `--harness codex`. What Codex adds:
+
+- **Source.** Read the models and effort ladders from the live spawn description or the session
+  catalog it names. A known rejection by this session's active provider or spawn tool rules out
+  the pair even if advertised. An absent ladder does not authorize `low`.
+- **Sizing.** With no user budget, start from pstack's `large` (`xhigh`), then choose the supported
+  level at or below the target and size it to the workload. Check a verifier candidate against the
+  actual writer again at spawn time.
+- **Authorization.** Skip the question only if the live tool also accepts the user's earlier
+  authorization. After a decline, a valid one-off instruction still applies.
+- **Failure.** Apply any valid one-off override or use native defaults. Do not retry with another
+  provider or rewrite a saved route that the session cannot use.
 
 ## Send the brief and collect the result
 
