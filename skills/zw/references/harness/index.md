@@ -77,7 +77,7 @@ a cap: a brief may name a different effort for one leg and the resolution order 
 | Harness | File | Call | Route source |
 |---|---|---|---|
 | DSH | `dsh.md` | `subagent` | the key table |
-| Claude Code | to write | `Task` | the key table, or the model field |
+| Claude Code | `claude-code.md` | `Agent` | the key table |
 | Codex | to write | none, the main thread runs the work | not applicable |
 
 ## Degradation

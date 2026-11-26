@@ -56,6 +56,7 @@ const DEFAULT_HARNESS = "dsh";
 const DEFAULT_FILE = join(homedir(), ".agents", "zw-roles.md");
 const INHERIT_WORDS = new Set(["inherit", "inherit-parent", "auto"]);
 const SKIPPED = Symbol("a section whose header was rejected");
+const FIXED_PROVIDER = { "claude-code": "alias" };
 
 function template(harness) {
   return [
@@ -65,6 +66,8 @@ function template(harness) {
     "# <provider> <model> [effort], or inherit. A comma makes a panel; --route-index",
     "# picks one. A line starting with # is a comment, and a key with no line",
     "# inherits. The optional budget line supplies the effort a route leaves out.",
+    "# A claude-code route has no provider: write the fixed word alias in its place,",
+    "# as in: alias sonnet low.",
     "#",
     "# The keys are defined in the zw skill, in references/harness/index.md. Resolve one with",
     "#   node <zw-skill>/scripts/role-route.mjs <key> --harness <name>",
@@ -169,6 +172,12 @@ function parseRoles(text) {
     if (failed) return;
     if (routes.length > 1 && routes.some((route) => route.inherit)) {
       errors.push({ line: at, message: "inherit cannot sit in a panel" });
+      return;
+    }
+    const fixed = FIXED_PROVIDER[current];
+    const stray = fixed === undefined ? undefined : routes.find((route) => !route.inherit && route.provider !== fixed);
+    if (stray) {
+      errors.push({ line: at, message: 'a ' + current + ' route names no provider; write "' + fixed + ' <model>" instead of "' + stray.provider + ' ' + stray.model + '"' });
       return;
     }
     const section = sections.get(current);
@@ -298,7 +307,7 @@ function selfTest() {
     "comment-sicko: inherit",
     "",
     "## claude-code",
-    "feature: other model-x",
+    "feature: alias model-x",
   ].join("\n");
   const parsed = parseRoles(good);
   check("good fixture parses without errors", parsed.errors.length === 0);
@@ -345,6 +354,10 @@ function selfTest() {
   check("a key line with no route is reported", routeless.errors.some((e) => /has no route/.test(e.message) && e.line === 2));
   const duplicated = parseRoles("## dsh\nfeature: a b\nfeature: c d\n");
   check("a duplicate key is reported", duplicated.errors.some((e) => /listed twice/.test(e.message)));
+  const strayProvider = parseRoles("## claude-code\nfeature: magpie model-x\nship: alias model-x, other model-y\nprose: inherit\n## dsh\nfeature: alias model-x\n");
+  check("a claude-code route with another provider is reported", strayProvider.errors.length === 2 && strayProvider.errors[0].line === 2 && /write "alias <model>" instead of "magpie model-x"/.test(strayProvider.errors[0].message));
+  check("a claude-code panel is checked route by route", strayProvider.errors[1].line === 3 && /other model-y/.test(strayProvider.errors[1].message));
+  check("the fixed provider binds only its own harness", strayProvider.sections.get("dsh").has("feature") && strayProvider.sections.get("claude-code").has("prose"));
   check("errors carry a line number", broken.errors.every((e) => typeof e.line === "number" && e.line > 0));
 
   const base = (key, index = 0) => resolveRoute(parsed.sections, key, "dsh", "fixture", index, parsed.budget);

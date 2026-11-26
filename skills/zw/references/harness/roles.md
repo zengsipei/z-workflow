@@ -30,6 +30,10 @@ comment-sicko: inherit
 - Values are the harness's own names. A DSH line names a provider and a model exactly as
   `list_subagent_models` reports them, and an effort only from the list that tool prints for that
   model.
+- Claude Code has no provider, so a `## claude-code` line writes the fixed word `alias` in that slot,
+  followed by a model alias the delegation tool lists and an effort from its ladder:
+  `how-explorer: alias sonnet low`. `--check` refuses any other provider in that section. The
+  `claude-code.md` adapter beside this file has the reasoning.
 
 ## Resolve one
 
@@ -50,7 +54,8 @@ for the harness `--harness` names, `dsh` when it names none, and never overwrite
 A human decides the routes, so setup is one conversation:
 
 1. Ask the harness which routes it authorizes. In DSH that is `list_subagent_models`: no argument
-   lists providers, a provider lists models, and a model lists the reasoning efforts it declares.
+   lists providers, a provider lists models, and a model lists the reasoning efforts it declares. In
+   Claude Code it is the delegation tool's own schema, which lists the model aliases and the efforts.
 2. Propose one route per key you actually use, reading the Keys table in `index.md` for what each key
    answers. The five playbook keys are the floor; add a sub-workload key when one leg deserves a
    different route, and keep `independent-verifier` off the writer's family.
