@@ -51,10 +51,10 @@ None of its own. The real artifact is the edited comment set inside the caller's
 ## Harness
 
 - Reading these rules: a human-invoked skill carries no trigger a model can fire, so no step loads this file on its own. A step that needs the comment rules reads this file by sibling path, `../zw-no-comments/SKILL.md`, the way pstack's playbooks read a skill file directly.
-- Delegation: the comment pass runs as a `comment-sicko` child through the harness adapter at `../zw/references/harness/index.md`, whose key table supplies the route; a key with no line inherits the parent's.
+- Delegation: the `comment-sicko` pass uses the route and fallback rules in `../zw/references/harness/index.md` and its harness adapter.
 - DSH: the pass is one child with its own route fields, and the native question tool gates an encoding proposal that changes code.
 - Claude Code: the same rules, with the route named on the child call and AskUserQuestion in that gate; with neither, the proposal is stated inline and applied only on an answer.
-- Codex: no children, so the pass runs sequentially on the main thread and the reply says the reading was not independent; no question tool, so the encoding proposal is inline.
+- Codex: use a report-only `comment-sicko` child through `../zw/references/harness/codex.md`; get the user's answer before applying an encoding proposal.
 
 ## Provenance
 

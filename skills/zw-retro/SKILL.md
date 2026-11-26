@@ -34,7 +34,7 @@ The user asks for a retrospective on a session, or asks what to change so a mist
 
 - DSH: ask with the native question tool when the user has not named a session; read session logs from this machine.
 - Claude Code: same, with AskUserQuestion.
-- Codex: no question tool, so ask inline in the reply.
+- Codex: ask through the available input tool or inline when the user has not named a session.
 
 ## Provenance
 

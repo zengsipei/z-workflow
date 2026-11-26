@@ -36,15 +36,16 @@ the mode skill the upstream text asks for, so the search fallback never runs.
 
 A key is not a model tier. The playbook keys and the sub-workload keys exist so the same workflow can
 send a cheap read to a cheap route and a contested judgement to a strong one, which is what cursor
-pstack's own role lines do. A key with no line inherits, so an empty table still runs the work.
+pstack's own role lines do. A key with no line supplies no override, so an empty table still runs the work.
 
 A key is a request, not a guarantee. A harness that cannot route still runs the work: see
 Degradation.
 
 ## Resolving a route
 
-The most specific instruction wins, so a model and an effort are each taken from the first step
-that names one.
+The most specific authorized instruction wins, field by field. Follow the harness adapter's
+authorization rule first. In Codex, a user-authorized route in the key table is a standing
+model request for that workload, not authorization to delegate.
 
 1. The brief for this leg, when it names a model or an effort, the harness accepts that field per
    child, and the session authorizes it. A route line never blocks a brief that names its own.
@@ -52,19 +53,18 @@ that names one.
    route. It supplies whatever the brief left unnamed. A line holds one route or a panel of them, and
    `--route-index` picks from a panel, which is how the two reviews of one diff can run on different
    model families.
-3. Nothing. The child inherits the parent's route. This always works and never blocks.
+3. Nothing. Omit the fields and let the harness apply its child defaults or inherit from the parent.
 
 ## Tiers within a key
 
-A key's line is a starting point, not a verdict on difficulty. cursor pstack gives each spawn one
-more decision, and so does this: before the call, move the effort along the ladder the harness printed for
-that model, keeping the family.
+A key's line is a starting point, not a verdict on difficulty. Where the adapter allows budget
+tiering, move the saved effort along the ladder for that model. Keep any effort the user requested
+for the leg unchanged.
 
 - Raise it one step for the hardest or subtlest work.
 - Lower it one step for a judgement call and two or more for routine work.
-- Never invent an effort or a model id. The ladder and the ids come from the harness's own listing,
-  and a rejected route falls back to the nearest valid slug that error names, or to inheritance when
-  it names none.
+- Validate the effort and model id against the harness's own listing. For a rejected route, follow
+  the adapter's fallback rule.
 - `role-route.mjs <key> --efforts <lowest-first ladder> --shift <n>` applies the move and reports
   whether it clamped, so the shift is a resolved value rather than a hope.
 - A faster lane is a different key or a model field, never a mutated id.
@@ -78,16 +78,17 @@ a cap: a brief may name a different effort for one leg and the resolution order 
 |---|---|---|---|
 | DSH | `dsh.md` | `subagent` | the key table |
 | Claude Code | `claude-code.md` | `Agent` | the key table |
-| Codex | to write | none, the main thread runs the work | not applicable |
+| Codex | [codex.md](codex.md) | `spawn_agent` when exposed | the user-authorized key table |
 
 ## Degradation
 
-A missing capability changes how the work runs, never whether it runs.
+A missing capability degrades best-effort work, not a route the user required.
 
-- No key table, or no line for the key: every child inherits the parent route.
-- A route the session does not authorize: drop to inheritance, say so in one line, and carry on
-  rather than failing the delegation.
-- No subagents: the work runs sequentially on the main thread, and the reply says so.
+- No key table, or no line for the key: the workflow supplies no override.
+- A route the session does not authorize: report the limitation and follow the harness adapter's
+  fallback rule.
+- No subagents: run best-effort legs sequentially on the main thread and report the fallback.
+  Follow the harness adapter before substituting for a required route.
 - An independent check needs a child that did not write the code. When the harness cannot give a
   fresh one, the reply says the check was not independent rather than presenting it as one.
 

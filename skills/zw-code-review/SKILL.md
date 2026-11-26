@@ -31,7 +31,7 @@ The user asks to review a branch, a PR, or work-in-progress changes, or says "re
 
 - DSH: run the two reviews as parallel children on the `review-standards` and `review-spec` keys, and an independent check of a finished change on the `independent-verifier` key, which stays off the writer's family through `../zw/references/harness/index.md`; capture the diff with git diff <fixed-point>...HEAD and the commits with git log <fixed-point>..HEAD --oneline.
 - Claude Code: run the two reviews as parallel Task calls with the same commands.
-- Codex: no subagents, so run Standards then Spec sequentially and say so.
+- Codex: run Standards and Spec as fresh children on `review-standards` and `review-spec`. Use `../zw/references/harness/codex.md` for routing and report when either review was not fresh.
 
 ## Provenance
 

@@ -52,7 +52,7 @@ The user wants more than tests on a concurrency, retry, state-machine, parser or
 
 - DSH: questions go through the native question tool, and shells and file tools are native, so generating the skill and running the check need no per-role routing.
 - Claude Code: same generation and the same proof pass; questions go through AskUserQuestion; the model checker or verifier is whatever the repo's own toolchain already installs.
-- Codex: no question tool, so questions go inline and the user answers in the next turn; a step that would block on an answer becomes a stated assumption, and the proof run still completes before hand-off.
+- Codex: ask through the available input tool or inline. State assumptions when proceeding without an answer; complete the proof run before hand-off.
 - All three: the verification tool belongs to the repo, never to the harness. Where a harness cannot run it, the step degrades to writing the check plus one recorded command for the user to run, and the proof stays incomplete until that command has run once and caught the break.
 
 ## Provenance

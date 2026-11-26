@@ -54,7 +54,7 @@ None of its own. The real artifact is the text, edited in place, or the reply it
 - A human-invoked skill is never loaded by a step on its own, so a step that needs these rules reads this file directly at its sibling path, `../zw-unslop/SKILL.md`, the way pstack's playbooks read a skill file by path. The skill has to sit beside its siblings for that path to resolve.
 - DSH: the pass needs no tool of its own; a long document can be marked by a child on the `prose` key through `../zw/references/harness/index.md`, and the child reports marks instead of editing.
 - Claude Code: the same rules, with the Task tool in place of a subagent call.
-- Codex: no subagents, so one context does the whole pass in sequence; the rules do not degrade, only the parallelism.
+- Codex: when delegating the long-document pass, use the `prose` key and a report-only brief through `../zw/references/harness/codex.md`.
 
 ## Provenance
 
