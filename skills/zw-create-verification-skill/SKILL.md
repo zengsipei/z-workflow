@@ -42,7 +42,7 @@ The user asks for a way to verify a repo, says "make a control skill for this re
 
 - DSH: browser and terminal tools are available natively; generating a skill needs no per-role routing; questions go through the native question tool.
 - Claude Code: same generation; browser work through available tools; questions through AskUserQuestion.
-- Codex: no subagents, so all reading and driving is sequential; no question tool, so questions go inline.
+- Codex: drive the proof with the available surface tools. For the interview, follow the question rule in `../zw/references/harness/codex.md`.
 
 ## Provenance
 

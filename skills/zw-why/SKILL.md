@@ -54,7 +54,7 @@ None committed. The read is the artifact, in the reply. Keep it as a note throug
 
 - DSH: investigators run through `../zw/references/harness/index.md`, one `why-investigator` per source and one `why-synthesizer` for the synthesis. Git and the repo's forge CLI run in bash; this session's own history is read with the session search tools.
 - Claude Code: the same fan-out with Task.
-- Codex: no subagents, so the sources are searched in sequence and the reply says the sweep was not parallel.
+- Codex: delegate the source reads and synthesis through `../zw/references/harness/codex.md` with the same keys; search a single source inline.
 
 ## Provenance
 

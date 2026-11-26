@@ -55,7 +55,7 @@ Use when the user names an existing map or ticket. The ticket types, the claim, 
 
 - DSH: when a task board is installed, its parent and child links plus blocking edges render the frontier and assignment is the claim; with no board, the map file and ticket numbers carry it; research tickets fan out in parallel on the `research` key through `../zw/references/harness/index.md`.
 - Claude Code: the same tracker or local files; research tickets fan out with Task.
-- Codex: no parallel workers, so research tickets resolve sequentially; no question tool, so questions go inline in the reply.
+- Codex: delegate independent research tickets on `research` through `../zw/references/harness/codex.md`; keep the same tracker or local files.
 
 ## Provenance
 

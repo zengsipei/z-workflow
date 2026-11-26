@@ -41,7 +41,7 @@ None of its own. The real artifact is the text itself, in place or in the reply,
 
 - DSH: the standard applies in place. A step that needs these rules reads this file by sibling path `../zw-technical-writing/SKILL.md`, which is the route this workflow uses where a skill cannot be called, and a question about a rule that would change code goes through the native question tool.
 - Claude Code: the same standard and the same sibling-path read, with AskUserQuestion where a rule change needs approval.
-- Codex: no question tool and no subagents, so the pass runs sequentially and a proposed change is stated inline and applied once the user answers. Nothing else degrades, because the file reads the same way.
+- Codex: read the same standard in place; use the question rule in `../zw/references/harness/codex.md` before applying a rule change that needs approval.
 
 ## Provenance
 

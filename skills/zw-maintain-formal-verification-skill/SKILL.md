@@ -47,7 +47,7 @@ This is not `zw-maintain-verification-skill`, which keeps a behavioral verificat
 
 - DSH: the pass runs in one agent, in step order. Several independent checks may go to children through `../zw/references/harness/index.md`; questions go through the native question tool.
 - Claude Code: the same sequence, with independent checks through Task and questions through AskUserQuestion.
-- Codex: no subagents, so independent checks run one after another and the reply says so; no question tool, so questions go inline and an answer becomes a stated assumption when one is needed to proceed.
+- Codex: keep the main pass in order. Delegate independent checks through `../zw/references/harness/codex.md`; state assumptions when proceeding without an answer.
 
 ## Provenance
 

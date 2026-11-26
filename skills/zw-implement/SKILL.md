@@ -46,7 +46,7 @@ The user says implement, build, or land this, and a spec or ticket graph already
 
 - DSH: fan-out goes through the harness adapter at `../zw/references/harness/index.md`, which owns the call, the key-to-route mapping and the fallbacks. A ticket is a `poteto-agent` child, an audit or an investigation is one too, and competing experiments or a contested design call get separate `poteto-agent` children. Missing decisions go through the native question tool; the checkers ship in `zw`'s `scripts/` directory and run against the target repo.
 - Claude Code: fan-out uses Task; questions use AskUserQuestion; the same steps apply.
-- Codex: no subagents, so run the graph sequentially and say so; no question tool, so ask inline.
+- Codex: when the topology calls for fan-out, use `../zw/references/harness/codex.md`; keep blocked tickets in dependency order.
 
 ## Provenance
 

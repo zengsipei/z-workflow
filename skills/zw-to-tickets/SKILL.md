@@ -39,7 +39,7 @@ The user has an approved spec and asks for tickets, or the zw playbook reaches t
 
 - DSH: tracker native blocking and child issues; each ticket can be dispatched as a `poteto-agent` child through `../zw/references/harness/index.md`.
 - Claude Code: Task per ticket, native blocking on the tracker.
-- Codex: no subagents, so tickets run sequentially in number order; no question tool, so the quiz goes inline in the reply.
+- Codex: use the question rule in `../zw/references/harness/codex.md` for the blocking-edge quiz. Publish the approved breakdown; leave implementation to its own step.
 
 ## Provenance
 

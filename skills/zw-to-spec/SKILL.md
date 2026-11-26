@@ -37,7 +37,7 @@ The user has finished shaping a feature, fix, or refactor in conversation and as
 
 - DSH: publish to the tracker or write the file; confirm the seam with the native question tool.
 - Claude Code: ask the seam question with AskUserQuestion; slash commands publish the tracker issue.
-- Codex: no question tool, so put the seam question inline in the reply and wait for the answer.
+- Codex: ask through the available input tool or inline and wait for the seam confirmation.
 
 ## Provenance
 
